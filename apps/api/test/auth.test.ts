@@ -131,20 +131,21 @@ describe('password change', () => {
     });
     expect(wrong.statusCode).toBe(400);
 
-    const tooShort = await ctx.app.inject({
+    const empty = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/password',
       headers: bearer(office.token),
-      payload: { currentPassword: ADMIN.password, newPassword: 'kratke' },
+      payload: { currentPassword: ADMIN.password, newPassword: '' },
     });
-    expect(tooShort.statusCode).toBe(400);
+    expect(empty.statusCode).toBe(400);
 
     const ok = await ctx.app.inject({
       method: 'POST',
       url: '/api/auth/password',
       headers: bearer(office.token),
-      payload: { currentPassword: ADMIN.password, newPassword: 'nove-dlouhe-heslo' },
+      payload: { currentPassword: ADMIN.password, newPassword: 'abc' },
     });
+    // No minimum length (only non-empty).
     expect(ok.statusCode).toBe(204);
     expect(
       (await ctx.app.inject({ url: '/api/auth/me', headers: bearer(office.token) })).statusCode,
@@ -152,6 +153,6 @@ describe('password change', () => {
     expect(
       (await ctx.app.inject({ url: '/api/auth/me', headers: bearer(ipad.token) })).statusCode,
     ).toBe(401);
-    await expect(ctx.login(ADMIN.email, 'nove-dlouhe-heslo')).resolves.toBeTruthy();
+    await expect(ctx.login(ADMIN.email, 'abc')).resolves.toBeTruthy();
   });
 });

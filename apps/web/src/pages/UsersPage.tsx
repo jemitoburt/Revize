@@ -12,7 +12,7 @@ import {
   Title,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { PASSWORD_MIN_LENGTH, ROLES, ROLE_LABELS, type Role, type User } from '@revize/shared';
+import { ROLES, ROLE_LABELS, type Role, type User } from '@revize/shared';
 import { useState, type FormEvent } from 'react';
 import type { ApiRequestError } from '../api/client.js';
 import { useCreateUser, useUpdateUser, useUsers } from '../api/hooks.js';
@@ -90,7 +90,6 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
         )}
         <PasswordInput
           label={user ? 'Nové heslo (nepovinné, odhlásí uživatele)' : 'Heslo'}
-          description={`Aspoň ${PASSWORD_MIN_LENGTH} znaků`}
           required={!user}
           value={password}
           error={errors.password}

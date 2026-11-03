@@ -21,14 +21,14 @@ cp .env.example .env
 
 V `.env` nastavte:
 
-| Proměnná            | Hodnota                                                                              |
-| ------------------- | ------------------------------------------------------------------------------------ |
-| `POSTGRES_PASSWORD` | dlouhé náhodné heslo (`openssl rand -base64 24`)                                     |
-| `ADMIN_EMAIL`       | e-mail prvního administrátora                                                        |
-| `ADMIN_PASSWORD`    | jeho heslo (aspoň 10 znaků). Platí jen pro první spuštění, pak ho změňte v aplikaci. |
-| `ORG_NAME`          | název vaší firmy                                                                     |
-| `SEED_DEMO`         | `false` pro ostrý provoz (`true` vloží ukázková data)                                |
-| `SITE_ADDRESS`      | podle varianty níže                                                                  |
+| Proměnná            | Hodnota                                                             |
+| ------------------- | ------------------------------------------------------------------- |
+| `POSTGRES_PASSWORD` | dlouhé náhodné heslo (`openssl rand -base64 24`)                    |
+| `ADMIN_EMAIL`       | e-mail prvního administrátora                                       |
+| `ADMIN_PASSWORD`    | jeho heslo. Platí jen pro první spuštění, pak ho změňte v aplikaci. |
+| `ORG_NAME`          | název vaší firmy                                                    |
+| `SEED_DEMO`         | `false` pro ostrý provoz (`true` vloží ukázková data)               |
+| `SITE_ADDRESS`      | podle varianty níže                                                 |
 
 ### Varianta A – na serveru nic jiného na portech 80/443 neběží
 

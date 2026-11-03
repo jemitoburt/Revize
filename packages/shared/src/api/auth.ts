@@ -2,12 +2,8 @@ import { z } from 'zod';
 import { PERMISSIONS, ROLES } from '../permissions.js';
 import { idSchema } from './common.js';
 
-export const PASSWORD_MIN_LENGTH = 10;
-
-export const passwordSchema = z
-  .string()
-  .min(PASSWORD_MIN_LENGTH, `Heslo musí mít aspoň ${PASSWORD_MIN_LENGTH} znaků`)
-  .max(200);
+/** No length rule (the user's decision 2026-11-03); logins stay rate-limited. */
+export const passwordSchema = z.string().min(1, 'Zadejte heslo').max(200);
 
 /** Trimmed and lower-cased first: iPad keyboards like to capitalize the first letter. */
 export const emailSchema = z

@@ -1,5 +1,4 @@
 import { Button, Paper, PasswordInput, Stack, Text, Title } from '@mantine/core';
-import { PASSWORD_MIN_LENGTH } from '@revize/shared';
 import { useState, type FormEvent } from 'react';
 import { useChangePassword, useMe } from '../api/hooks.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
@@ -47,9 +46,7 @@ export function AccountPage() {
             />
             <PasswordInput
               label="Nové heslo"
-              description={`Aspoň ${PASSWORD_MIN_LENGTH} znaků`}
               required
-              minLength={PASSWORD_MIN_LENGTH}
               value={newPassword}
               onChange={(e) => setNew(e.currentTarget.value)}
             />
