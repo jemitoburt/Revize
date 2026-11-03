@@ -67,6 +67,17 @@ V `.env` nastavte:
   }
   ```
 
+### Limity prostředků
+
+V `.env` (nebo v proměnných Dokploy) jde nastavit limity CPU a RAM pro každou službu, velikost logů
+a limit místa na fotky (viz `.env.example`).
+
+- Výchozí jsou: databáze 512 MB, API 1 GB (včetně Chromia pro PDF), web 256 MB a fotky 10 GB
+  (`STORAGE_MAX_GB`).
+- Po dosažení limitu fotek server další fotky odmítne. iPady je mezitím drží v zařízení
+  a odešlou je, jakmile se limit zvýší nebo uvolní místo. Limit proto nastavte podle disku
+  serveru s rezervou.
+
 ### Spuštění a kontrola
 
 ```sh

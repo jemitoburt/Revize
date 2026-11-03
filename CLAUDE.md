@@ -132,6 +132,6 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   settings + logo (`settings.manage`), protocol HTML in shared (`renderProtocolHtml`, ADR-0016),
   PDF via `PdfRenderer` (Chromium/playwright-core; `CHROMIUM_PATH`), office pages Kontroly and
   Nastavení. The layout waits for the user's sample protocol.
-- Open: PR vitekdynka-debug/Revize#1 (Dokploy compose) needs the user's review; branch
-  `dokploy-review` has it merged with a fix (pg ignores `password` next to `connectionString`).
+- Dokploy variant merged (PR vitekdynka-debug/Revize#1): `docker-compose.dokploy.yml`, DB password
+  apart from the URL (`DATABASE_PASSWORD`), CPU/RAM/log limits and `STORAGE_MAX_GB` for files.
 - Next: M7 part 2 exports (XLSX/CSV results, photo ZIP with EXIF/IPTC), M8 history and filters.
