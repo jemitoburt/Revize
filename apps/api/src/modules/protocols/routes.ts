@@ -5,6 +5,8 @@ import { authOf, requirePermission } from '../../auth/plugin.js';
 import type { ProtocolsService } from './service.js';
 
 const params = z.object({ id: idSchema });
+/** Optional: the protocol of one equipment type only (its text and its items). */
+const querystring = z.object({ equipmentTypeId: idSchema.optional() });
 
 export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsService }> = async (
   app,
@@ -17,12 +19,12 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
     '/inspections/:id/protocol.html',
     {
       preHandler: read,
-      schema: { tags, summary: 'Protokol kontroly jako HTML (náhled, tisk)', params },
+      schema: { tags, summary: 'Protokol kontroly jako HTML (náhled, tisk)', params, querystring },
     },
     async (req, reply) =>
       reply
         .header('content-type', 'text/html; charset=utf-8')
-        .send(await protocols.html(authOf(req), req.params.id)),
+        .send(await protocols.html(authOf(req), req.params.id, req.query.equipmentTypeId)),
   );
   app.get(
     '/inspections/:id/protocol.pdf',
@@ -32,10 +34,15 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
         tags,
         summary: 'Protokol kontroly v PDF (před uzavřením označený jako předběžný)',
         params,
+        querystring,
       },
     },
     async (req, reply) => {
-      const { data, fileName } = await protocols.pdf(authOf(req), req.params.id);
+      const { data, fileName } = await protocols.pdf(
+        authOf(req),
+        req.params.id,
+        req.query.equipmentTypeId,
+      );
       return reply
         .header('content-type', 'application/pdf')
         .header('content-disposition', `attachment; filename="${fileName}"`)

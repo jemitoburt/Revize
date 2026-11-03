@@ -29,6 +29,18 @@ nastavení“: rozvržení se připraví podle jeho vzoru a v kanceláři se nas
 - **Předběžný protokol:** do uzavření kontroly nese výrazné označení. Po uzavření je konečný.
   Číslo protokolu je `<datum kontroly>/<posledních 8 znaků ID kontroly>`.
 
+## Upřesnění 2026-11-03 podle popisu uživatele
+
+- **Text protokolu** je u každé sekce jen ten, který patří k jejímu typu vybavení. Protokol jde
+  vytvořit i pro jediný typ (`?equipmentTypeId=`, výběr v náhledu).
+- **Tabulka artiklů:** Číslo | Název a popis | Vyhovuje (zaškrtávací pole ano/ne) | Poznámka /
+  závada. Je to skutečná tabulka s pevnými šířkami sloupců (`table-layout: fixed`). Řádek se
+  nerozdělí mezi strany a záhlaví se na další straně opakuje.
+- **Závady se zmenšenými fotkami** jsou až na dalších stranách. Nejdřív závažné (červené),
+  potom ostatní (oranžové, zelené).
+- Vzor od uživatele se nepodařilo otevřít (soubor přišel prázdný). Rozvržení se podle něj ještě
+  doladí.
+
 ## Důsledky
 
 - Změny rozvržení podle vzoru od uživatele jsou úprava jedné funkce a jejího testu. Data

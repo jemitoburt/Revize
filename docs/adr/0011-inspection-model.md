@@ -17,6 +17,22 @@
 - Číslo artiklu je unikátní v rámci zákazníka. Zadá ho technik, nebo ho přidělí systém
   (ADR-0004, rezervované bloky).
 
+## Semafor závad (upřesnění 2026-11-03, podle vzoru protokolu)
+
+Hodnocení „závada“ má závažnost podle semaforu ČSN EN 15635 (sloupec `severity`):
+
+| Stupeň   | Význam                                             | V protokolu              |
+| -------- | -------------------------------------------------- | ------------------------ |
+| zelená   | sledovat, bez omezení provozu                      | volitelně (zaškrtávátko) |
+| oranžová | opravit co nejdřív (do 4 týdnů), místo nezatěžovat | volitelně (zaškrtávátko) |
+| červená  | ihned odlehčit a vyřadit z provozu do opravy       | vždy                     |
+
+- Červená znamená vždy `taken_out_of_service`. Hlídá to omezení v databázi.
+- Zelená a oranžová mají `include_in_protocol` (výchozí ano). Nezahrnutá závada se v protokolu
+  vytiskne jako „vyhovuje“ bez poznámky a bez fotek.
+- Migrace `0006` převedla dosavadní závady takto: vyřazené na červenou, ostatní na oranžovou.
+- Starší klienti posílající jen `takenOutOfService` dál fungují (červená, jinak oranžová).
+
 ## Zápis výsledků (upřesnění 2026-11-03, M5)
 
 - **Zahájení:** kontrolu zahájí technik pod ID z klienta (`PUT /inspections/:id`, opakování nic

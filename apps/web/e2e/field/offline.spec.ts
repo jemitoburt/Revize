@@ -28,7 +28,7 @@ test('without a connection results and photos stay on the device, survive a relo
   await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
 
   await page.getByTestId('item-10002').click();
-  await sheet(page).getByRole('button', { name: 'Závada' }).click();
+  await sheet(page).getByRole('button', { name: 'Oranžová' }).click();
   await sheet(page).getByLabel('Popis závady').fill('Uvolněná příčka');
   const chooser = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();

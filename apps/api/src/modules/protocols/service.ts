@@ -4,6 +4,8 @@ import {
   fillProtocolTemplate,
   nextInspectionDateOf,
   renderProtocolHtml,
+  severityOf,
+  type InspectionItem,
   type ProtocolData,
   type ProtocolItem,
 } from '@revize/shared';
@@ -19,6 +21,19 @@ import { organizationOf, settingsOf } from '../organization/service.js';
 
 /** Item details shown in the protocol table: the first few filled-in fields of the type. */
 const DETAIL_FIELDS = 3;
+
+/**
+ * How a result appears in the protocol: the traffic light of a defect, or – for a minor defect
+ * the technician did not include – just "complies" without the note.
+ */
+function printedResult(
+  result: InspectionItem['result'],
+): Pick<ProtocolItem, 'outcome' | 'defectDescription'> {
+  if (!result) return { outcome: 'unchecked', defectDescription: null };
+  const severity = severityOf(result);
+  if (!severity || !result.includeInProtocol) return { outcome: 'ok', defectDescription: null };
+  return { outcome: severity, defectDescription: result.defectDescription };
+}
 
 const czechDate = (iso: string | null) => {
   if (!iso) return '–';
@@ -38,9 +53,16 @@ export function createProtocolsService(
     return `data:${mimeType};base64,${Buffer.from(bytes).toString('base64')}`;
   }
 
-  async function build(auth: AuthContext, inspectionId: string): Promise<ProtocolData> {
+  async function build(
+    auth: AuthContext,
+    inspectionId: string,
+    equipmentTypeId?: string,
+  ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
-    const items = await inspections.items(auth, inspectionId);
+    // A protocol of one equipment type contains only its items and its protocol text.
+    const items = (await inspections.items(auth, inspectionId)).filter(
+      (i) => !equipmentTypeId || i.equipmentTypeId === equipmentTypeId,
+    );
     const org = await organizationOf(db, auth);
     const settings = settingsOf(org);
     const [[customerRow], [siteRow]] = await Promise.all([
@@ -99,15 +121,8 @@ export function createProtocolsService(
               .slice(0, DETAIL_FIELDS)
               .map((f) => f.value)
               .join(' · '),
-            outcome: !i.result
-              ? 'unchecked'
-              : i.result.outcome === 'ok'
-                ? 'ok'
-                : i.result.takenOutOfService
-                  ? 'out_of_service'
-                  : 'defect',
-            defectDescription: i.result?.defectDescription ?? null,
-            photos: photosByItem.get(i.id) ?? [],
+            ...printedResult(i.result),
+            photos: i.result?.includeInProtocol === false ? [] : (photosByItem.get(i.id) ?? []),
           }));
         return { typeName: type.name, text, items: rows };
       });
@@ -145,18 +160,19 @@ export function createProtocolsService(
   }
 
   return {
-    async html(auth: AuthContext, inspectionId: string): Promise<string> {
-      return renderProtocolHtml(await build(auth, inspectionId));
+    async html(auth: AuthContext, inspectionId: string, equipmentTypeId?: string): Promise<string> {
+      return renderProtocolHtml(await build(auth, inspectionId, equipmentTypeId));
     },
 
     async pdf(
       auth: AuthContext,
       inspectionId: string,
+      equipmentTypeId?: string,
     ): Promise<{ data: Uint8Array; fileName: string }> {
       if (!pdf) {
         throw new AppError(501, 'pdf_unavailable', 'PDF se zde nevytváří, použijte tisk náhledu.');
       }
-      const data = await build(auth, inspectionId);
+      const data = await build(auth, inspectionId, equipmentTypeId);
       const bytes = await pdf.render(
         renderProtocolHtml(data),
         `${data.company.name} · protokol ${data.number}`,

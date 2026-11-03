@@ -40,9 +40,14 @@ techniků současně. Stačí v ní zapsat první výsledek.
 
 - Ukazuje číslo, typ, umístění, QR kód, hodnoty polí a případný dřívější výsledek v této kontrole.
 - **V pořádku** uloží výsledek jedním klepnutím.
-- **Závada:** napište popis, případně přidejte fotky závady a klepněte na **Uložit závadu**.
-- **Vyřadit:** závada s vyřazením z provozu. Artikl se hned označí jako vyřazený. Vrátit ho do
-  provozu může jen kancelář (s důvodem, zapíše se do auditu).
+- **Závada** má semafor podle ČSN EN 15635. Napište popis, případně přidejte fotky závady
+  a klepněte na **Uložit závadu**.
+  - **Zelená:** sledovat, bez omezení provozu.
+  - **Oranžová:** opravit co nejdřív, poškozené místo nezatěžovat.
+  - **Červená:** ihned odlehčit a vyřadit z provozu. Artikl se hned označí jako vyřazený. Vrátit
+    ho do provozu může jen kancelář (s důvodem, zapíše se do auditu).
+- U zelené a oranžové je zaškrtávátko **Zahrnout do protokolu** (výchozí zapnuté). Červená
+  závada je v protokolu vždy.
 - **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Zůstávají
   u artiklu i pro další kontroly.
 - Fotku zobrazíte klepnutím na náhled. Tam ji jde i smazat.

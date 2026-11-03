@@ -2,6 +2,7 @@ import {
   Alert,
   Badge,
   Button,
+  Checkbox,
   Divider,
   Drawer,
   Group,
@@ -14,11 +15,14 @@ import {
 import {
   LOCATION_SEPARATOR,
   newId,
+  SEVERITY_LABELS,
   outcomeLabel,
+  severityOf,
   type EquipmentType,
   type InspectionItem,
   type InspectionResult,
   type Photo,
+  type Severity,
 } from '@revize/shared';
 import { IconAlertTriangle, IconBan, IconCheck } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
@@ -46,7 +50,13 @@ export interface ItemSheetProps {
   onSaved: (result: InspectionResult) => void;
 }
 
-type Choice = { outcome: 'ok' } | { outcome: 'defect'; takenOutOfService: boolean };
+type Choice = { outcome: 'ok' } | { outcome: 'defect'; severity: Severity };
+
+const SEVERITY_BUTTONS: { severity: Severity; color: string; icon: typeof IconCheck }[] = [
+  { severity: 'green', color: 'teal', icon: IconAlertTriangle },
+  { severity: 'amber', color: 'orange', icon: IconAlertTriangle },
+  { severity: 'red', color: 'red', icon: IconBan },
+];
 
 export function ItemSheet(props: ItemSheetProps) {
   return (
@@ -91,10 +101,11 @@ function SheetBody({
 
   const [choice, setChoice] = useState<Choice | null>(
     current?.outcome === 'defect'
-      ? { outcome: 'defect', takenOutOfService: current.takenOutOfService }
+      ? { outcome: 'defect', severity: severityOf(current) ?? 'amber' }
       : null,
   );
   const [description, setDescription] = useState(current?.defectDescription ?? '');
+  const [includeInProtocol, setIncludeInProtocol] = useState(current?.includeInProtocol ?? true);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [busyItemPhoto, setBusyItemPhoto] = useState(false);
   // Photos on this device: drafts (defect photos before the result is saved) and unsent ones.
@@ -106,7 +117,7 @@ function SheetBody({
 
   // Defect photos left from an unsaved card (app closed): show the defect form again.
   useEffect(() => {
-    if (drafts.length > 0 && !choice) setChoice({ outcome: 'defect', takenOutOfService: false });
+    if (drafts.length > 0 && !choice) setChoice({ outcome: 'defect', severity: 'amber' });
   }, [drafts.length, choice]);
 
   const itemPhotos = (photos.data ?? []).filter((p) => p.owner === 'item');
@@ -128,7 +139,8 @@ function SheetBody({
           id: resultId,
           outcome: next.outcome,
           defectDescription: next.outcome === 'defect' ? description.trim() : null,
-          takenOutOfService: next.outcome === 'defect' && next.takenOutOfService,
+          severity: next.outcome === 'defect' ? next.severity : null,
+          includeInProtocol: next.outcome === 'ok' || next.severity === 'red' || includeInProtocol,
           recordedAt: new Date().toISOString(),
         },
       });
@@ -232,7 +244,7 @@ function SheetBody({
       )}
 
       <Divider label="Výsledek kontroly" labelPosition="left" />
-      <SimpleGrid cols={3} spacing="sm">
+      <SimpleGrid cols={4} spacing="sm">
         <Button
           size="xl"
           color="green"
@@ -247,32 +259,30 @@ function SheetBody({
         >
           V pořádku
         </Button>
-        <Button
-          size="xl"
-          color="orange"
-          variant={choice?.outcome === 'defect' && !choice.takenOutOfService ? 'filled' : 'light'}
-          leftSection={<IconAlertTriangle />}
-          disabled={readOnly}
-          onClick={() => setChoice({ outcome: 'defect', takenOutOfService: false })}
-        >
-          Závada
-        </Button>
-        <Button
-          size="xl"
-          color="red"
-          variant={choice?.outcome === 'defect' && choice.takenOutOfService ? 'filled' : 'light'}
-          leftSection={<IconBan />}
-          disabled={readOnly}
-          onClick={() => setChoice({ outcome: 'defect', takenOutOfService: true })}
-        >
-          Vyřadit
-        </Button>
+        {SEVERITY_BUTTONS.map(({ severity, color, icon: Icon }) => (
+          <Button
+            key={severity}
+            size="xl"
+            color={color}
+            variant={
+              choice?.outcome === 'defect' && choice.severity === severity ? 'filled' : 'light'
+            }
+            leftSection={<Icon />}
+            disabled={readOnly}
+            onClick={() => setChoice({ outcome: 'defect', severity })}
+          >
+            {SEVERITY_LABELS[severity].short}
+          </Button>
+        ))}
       </SimpleGrid>
 
       {choice?.outcome === 'defect' && (
         <Stack gap="sm">
+          <Text size="sm" c="dimmed">
+            {SEVERITY_LABELS[choice.severity].hint}
+          </Text>
           <Textarea
-            label={choice.takenOutOfService ? 'Závada (vyřazení z provozu)' : 'Popis závady'}
+            label={choice.severity === 'red' ? 'Závada (vyřazení z provozu)' : 'Popis závady'}
             placeholder="Např. ohnutý stojan, chybí pojistka nosníku…"
             autosize
             minRows={3}
@@ -285,6 +295,15 @@ function SheetBody({
               setDescriptionError(null);
             }}
           />
+          {choice.severity !== 'red' && (
+            <Checkbox
+              size="md"
+              label="Zahrnout do protokolu"
+              checked={includeInProtocol}
+              disabled={readOnly}
+              onChange={(e) => setIncludeInProtocol(e.currentTarget.checked)}
+            />
+          )}
           <PhotoStrip
             title="Fotky závady"
             photos={defectPhotos}
@@ -296,12 +315,14 @@ function SheetBody({
           />
           <Button
             size="lg"
-            color={choice.takenOutOfService ? 'red' : 'orange'}
+            color={
+              choice.severity === 'red' ? 'red' : choice.severity === 'amber' ? 'orange' : 'teal'
+            }
             loading={saving}
             disabled={readOnly}
             onClick={() => void save(choice)}
           >
-            {choice.takenOutOfService ? 'Uložit a vyřadit z provozu' : 'Uložit závadu'}
+            {choice.severity === 'red' ? 'Uložit a vyřadit z provozu' : 'Uložit závadu'}
           </Button>
         </Stack>
       )}

@@ -150,6 +150,36 @@ describe('organization settings and protocol', () => {
     expect((await api('GET', '/api/organization/logo')).headers['content-type']).toBe('image/png');
   });
 
+  it('prints the traffic light, leaves out minor defects not to include, filters by type', async () => {
+    const { id, items } = await inspectionWithResults();
+    await api(
+      'PUT',
+      `/api/inspections/${id}/results/${items[2]!.id}`,
+      result('defect', {
+        defectDescription: 'Odřený lak',
+        severity: 'green',
+        includeInProtocol: false,
+      }),
+    );
+    const listed = (await api('GET', `/api/inspections/${id}/items`)).json();
+    expect(listed[2].result).toMatchObject({ severity: 'green', includeInProtocol: false });
+    expect(listed[1].result).toMatchObject({ severity: 'red', takenOutOfService: true });
+
+    const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
+    expect(html).toContain('Závažné závady (1)');
+    expect(html).toContain('Prasklá příčka');
+    expect(html).not.toContain('Odřený lak');
+
+    const racks = (await api('GET', '/api/equipment-types'))
+      .json()
+      .find((t: { name: string }) => t.name === 'Regál paletový');
+    const onlyRacks = (
+      await api('GET', `/api/inspections/${id}/protocol.html?equipmentTypeId=${racks.id}`)
+    ).body;
+    expect(onlyRacks).not.toContain('Prasklá příčka');
+    expect(onlyRacks).not.toContain('<h2>Žebřík</h2>');
+  });
+
   it('renders the protocol as HTML and PDF, draft until closed', async () => {
     const { id } = await inspectionWithResults();
     const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
@@ -157,7 +187,7 @@ describe('organization settings and protocol', () => {
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
     expect(html).toContain('Ukázkový sklad s.r.o.');
     expect(html).toContain('Prasklá příčka');
-    expect(html).toContain('Vyřazeno z provozu');
+    expect(html).toContain('Červená – ihned vyřadit z provozu');
     expect(html).toContain('data:image/jpeg;base64,');
     // The type's protocol text with its placeholders filled in.
     expect(html).toContain('provozovna Provozovna Brno');

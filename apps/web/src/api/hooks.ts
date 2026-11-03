@@ -369,7 +369,9 @@ export function useRecordResult(inspectionId: string) {
         itemId,
         outcome: parsed.outcome,
         defectDescription: parsed.outcome === 'defect' ? parsed.defectDescription : null,
-        takenOutOfService: parsed.outcome === 'defect' && parsed.takenOutOfService,
+        takenOutOfService: parsed.takenOutOfService,
+        severity: parsed.severity,
+        includeInProtocol: parsed.includeInProtocol,
         recordedAt: parsed.recordedAt,
         recordedBy: me.id,
         recordedByName: me.displayName,
@@ -585,10 +587,19 @@ export const useReopenInspection = () =>
   );
 
 /** The protocol as HTML (preview in an iframe, printing in the demo). */
-export const useProtocolHtml = (inspectionId: string, enabled: boolean) =>
+export const useProtocolHtml = (
+  inspectionId: string,
+  equipmentTypeId: string | null,
+  enabled: boolean,
+) =>
   useQuery<string, ApiRequestError>({
-    queryKey: ['protocol', inspectionId],
-    queryFn: async () => (await fetchBlob(`/inspections/${inspectionId}/protocol.html`)).text(),
+    queryKey: ['protocol', inspectionId, equipmentTypeId],
+    queryFn: async () =>
+      (
+        await fetchBlob(
+          `/inspections/${inspectionId}/protocol.html${queryString({ equipmentTypeId })}`,
+        )
+      ).text(),
     enabled,
     staleTime: 0,
     gcTime: 0,

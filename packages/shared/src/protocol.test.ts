@@ -58,9 +58,17 @@ describe('renderProtocolHtml', () => {
             itemNumber: '10002',
             location: 'Hala A › Řada 1',
             details: 'Krause',
-            outcome: 'out_of_service',
+            outcome: 'red',
             defectDescription: 'Prasklá štěřina',
             photos: ['data:image/jpeg;base64,AAAA'],
+          },
+          {
+            itemNumber: '10003',
+            location: 'Hala B',
+            details: 'Hailo',
+            outcome: 'amber',
+            defectDescription: 'Chybí patka',
+            photos: [],
           },
           {
             itemNumber: '4001',
@@ -82,9 +90,12 @@ describe('renderProtocolHtml', () => {
     expect(html).toContain('Revize &lt;Novák&gt;');
     expect(html).not.toContain('Revize <Novák>');
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
-    expect(html).toContain('<b>2 / 3</b>zkontrolováno');
+    expect(html).toContain('<b>3 / 4</b>zkontrolováno');
     expect(html).toContain('<p>Druhý odstavec.</p>');
-    expect(html).toContain('Zjištěné závady (1)');
+    // Defects on their own pages: serious (red) first, then the others.
+    expect(html.indexOf('Závažné závady (1)')).toBeGreaterThan(html.indexOf('photo-pages'));
+    expect(html.indexOf('Závažné závady (1)')).toBeLessThan(html.indexOf('Závady (1)'));
+    expect(html).toContain('<th class="c-ok">Vyhovuje</th>');
     expect(html).toContain('<img src="data:image/jpeg;base64,AAAA"');
     expect(html).toContain('Nezkontrolováno');
     expect(html).toContain('Osvědčení č. 12/2025');

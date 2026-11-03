@@ -1,4 +1,4 @@
-import type { InspectionItem, InspectionProgress } from './api/inspections.js';
+import type { InspectionItem, InspectionProgress, Severity } from './api/inspections.js';
 import type { ScanTarget } from './scan-payload.js';
 
 /**
@@ -49,11 +49,32 @@ export const OUTCOME_LABELS = {
   unchecked: 'Nezkontrolováno',
 } as const;
 
+export const SEVERITY_LABELS: Record<Severity, { short: string; hint: string }> = {
+  green: { short: 'Zelená', hint: 'Sledovat, bez omezení provozu' },
+  amber: {
+    short: 'Oranžová',
+    hint: 'Opravit co nejdřív (do 4 týdnů), poškozené místo nezatěžovat',
+  },
+  red: { short: 'Červená', hint: 'Ihned odlehčit a vyřadit z provozu do opravy' },
+};
+
+type LabelledResult = {
+  outcome: 'ok' | 'defect';
+  takenOutOfService: boolean;
+  severity?: Severity | null;
+};
+
+/** Severity of a result for display (older results without severity: red when out of service). */
+export function severityOf(result: LabelledResult): Severity | null {
+  if (result.outcome === 'ok') return null;
+  return result.severity ?? (result.takenOutOfService ? 'red' : 'amber');
+}
+
 /** Label of a result as shown in lists and the protocol. */
-export function outcomeLabel(
-  result: { outcome: 'ok' | 'defect'; takenOutOfService: boolean } | null,
-): string {
+export function outcomeLabel(result: LabelledResult | null): string {
   if (!result) return OUTCOME_LABELS.unchecked;
-  if (result.outcome === 'ok') return OUTCOME_LABELS.ok;
-  return result.takenOutOfService ? OUTCOME_LABELS.outOfService : OUTCOME_LABELS.defect;
+  const severity = severityOf(result);
+  if (!severity) return OUTCOME_LABELS.ok;
+  if (severity === 'red') return OUTCOME_LABELS.outOfService;
+  return `Závada – ${SEVERITY_LABELS[severity].short.toLowerCase()}`;
 }

@@ -15,7 +15,12 @@ import {
   Textarea,
   Title,
 } from '@mantine/core';
-import { LOCATION_SEPARATOR, outcomeLabel, type InspectionResult } from '@revize/shared';
+import {
+  LOCATION_SEPARATOR,
+  outcomeLabel,
+  severityOf,
+  type InspectionResult,
+} from '@revize/shared';
 import { IconFileText, IconLock, IconLockOpen } from '@tabler/icons-react';
 import { useParams } from '@tanstack/react-router';
 import { useMemo, useState, type FormEvent } from 'react';
@@ -34,8 +39,11 @@ import { notifyError, notifySaved } from '../lib/notify.js';
 
 type Filter = 'all' | 'defects' | 'unchecked';
 
-const color = (r: InspectionResult) =>
-  r.outcome === 'ok' ? 'green' : r.takenOutOfService ? 'red' : 'orange';
+const SEVERITY_COLOR = { green: 'teal', amber: 'orange', red: 'red' } as const;
+const color = (r: InspectionResult) => {
+  const severity = severityOf(r);
+  return severity ? SEVERITY_COLOR[severity] : 'green';
+};
 
 function CloseForm({
   inspectionId,
@@ -280,7 +288,14 @@ export function InspectionDetailPage() {
                   </Text>
                 )}
               </Table.Td>
-              <Table.Td>{i.result?.defectDescription}</Table.Td>
+              <Table.Td>
+                {i.result?.defectDescription}
+                {i.result && !i.result.includeInProtocol && (
+                  <Text size="xs" c="dimmed">
+                    Není v protokolu
+                  </Text>
+                )}
+              </Table.Td>
               <Table.Td>
                 {i.result && (
                   <Text size="sm">
@@ -315,6 +330,10 @@ export function InspectionDetailPage() {
       <ProtocolPreview
         inspectionId={inspectionId}
         fileName={`protokol-${data.inspectionDate}.pdf`}
+        types={[...new Set((items.data ?? []).map((i) => i.equipmentTypeId))].map((id) => ({
+          id,
+          name: typeName.get(id) ?? '?',
+        }))}
         opened={dialog === 'protocol'}
         onClose={() => setDialog(null)}
       />

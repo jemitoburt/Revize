@@ -48,9 +48,11 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page).getByRole('heading', { name: '10001', exact: true })).toBeVisible({
     timeout: 15_000,
   });
-  await sheet(page).getByRole('button', { name: 'Závada' }).click();
+  await sheet(page).getByRole('button', { name: 'Oranžová' }).click();
   await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
   await expect(sheet(page).getByText('Popište závadu')).toBeVisible();
+  // Minor (green/amber) defects can be left out of the protocol; included by default.
+  await expect(sheet(page).getByLabel('Zahrnout do protokolu')).toBeChecked();
   await sheet(page).getByLabel('Popis závady').fill('Prasklá příčka');
   const chooser = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
@@ -65,7 +67,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   // The defect and its uploaded photo are on the server.
   await page.getByText('Závady (1)').click();
   await page.getByTestId('item-10001').click();
-  await expect(sheet(page).getByText('Zapsáno: Závada')).toBeVisible();
+  await expect(sheet(page).getByText('Zapsáno: Závada – oranžová')).toBeVisible();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await expect(sheet(page).getByRole('button', { name: 'Zobrazit fotku' })).toHaveCount(1);
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();

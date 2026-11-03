@@ -207,6 +207,8 @@ export function createInspectionsService(db: Db) {
       outcome: row.outcome as InspectionResult['outcome'],
       defectDescription: row.defectDescription,
       takenOutOfService: row.takenOutOfService,
+      severity: row.severity as InspectionResult['severity'],
+      includeInProtocol: row.includeInProtocol,
       recordedAt: row.recordedAt.toISOString(),
       recordedBy: row.recordedBy,
       recordedByName: extra?.name ?? '?',
@@ -382,6 +384,8 @@ export function createInspectionsService(db: Db) {
               outcome: r.result.outcome as InspectionResult['outcome'],
               defectDescription: r.result.defectDescription,
               takenOutOfService: r.result.takenOutOfService,
+              severity: r.result.severity as InspectionResult['severity'],
+              includeInProtocol: r.result.includeInProtocol,
               recordedAt: r.result.recordedAt.toISOString(),
               recordedBy: r.result.recordedBy,
               recordedByName: r.recordedByName ?? '?',
@@ -425,7 +429,9 @@ export function createInspectionsService(db: Db) {
         const values = {
           outcome: input.outcome,
           defectDescription: input.outcome === 'defect' ? input.defectDescription : null,
-          takenOutOfService: input.outcome === 'defect' && input.takenOutOfService,
+          takenOutOfService: input.takenOutOfService,
+          severity: input.severity,
+          includeInProtocol: input.includeInProtocol,
           recordedAt,
           recordedBy: auth.userId,
         };
@@ -461,6 +467,8 @@ export function createInspectionsService(db: Db) {
             existing.outcome === values.outcome &&
             existing.defectDescription === values.defectDescription &&
             existing.takenOutOfService === values.takenOutOfService &&
+            existing.severity === values.severity &&
+            existing.includeInProtocol === values.includeInProtocol &&
             existing.recordedAt.getTime() === recordedAt.getTime() &&
             existing.recordedBy === auth.userId;
           if (unchanged) return resultDto(tx, existing);

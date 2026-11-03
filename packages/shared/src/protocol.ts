@@ -54,9 +54,13 @@ export interface ProtocolCompany {
 export interface ProtocolItem {
   itemNumber: string;
   location: string;
-  /** Selected field values, e.g. "Alve · Opěrný · 8 příček". */
+  /** Name with description: the type and selected field values ("Alve · Opěrný · 8 příček"). */
   details: string;
-  outcome: 'ok' | 'defect' | 'out_of_service' | 'unchecked';
+  /**
+   * Result as printed. A minor defect the technician left out of the protocol is printed as
+   * `ok` without its note (`includeInProtocol`, decided by the service that builds the data).
+   */
+  outcome: 'ok' | 'green' | 'amber' | 'red' | 'unchecked';
   defectDescription: string | null;
   /** data: URLs of defect photo thumbnails. */
   photos: string[];
@@ -86,11 +90,10 @@ export interface ProtocolData {
   generatedAt: string;
 }
 
-const OUTCOME_TEXT: Record<ProtocolItem['outcome'], string> = {
-  ok: 'V pořádku',
-  defect: 'Závada',
-  out_of_service: 'Vyřazeno z provozu',
-  unchecked: 'Nezkontrolováno',
+const SEVERITY_TEXT: Record<'green' | 'amber' | 'red', string> = {
+  red: 'Červená – ihned vyřadit z provozu',
+  amber: 'Oranžová – opravit co nejdřív',
+  green: 'Zelená – sledovat',
 };
 
 const escape = (text: string) =>
@@ -110,6 +113,11 @@ const paragraphs = (text: string) =>
     .filter(Boolean)
     .map((p) => `<p>${escape(p).replace(/\n/g, '<br>')}</p>`)
     .join('');
+const box = (checked: boolean) => `<span class="box">${checked ? '&#10003;' : ''}</span>`;
+
+const isDefect = (o: ProtocolItem['outcome']): o is 'green' | 'amber' | 'red' =>
+  o === 'green' || o === 'amber' || o === 'red';
+const SEVERITY_ORDER = { red: 0, amber: 1, green: 2 } as const;
 
 function counts(sections: ProtocolSection[]) {
   const all = sections.flatMap((s) => s.items);
@@ -117,8 +125,9 @@ function counts(sections: ProtocolSection[]) {
   return {
     total: all.length,
     ok: by('ok'),
-    defect: by('defect'),
-    out: by('out_of_service'),
+    green: by('green'),
+    amber: by('amber'),
+    red: by('red'),
     unchecked: by('unchecked'),
   };
 }
@@ -140,16 +149,23 @@ table { width: 100%; border-collapse: collapse; }
 .info td { padding: 1.2mm 2mm; vertical-align: top; border-bottom: 1px solid #e3e6ea; }
 .info td:first-child { width: 34mm; color: #555; }
 .summary { display: flex; gap: 3mm; margin: 2mm 0; }
-.summary div { flex: 1; border: 1px solid #d4d9df; border-radius: 2mm; padding: 2mm; text-align: center; }
-.summary b { display: block; font-size: 14pt; }
-.items th { text-align: left; background: #eef2f6; padding: 1.5mm 2mm; font-size: 8.5pt; border-bottom: 1px solid #c9d1da; }
-.items td { padding: 1.3mm 2mm; border-bottom: 1px solid #e3e6ea; vertical-align: top; }
+.summary div { flex: 1; border: 1px solid #d4d9df; border-radius: 2mm; padding: 2mm; text-align: center; font-size: 8.5pt; }
+.summary b { display: block; font-size: 13pt; }
+.items { table-layout: fixed; }
+.items th { text-align: left; background: #eef2f6; padding: 1.5mm 2mm; font-size: 8.5pt; border: 1px solid #c9d1da; }
+.items td { padding: 1.3mm 2mm; border: 1px solid #d4d9df; vertical-align: top; overflow-wrap: anywhere; }
 .items tr { page-break-inside: avoid; }
+.items .c-num { width: 17mm; } .items .c-ok { width: 25mm; text-align: center; white-space: nowrap; }
+.items .c-note { width: 62mm; }
+.where { color: #555; font-size: 8pt; }
+.box { display: inline-block; width: 3.4mm; height: 3.4mm; border: 1px solid #1a1a1a; line-height: 3.2mm; text-align: center; font-size: 8pt; vertical-align: -0.6mm; margin: 0 0.8mm 0 1.8mm; }
 .num { font-family: 'Noto Sans Mono', 'DejaVu Sans Mono', monospace; font-weight: 700; white-space: nowrap; }
-.r-ok { color: #15803d; font-weight: 600; } .r-defect { color: #c2410c; font-weight: 700; }
-.r-out_of_service { color: #b91c1c; font-weight: 700; } .r-unchecked { color: #6b7280; }
-.defect { page-break-inside: avoid; border: 1px solid #e3e6ea; border-left: 3px solid #c2410c; padding: 2mm 3mm; margin-bottom: 3mm; }
-.defect.out_of_service { border-left-color: #b91c1c; }
+.dot { display: inline-block; width: 2.6mm; height: 2.6mm; border-radius: 50%; margin-right: 1.2mm; vertical-align: -0.3mm; }
+.s-red { background: #b91c1c; } .s-amber { background: #ea8c00; } .s-green { background: #15803d; }
+.t-red { color: #b91c1c; } .t-amber { color: #b45309; } .t-green { color: #15803d; } .t-unchecked { color: #6b7280; }
+.photo-pages { page-break-before: always; }
+.defect { page-break-inside: avoid; border: 1px solid #e3e6ea; border-left: 3px solid #b45309; padding: 2mm 3mm; margin-bottom: 3mm; }
+.defect.red { border-left-color: #b91c1c; } .defect.green { border-left-color: #15803d; }
 .photos { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
 .photos img { width: 42mm; height: 32mm; object-fit: cover; border: 1px solid #d4d9df; }
 .signatures { display: flex; gap: 12mm; margin-top: 14mm; page-break-inside: avoid; }
@@ -157,15 +173,27 @@ table { width: 100%; border-collapse: collapse; }
 .footer { margin-top: 8mm; font-size: 8pt; color: #555; }
 `;
 
-/** The protocol as a complete HTML document (A4, print styles). */
+/**
+ * The protocol as a complete HTML document (A4, print styles). Per equipment type: its own
+ * protocol text and a table "number | name and description | complies yes/no | note/defect".
+ * Defects with reduced photos follow on separate pages, the serious (red) ones first.
+ */
 export function renderProtocolHtml(data: ProtocolData): string {
   const c = data.company;
   const sum = counts(data.sections);
-  const defects = data.sections.flatMap((s) =>
-    s.items
-      .filter((i) => i.outcome === 'defect' || i.outcome === 'out_of_service')
-      .map((i) => ({ ...i, typeName: s.typeName })),
-  );
+  const defects = data.sections
+    .flatMap((s) =>
+      s.items
+        .filter((i) => isDefect(i.outcome))
+        .map((i) => ({
+          ...i,
+          outcome: i.outcome as 'green' | 'amber' | 'red',
+          typeName: s.typeName,
+        })),
+    )
+    .sort((a, b) => SEVERITY_ORDER[a.outcome] - SEVERITY_ORDER[b.outcome]);
+  const serious = defects.filter((d) => d.outcome === 'red');
+  const other = defects.filter((d) => d.outcome !== 'red');
   const companyLines = [
     c.address,
     c.companyId && `IČO: ${c.companyId}`,
@@ -173,40 +201,53 @@ export function renderProtocolHtml(data: ProtocolData): string {
     c.web,
   ].filter(Boolean) as string[];
 
+  const row = (i: ProtocolItem) => {
+    const complies = i.outcome === 'ok' ? true : isDefect(i.outcome) ? false : null;
+    const note = isDefect(i.outcome)
+      ? `<span class="dot s-${i.outcome}"></span><span class="t-${i.outcome}">${escape(
+          i.defectDescription ?? '',
+        )}</span>`
+      : i.outcome === 'unchecked'
+        ? '<span class="t-unchecked">Nezkontrolováno</span>'
+        : '';
+    return `<tr><td class="num">${escape(i.itemNumber)}</td><td>${escape(i.details)}<div class="where">${escape(
+      i.location,
+    )}</div></td><td class="c-ok">ano${box(complies === true)} ne${box(complies === false)}</td><td>${note}</td></tr>`;
+  };
+
   const sections = data.sections
     .map(
       (s) => `
 <h2>${escape(s.typeName)}</h2>
 ${paragraphs(s.text)}
 <table class="items">
-  <thead><tr><th>Číslo</th><th>Umístění</th><th>Údaje</th><th>Výsledek</th><th>Závada / poznámka</th></tr></thead>
-  <tbody>${s.items
-    .map(
-      (i) =>
-        `<tr><td class="num">${escape(i.itemNumber)}</td><td>${escape(i.location)}</td><td>${escape(
-          i.details,
-        )}</td><td class="r-${i.outcome}">${OUTCOME_TEXT[i.outcome]}</td><td>${escape(
-          i.defectDescription ?? '',
-        )}</td></tr>`,
-    )
-    .join('')}</tbody>
+  <colgroup><col class="c-num"><col><col class="c-ok"><col class="c-note"></colgroup>
+  <thead><tr><th>Číslo</th><th>Název a popis</th><th class="c-ok">Vyhovuje</th><th>Poznámka / závada</th></tr></thead>
+  <tbody>${s.items.map(row).join('')}</tbody>
 </table>`,
     )
     .join('');
 
-  const defectList = defects.length
-    ? `<h2>Zjištěné závady (${defects.length})</h2>${defects
-        .map(
-          (d) => `
+  const defectCard = (d: (typeof defects)[number]) => `
 <div class="defect ${d.outcome}">
   <strong class="num">${escape(d.itemNumber)}</strong> · ${escape(d.typeName)} · ${escape(d.location)}
-  · <span class="r-${d.outcome}">${OUTCOME_TEXT[d.outcome]}</span>
+  · <span class="t-${d.outcome}"><span class="dot s-${d.outcome}"></span>${SEVERITY_TEXT[d.outcome]}</span>
   <div>${escape(d.defectDescription ?? '')}</div>
   ${d.photos.length ? `<div class="photos">${d.photos.map((p) => `<img src="${p}" alt="">`).join('')}</div>` : ''}
-</div>`,
-        )
-        .join('')}`
-    : '';
+</div>`;
+
+  const photoPages =
+    defects.length || data.overviewPhotos.length
+      ? `<div class="photo-pages">
+${serious.length ? `<h2>Závažné závady (${serious.length})</h2>${serious.map(defectCard).join('')}` : ''}
+${other.length ? `<h2>Závady (${other.length})</h2>${other.map(defectCard).join('')}` : ''}
+${
+  data.overviewPhotos.length
+    ? `<h2>Fotodokumentace kontroly</h2><div class="photos">${data.overviewPhotos.map((p) => `<img src="${p}" alt="">`).join('')}</div>`
+    : ''
+}
+</div>`
+      : '';
 
   return `<!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><title>Protokol ${escape(data.number)}</title>
@@ -230,21 +271,16 @@ ${data.final ? '' : '<div class="draft">PŘEDBĚŽNÝ PROTOKOL – kontrola ješ
 </table>
 <div class="summary">
   <div><b>${sum.total - sum.unchecked} / ${sum.total}</b>zkontrolováno</div>
-  <div><b class="r-ok">${sum.ok}</b>v pořádku</div>
-  <div><b class="r-defect">${sum.defect}</b>se závadou</div>
-  <div><b class="r-out_of_service">${sum.out}</b>vyřazeno z provozu</div>
+  <div><b class="t-green">${sum.ok}</b>vyhovuje</div>
+  <div><b class="t-red">${sum.red}</b>závažné závady</div>
+  <div><b class="t-amber">${sum.amber + sum.green}</b>ostatní závady</div>
 </div>
 ${sections}
-${defectList}
-${
-  data.overviewPhotos.length
-    ? `<h2>Fotodokumentace kontroly</h2><div class="photos">${data.overviewPhotos.map((p) => `<img src="${p}" alt="">`).join('')}</div>`
-    : ''
-}
 <div class="signatures">
   <div>Kontrolu provedl: ${escape(data.leadInspector)}${c.certification ? `<br>${escape(c.certification)}` : ''}</div>
   <div>Za zákazníka převzal (jméno, podpis, datum)</div>
 </div>
 ${c.footer ? `<div class="footer">${paragraphs(c.footer)}</div>` : ''}
+${photoPages}
 </body></html>`;
 }

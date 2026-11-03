@@ -26,6 +26,7 @@ import {
   outcomeLabel,
   parseScanPayload,
   progressOf,
+  severityOf,
   type EquipmentType,
   type InspectionItem,
   type InspectionResult,
@@ -68,11 +69,11 @@ import { ScannerOverlay } from './ScannerOverlay.js';
 type Filter = 'unchecked' | 'defects' | 'all';
 type Source = 'list' | 'scan';
 
-const RESULT_COLORS = { ok: 'green', defect: 'orange', out: 'red' } as const;
+const SEVERITY_COLORS = { green: 'teal', amber: 'orange', red: 'red' } as const;
 
 function resultColor(result: InspectionResult) {
-  if (result.outcome === 'ok') return RESULT_COLORS.ok;
-  return result.takenOutOfService ? RESULT_COLORS.out : RESULT_COLORS.defect;
+  const severity = severityOf(result);
+  return severity ? SEVERITY_COLORS[severity] : 'green';
 }
 
 function matches(item: InspectionItem, text: string) {

@@ -309,6 +309,13 @@ export const inspectionResult = pgTable(
     outcome: text('outcome').notNull(),
     defectDescription: text('defect_description'),
     takenOutOfService: boolean('taken_out_of_service').notNull().default(false),
+    /**
+     * Defect severity by ČSN EN 15635 (traffic light): green = monitor, amber = repair soon,
+     * red = unload and take out of service at once (`taken_out_of_service`). Null for OK.
+     */
+    severity: text('severity'),
+    /** Minor (green/amber) defects can be left out of the protocol; red ones never are. */
+    includeInProtocol: boolean('include_in_protocol').notNull().default(true),
     /** Time on the device when the technician recorded the result. */
     recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull(),
     recordedBy: uuid('recorded_by')
@@ -324,6 +331,14 @@ export const inspectionResult = pgTable(
     check(
       'inspection_result_out_of_service_check',
       sql`${t.outcome} = 'defect' or not ${t.takenOutOfService}`,
+    ),
+    check(
+      'inspection_result_severity_check',
+      sql`(${t.outcome} = 'ok' and ${t.severity} is null) or (${t.outcome} = 'defect' and ${t.severity} in ('green', 'amber', 'red'))`,
+    ),
+    check(
+      'inspection_result_red_check',
+      sql`${t.severity} is distinct from 'red' or (${t.takenOutOfService} and ${t.includeInProtocol})`,
     ),
   ],
 );

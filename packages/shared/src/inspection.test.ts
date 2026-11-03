@@ -50,6 +50,10 @@ describe('progressOf and outcomeLabel', () => {
   it('labels results in Czech', () => {
     expect(outcomeLabel(null)).toBe('Nezkontrolováno');
     expect(outcomeLabel(result('defect', true))).toBe('Vyřazeno z provozu');
+    expect(outcomeLabel({ outcome: 'defect', takenOutOfService: false, severity: 'green' })).toBe(
+      'Závada – zelená',
+    );
+    expect(outcomeLabel(result('defect'))).toBe('Závada – oranžová');
   });
 });
 
@@ -60,6 +64,31 @@ describe('recordResultSchema', () => {
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues[0]?.path).toEqual(['defectDescription']);
   });
+  it('derives the traffic light: red = out of service and always in the protocol', () => {
+    const defect = { ...base, outcome: 'defect' as const, defectDescription: 'Ohnutý nosník' };
+    expect(
+      recordResultSchema.parse({ ...defect, severity: 'red', includeInProtocol: false }),
+    ).toMatchObject({
+      severity: 'red',
+      takenOutOfService: true,
+      includeInProtocol: true,
+    });
+    expect(
+      recordResultSchema.parse({ ...defect, severity: 'green', includeInProtocol: false }),
+    ).toMatchObject({
+      severity: 'green',
+      takenOutOfService: false,
+      includeInProtocol: false,
+    });
+    // Older clients: no severity, only "taken out of service".
+    expect(recordResultSchema.parse({ ...defect, takenOutOfService: true }).severity).toBe('red');
+    expect(recordResultSchema.parse(defect).severity).toBe('amber');
+    expect(recordResultSchema.parse({ ...base, outcome: 'ok' })).toMatchObject({ severity: null });
+    expect(
+      recordResultSchema.safeParse({ ...base, outcome: 'ok', severity: 'green' }).success,
+    ).toBe(false);
+  });
+
   it('allows taking out of service only with a defect', () => {
     expect(
       recordResultSchema.safeParse({ ...base, outcome: 'ok', takenOutOfService: true }).success,

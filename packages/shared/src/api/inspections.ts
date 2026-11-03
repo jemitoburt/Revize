@@ -11,6 +11,13 @@ export type InspectionStatus = (typeof INSPECTION_STATUSES)[number];
 export const OUTCOMES = ['ok', 'defect'] as const;
 export type Outcome = (typeof OUTCOMES)[number];
 
+/**
+ * Defect severity, traffic light of ČSN EN 15635: green = monitor, amber = repair soon,
+ * red = unload and take out of service at once.
+ */
+export const SEVERITIES = ['green', 'amber', 'red'] as const;
+export type Severity = (typeof SEVERITIES)[number];
+
 export const inspectionProgressSchema = z.object({
   /** Items of the site in the inspection's scope (not retired). */
   total: z.number().int(),
@@ -63,6 +70,9 @@ export const inspectionResultSchema = z.object({
   outcome: z.enum(OUTCOMES),
   defectDescription: z.string().nullable(),
   takenOutOfService: z.boolean(),
+  severity: z.enum(SEVERITIES).nullable(),
+  /** Minor defects can be left out of the protocol (red ones are always in it). */
+  includeInProtocol: z.boolean(),
   recordedAt: z.string(),
   recordedBy: idSchema,
   recordedByName: z.string(),
@@ -97,7 +107,10 @@ export const recordResultSchema = z
     id: idSchema,
     outcome: z.enum(OUTCOMES),
     defectDescription: z.string().trim().max(2000).nullable().default(null),
+    /** Required for defects; older clients send only `takenOutOfService` (= red, else amber). */
+    severity: z.enum(SEVERITIES).nullable().optional(),
     takenOutOfService: z.boolean().default(false),
+    includeInProtocol: z.boolean().default(true),
     recordedAt: isoDateTimeSchema,
   })
   .superRefine((value, ctx) => {
@@ -108,13 +121,26 @@ export const recordResultSchema = z
         message: 'Popište závadu',
       });
     }
-    if (value.outcome === 'ok' && value.takenOutOfService) {
+    if (value.outcome === 'ok' && (value.takenOutOfService || value.severity)) {
       ctx.addIssue({
         code: 'custom',
-        path: ['takenOutOfService'],
-        message: 'Vyřadit z provozu lze jen artikl se závadou',
+        path: ['severity'],
+        message: 'Závažnost a vyřazení z provozu patří jen k závadě',
       });
     }
+  })
+  .transform((value) => {
+    if (value.outcome === 'ok') {
+      return { ...value, severity: null, takenOutOfService: false, includeInProtocol: true };
+    }
+    const severity: Severity = value.severity ?? (value.takenOutOfService ? 'red' : 'amber');
+    // Red means out of service and always appears in the protocol.
+    return {
+      ...value,
+      severity,
+      takenOutOfService: severity === 'red',
+      includeInProtocol: severity === 'red' || value.includeInProtocol,
+    };
   });
 export type RecordResultInput = z.input<typeof recordResultSchema>;
 

@@ -43,6 +43,13 @@
       "when": 1793700254866,
       "tag": "0005_rack_bay_load_prefill",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793708038520,
+      "tag": "0006_result_severity",
+      "breakpoints": true
     }
   ]
 }
