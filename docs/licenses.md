@@ -28,16 +28,20 @@ Kontrolu dělá `pnpm run check:licenses` (skript `scripts/check-licenses.mjs`),
 
 ## Schválené výjimky
 
-| Balíček                                          | Licence                 | Proč je to v pořádku                                                                                                                                                       | Schváleno                                 |
-| ------------------------------------------------ | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| sharp → `@img/sharp-libvips-*`                   | LGPL-3.0-or-later       | libvips je dynamicky linkovaná knihovna a provozujeme ji sami (self-hosting, nic nešíříme). sharp samotný má Apache-2.0.                                                   | uživatel, 2026-10-26                      |
-| ExifTool (přes `exiftool-vendored`, MIT wrapper) | Artistic-1.0 / GPL-1.0+ | Spouští se jako samostatný proces, nelinkuje se.                                                                                                                           | uživatel, 2026-10-26                      |
-| `lightningcss`                                   | MPL-2.0                 | Tranzitivní závislost Vite 8, používá se jen při buildu CSS a do aplikace se nedostane. MPL je slabý copyleft na úrovni souborů a týká se jen úprav samotné knihovny.      | evidováno 2026-10-26, nahlášeno uživateli |
-| `caniuse-lite`                                   | CC-BY-4.0               | Data o podpoře v prohlížečích, potřebná jen při buildu.                                                                                                                    | evidováno 2026-10-26, nahlášeno uživateli |
-| `buffers` 0.1.1 (exceljs → unzipper → binary)    | neuvedena               | Malá pomocná knihovna (autor substack) bez licence v balíčku. Používá ji jen čtení XLSX v API. Kdyby nebyla schválena, nahradí se čtení XLSX jinou knihovnou (`parse.ts`). | evidováno 2026-10-28, nahlášeno uživateli |
+| Balíček                                          | Licence                 | Proč je to v pořádku                                                                                                                                                  | Schváleno                                 |
+| ------------------------------------------------ | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| sharp → `@img/sharp-libvips-*`                   | LGPL-3.0-or-later       | libvips je dynamicky linkovaná knihovna a provozujeme ji sami (self-hosting, nic nešíříme). sharp samotný má Apache-2.0.                                              | uživatel, 2026-10-26                      |
+| ExifTool (přes `exiftool-vendored`, MIT wrapper) | Artistic-1.0 / GPL-1.0+ | Spouští se jako samostatný proces, nelinkuje se.                                                                                                                      | uživatel, 2026-10-26                      |
+| `lightningcss`                                   | MPL-2.0                 | Tranzitivní závislost Vite 8, používá se jen při buildu CSS a do aplikace se nedostane. MPL je slabý copyleft na úrovni souborů a týká se jen úprav samotné knihovny. | evidováno 2026-10-26, nahlášeno uživateli |
+| `caniuse-lite`                                   | CC-BY-4.0               | Data o podpoře v prohlížečích, potřebná jen při buildu.                                                                                                               | evidováno 2026-10-26, nahlášeno uživateli |
 
-Permisivní licence mimo základní sadu: `jszip` (MIT OR GPL-3.0, používáme pod MIT), `pako`
-(MIT a Zlib), `chainsaw` (MIT/X11). Všechny jsou tranzitivní závislosti exceljs.
+Permisivní licence mimo základní sadu: `jszip` (MIT OR GPL-3.0, používáme pod MIT) a `pako`
+(MIT a Zlib). Obě jsou tranzitivní závislosti exceljs.
+
+exceljs 4.4 vyžaduje `unzipper` 0.10, který přes `binary` tahal balíček `buffers` bez uvedené
+licence. V `pnpm-workspace.yaml` je proto vynucený `unzipper` 0.12 (stejné API, bez těchto
+závislostí; rozhodnutí uživatele 2026-11-03). exceljs ho používá jen pro proudové čtení,
+které Revize nevyužívá (`parse.ts` čte přes JSZip).
 
 ## Nástroje mimo aplikaci
 

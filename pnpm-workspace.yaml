@@ -1,3 +1,8 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+overrides:
+  # exceljs 4.4 pins unzipper 0.10, whose `binary` → `buffers` has no license (docs/licenses.md).
+  # 0.12 has the same Parse API (used only by exceljs' streaming reader) without them.
+  unzipper: ^0.12.5

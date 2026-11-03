@@ -28,7 +28,6 @@ const APPROVED = {
   '@img/sharp-libvips-': 'LGPL-3.0 libvips used by sharp, dynamically linked (approved 2026-10-26)',
   lightningcss: 'MPL-2.0, build-time CSS tool of Vite, not shipped',
   'caniuse-lite': 'CC-BY-4.0 browser support data, build-time only',
-  buffers: 'no license field (substack, exceljs → unzipper → binary), reported to the user',
 };
 
 const report = JSON.parse(
