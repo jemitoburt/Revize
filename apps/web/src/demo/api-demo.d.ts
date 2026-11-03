@@ -26,10 +26,24 @@ export interface Migration {
   sql: string;
 }
 
+export interface ProcessedImage {
+  width: number;
+  height: number;
+  thumbnail: Uint8Array;
+}
+
+export interface ImageProcessor {
+  process(data: Uint8Array, thumbnailSize: number): Promise<ProcessedImage | null>;
+}
+
 export interface DemoApi {
   handle(request: DemoRequest): Promise<DemoResponse>;
 }
 
 export declare const DEMO_ADMIN: { email: string; password: string };
 export declare function applyMigrations(client: PGlite, migrations: Migration[]): Promise<void>;
-export declare function createDemoApi(client: PGlite, migrations: Migration[]): Promise<DemoApi>;
+export declare function createDemoApi(
+  client: PGlite,
+  migrations: Migration[],
+  images?: ImageProcessor,
+): Promise<DemoApi>;

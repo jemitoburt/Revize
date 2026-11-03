@@ -1,6 +1,13 @@
 import './shims/buffer-global.js';
 import { PGlite } from '@electric-sql/pglite';
-import { createDemoApi, type DemoApi, type DemoRequest, type Migration } from '@revize/api/demo';
+import {
+  createDemoApi,
+  type DemoApi,
+  type DemoRequest,
+  type ImageProcessor,
+  type Migration,
+} from '@revize/api/demo';
+import { resizeToJpeg } from '../lib/images.js';
 
 /** The demo's PostgreSQL database lives in this browser's IndexedDB under this name. */
 const DATABASE_NAME = 'revize-demo';
@@ -19,12 +26,28 @@ const migrations: Migration[] = Object.entries(sqlFiles).map(([path, sql]) => ({
   sql,
 }));
 
+/** Thumbnails in the browser instead of sharp. */
+const canvasImages: ImageProcessor = {
+  async process(data, thumbnailSize) {
+    try {
+      const { blob, width, height } = await resizeToJpeg(
+        new Blob([new Uint8Array(data)]),
+        thumbnailSize,
+        0.75,
+      );
+      return { width, height, thumbnail: new Uint8Array(await blob.arrayBuffer()) };
+    } catch {
+      return null;
+    }
+  },
+};
+
 let started: Promise<{ client: PGlite; api: DemoApi }> | null = null;
 
 function demo() {
   started ??= PGlite.create(`idb://${DATABASE_NAME}`).then(async (client) => ({
     client,
-    api: await createDemoApi(client, migrations),
+    api: await createDemoApi(client, migrations, canvasImages),
   }));
   return started;
 }

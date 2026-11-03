@@ -103,6 +103,39 @@ describe('demo runtime (API on PGlite)', () => {
     expect(commit.data).toMatchObject({ created: 1, locationsCreated: 1 });
   });
 
+  it('runs an inspection with results and photos', async () => {
+    const id = '0190e8a0-0000-7000-8000-00000000a001';
+    const customer = (await call('GET', '/api/customers')).data.find(
+      (c: { name: string }) => c.name === 'Ukázkový sklad s.r.o.',
+    );
+    const site = (await call('GET', `/api/customers/${customer.id}/sites`)).data[0];
+    const started = await call('PUT', `/api/inspections/${id}`, {
+      siteId: site.id,
+      inspectionDate: '2026-11-03',
+    });
+    expect(started.status).toBe(201);
+    const items = (await call('GET', `/api/inspections/${id}/items`)).data;
+    expect(items.length).toBeGreaterThan(30);
+    const recorded = await call('PUT', `/api/inspections/${id}/results/${items[0].id}`, {
+      id: '0190e8a0-0000-7000-8000-00000000a002',
+      outcome: 'defect',
+      defectDescription: 'Chybí pojistka',
+      recordedAt: new Date().toISOString(),
+    });
+    expect(recorded.status).toBe(200);
+    const photo = await call('PUT', '/api/photos/0190e8a0-0000-7000-8000-00000000a003', undefined, {
+      body: {
+        fields: { owner: 'result', itemId: items[0].id, inspectionId: id },
+        file: { filename: 'f.jpg', mimetype: 'image/jpeg', data: new Uint8Array([1, 2, 3]) },
+      },
+    });
+    expect(photo.status).toBe(201);
+    const thumb = await call('GET', '/api/photos/0190e8a0-0000-7000-8000-00000000a003/thumbnail');
+    expect([...(thumb.body as Uint8Array)]).toEqual([1, 2, 3]);
+    const detail = await call('GET', `/api/inspections/${id}`);
+    expect(detail.data.progress).toMatchObject({ checked: 1, defect: 1 });
+  });
+
   it('keeps data in the database across runtime restarts', async () => {
     const again = await createDemoApi(client, migrations);
     demo = again;

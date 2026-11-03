@@ -1,8 +1,5 @@
-import { createReadStream, createWriteStream } from 'node:fs';
-import { mkdir, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, resolve, sep } from 'node:path';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 import { newId } from '@revize/shared';
 import type { FileStorage } from './file-storage.js';
 
@@ -14,12 +11,12 @@ export class LocalDiskStorage implements FileStorage {
   }
 
   /** Writes to a temp file first and renames it, so readers never see a half-written file. */
-  async put(key: string, data: Buffer | Readable): Promise<{ size: number }> {
+  async put(key: string, data: Uint8Array): Promise<{ size: number }> {
     const target = this.pathOf(key);
     await mkdir(dirname(target), { recursive: true });
     const temp = `${target}.${newId()}.tmp`;
     try {
-      await pipeline(Buffer.isBuffer(data) ? Readable.from([data]) : data, createWriteStream(temp));
+      await writeFile(temp, data);
       await rename(temp, target);
     } catch (error) {
       await rm(temp, { force: true });
@@ -28,10 +25,8 @@ export class LocalDiskStorage implements FileStorage {
     return { size: (await stat(target)).size };
   }
 
-  async get(key: string): Promise<Readable> {
-    const path = this.pathOf(key);
-    await stat(path); // fail early with ENOENT instead of on first read
-    return createReadStream(path);
+  async read(key: string): Promise<Uint8Array> {
+    return readFile(this.pathOf(key));
   }
 
   async exists(key: string): Promise<boolean> {

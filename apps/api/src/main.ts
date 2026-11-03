@@ -3,10 +3,17 @@ import { bootstrap } from './bootstrap.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
+import { LocalDiskStorage } from './infra/local-disk-storage.js';
+import { SharpImageProcessor } from './infra/sharp-image-processor.js';
 
 const config = loadConfig();
 const database = createDatabase(config.DATABASE_URL);
-const app = await buildApp({ config, db: database.db });
+const app = await buildApp({
+  config,
+  db: database.db,
+  files: new LocalDiskStorage(config.FILES_DIR),
+  images: new SharpImageProcessor(),
+});
 
 try {
   if (config.MIGRATE_ON_START) {

@@ -15,15 +15,19 @@ import { authPlugin } from './auth/plugin.js';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
 import { errorResponse } from './error-response.js';
+import type { FileStorage } from './infra/file-storage.js';
+import type { ImageProcessor } from './infra/image-processor.js';
 import { registerApiRoutes } from './routes.js';
 
 export interface AppDeps {
   config: Config;
   db: Db;
+  files: FileStorage;
+  images: ImageProcessor;
   logger?: FastifyServerOptions['logger'];
 }
 
-export async function buildApp({ config, db, logger }: AppDeps) {
+export async function buildApp({ config, db, files, images, logger }: AppDeps) {
   useCzechValidationMessages();
 
   const app = Fastify({
@@ -67,7 +71,9 @@ export async function buildApp({ config, db, logger }: AppDeps) {
   await app.register(swaggerUi, { routePrefix: '/api/docs' });
   await app.register(authPlugin, { db, config });
 
-  await app.register((api) => registerApiRoutes(api, { db, config }), { prefix: '/api' });
+  await app.register((api) => registerApiRoutes(api, { db, config, files, images }), {
+    prefix: '/api',
+  });
 
   return app;
 }

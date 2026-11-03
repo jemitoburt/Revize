@@ -1,6 +1,9 @@
 // Starts the API for the web e2e tests on a freshly created database.
 // Needs a PostgreSQL server (TEST_DATABASE_URL, e.g. `pnpm db:test`).
 import { spawn } from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 
@@ -28,6 +31,7 @@ const child = spawn('pnpm', ['exec', 'tsx', 'src/main.ts'], {
     ADMIN_PASSWORD: 'admin-heslo-123',
     SEED_DEMO: 'false',
     LOG_LEVEL: 'warn',
+    FILES_DIR: mkdtempSync(join(tmpdir(), 'revize-e2e-files-')),
   },
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill(signal));

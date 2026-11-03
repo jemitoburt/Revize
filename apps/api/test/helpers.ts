@@ -1,3 +1,6 @@
+import { mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { sql } from 'drizzle-orm';
 import type { LightMyRequestResponse } from 'fastify';
 import { inject } from 'vitest';
@@ -5,6 +8,8 @@ import { buildApp, type App } from '../src/app.js';
 import { bootstrap } from '../src/bootstrap.js';
 import { loadConfig, type Config } from '../src/config.js';
 import { createDatabase, type Database } from '../src/db/client.js';
+import { LocalDiskStorage } from '../src/infra/local-disk-storage.js';
+import { SharpImageProcessor } from '../src/infra/sharp-image-processor.js';
 
 export const ADMIN = { email: 'admin@test.cz', password: 'admin-heslo-123' };
 
@@ -29,7 +34,14 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     ...env,
   });
   const database = createDatabase(config.DATABASE_URL);
-  const app = await buildApp({ config, db: database.db, logger: false });
+  const filesDir = await mkdtemp(join(tmpdir(), 'revize-files-'));
+  const app = await buildApp({
+    config,
+    db: database.db,
+    files: new LocalDiskStorage(filesDir),
+    images: new SharpImageProcessor(),
+    logger: false,
+  });
 
   return {
     app,

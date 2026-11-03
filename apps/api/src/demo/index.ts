@@ -6,9 +6,12 @@ import { bootstrap } from '../bootstrap.js';
 import type { Config } from '../config.js';
 import type { Db } from '../db/client.js';
 import * as schema from '../db/schema.js';
+import type { ImageProcessor } from '../infra/image-processor.js';
 import { registerApiRoutes } from '../routes.js';
+import { PgliteFileStorage, passThroughImages } from './files.js';
 import { DemoRouter } from './router.js';
 
+export type { ImageProcessor, ProcessedImage } from '../infra/image-processor.js';
 export type { DemoMultipart, DemoRequest, DemoResponse } from './router.js';
 
 export const DEMO_ADMIN = { email: 'admin@revize.local', password: 'demo-heslo' };
@@ -60,9 +63,15 @@ export interface DemoApi {
  * (ADR-0015): same migrations, services, validation and errors as the server. A fresh
  * database gets the demo organization, administrator and data.
  */
-export async function createDemoApi(client: PGlite, migrations: Migration[]): Promise<DemoApi> {
+export async function createDemoApi(
+  client: PGlite,
+  migrations: Migration[],
+  images: ImageProcessor = passThroughImages,
+): Promise<DemoApi> {
   useCzechValidationMessages();
   await applyMigrations(client, migrations);
+  const files = new PgliteFileStorage(client);
+  await files.init();
   const db = drizzle(client, { schema, casing: 'snake_case' }) as unknown as Db;
   const silent = { info: () => {}, warn: () => {} };
   await bootstrap(db, demoConfig, silent as never);
@@ -70,7 +79,7 @@ export async function createDemoApi(client: PGlite, migrations: Migration[]): Pr
   const router = new DemoRouter();
   const root = router.instance();
   await root.register(authPlugin, { db, config: demoConfig });
-  await root.register((api) => registerApiRoutes(api, { db, config: demoConfig }), {
+  await root.register((api) => registerApiRoutes(api, { db, config: demoConfig, files, images }), {
     prefix: '/api',
   });
   return { handle: (request) => router.handle(request) };
