@@ -14,6 +14,9 @@ export interface RowIssue {
   /** Column index, or null for row-level problems. */
   column: number | null;
   message: string;
+  /** Field key and the cell value, for the list of problems (replace / accept / skip). */
+  field?: string;
+  value?: string;
 }
 
 export interface RowCandidate {
@@ -112,11 +115,14 @@ export function buildRowCandidate(
     const fallback = mapping.defaults[field.key]?.trim() ?? '';
     let cell: RawCell = index === null ? null : at(index);
     let fromDefault = false;
+    const original = cellText(cell);
     if (!isEmptyCell(cell)) {
-      const text = normalizeText(cellText(cell));
+      const text = normalizeText(original);
       const replacement = mapping.replacements[field.key]?.find(
         (r) => normalizeText(r.from) === text,
       );
+      // Skipped: the value is left out on purpose (no value, no default, no warning).
+      if (replacement?.skip) continue;
       if (replacement) cell = replacement.to;
     }
     if (isEmptyCell(cell) && fallback) {
@@ -135,7 +141,12 @@ export function buildRowCandidate(
     const keptAsText =
       converted.value === cell && typeof cell === 'string' && field.kind !== 'text';
     if (converted.warning && (!fromDefault || keptAsText)) {
-      warnings.push({ column: index, message: converted.warning });
+      warnings.push({
+        column: index,
+        message: converted.warning,
+        field: field.key,
+        value: fromDefault ? cellText(cell) : original,
+      });
     }
     if (converted.newOptions) newOptions[field.key] = converted.newOptions;
   }

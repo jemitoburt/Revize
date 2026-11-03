@@ -17,6 +17,8 @@ import { useColumnValues } from '../api/hooks.js';
 export interface Replacement {
   from: string;
   to: string;
+  /** Not imported ("Přeskočit" in the problem list). */
+  skip?: boolean;
 }
 
 export interface ImportFieldValuesProps {
@@ -34,7 +36,7 @@ export interface ImportFieldValuesProps {
 const BOOLEAN_VALUES = ['ano', 'ne'];
 
 /** A value input that offers the field's options (any other text is allowed too). */
-function ValueInput({
+export function ValueInput({
   field,
   value,
   onChange,
@@ -90,16 +92,16 @@ export function ImportFieldValues({
   const values = useColumnValues(jobId, opened ? column : null);
   const [draftDefault, setDraftDefault] = useState(defaultValue);
   const [draft, setDraft] = useState<Record<string, string>>(() =>
-    Object.fromEntries(replacements.map((r) => [r.from, r.to])),
+    Object.fromEntries(replacements.filter((r) => !r.skip).map((r) => [r.from, r.to])),
   );
 
   const save = () => {
-    onSave(
-      Object.entries(draft)
-        .filter(([, to]) => to.trim() !== '')
-        .map(([from, to]) => ({ from, to: to.trim() })),
-      draftDefault.trim(),
-    );
+    const typed = Object.entries(draft)
+      .filter(([, to]) => to.trim() !== '')
+      .map(([from, to]) => ({ from, to: to.trim() }));
+    // Values skipped in the problem list stay skipped unless a replacement was typed for them.
+    const skipped = replacements.filter((r) => r.skip && !typed.some((t) => t.from === r.from));
+    onSave([...typed, ...skipped], draftDefault.trim());
     onClose();
   };
 
@@ -154,7 +156,11 @@ export function ImportFieldValues({
                           <ValueInput
                             field={field}
                             ariaLabel={`Nahradit ${v.value}`}
-                            placeholder="ponechat"
+                            placeholder={
+                              replacements.some((r) => r.skip && r.from === v.value)
+                                ? 'přeskočeno'
+                                : 'ponechat'
+                            }
                             value={draft[v.value] ?? ''}
                             onChange={(to) => setDraft((d) => ({ ...d, [v.value]: to }))}
                           />

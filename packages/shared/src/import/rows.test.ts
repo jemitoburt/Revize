@@ -162,3 +162,32 @@ describe('buildRowCandidate with replacements and default values', () => {
     expect(buildRowCandidate(['', '', '', '', '', '', ''], 4, withValues, ladder).empty).toBe(true);
   });
 });
+
+describe('buildRowCandidate for the problem list', () => {
+  it('tells the field and value of a warning and leaves skipped values out', () => {
+    const row = ['10001', '', '', '', 'Alve', 'dvojitý', 'deset'];
+    const warned = buildRowCandidate(row, 2, mapping, ladder);
+    expect(warned.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ column: 5, field: 'ladder_type', value: 'dvojitý' }),
+        expect.objectContaining({ column: 6, field: 'rungs', value: 'deset' }),
+      ]),
+    );
+    const skipped = buildRowCandidate(
+      row,
+      2,
+      {
+        ...mapping,
+        replacements: {
+          ladder_type: [{ from: 'Dvojitý', to: '', skip: true }],
+          rungs: [{ from: 'deset', to: '10' }],
+        },
+      },
+      ladder,
+    );
+    expect(skipped.fieldValues.ladder_type).toBeUndefined();
+    expect(skipped.fieldValues.rungs).toBe(10);
+    expect(skipped.newOptions).toEqual({});
+    expect(skipped.warnings.filter((w) => w.field)).toEqual([]);
+  });
+});

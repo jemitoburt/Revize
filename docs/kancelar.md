@@ -58,6 +58,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      se zatím nic nezapsalo.
      - _Varování_ (hodnota převzatá jako text, nová hodnota číselníku, chybějící povinný údaj)
        import nezastaví. Takové hodnoty doplníte nebo opravíte u artiklu.
+     - **Seznam problémů:** každá nevyhovující hodnota pole je tu jednou i s počtem řádků.
+       _Nahradit_ ji změní za jinou hodnotu ve všech řádcích toho pole. _Přijmout_ ji
+       naimportuje tak, jak je. _Přeskočit_ ji nenaimportuje a pole zůstane prázdné. Po náhradě
+       nebo přeskočení se kontrola spustí znovu a náhrady se zapamatují s mapováním.
      - _Chyby_ (neplatné nebo duplicitní číslo, obsazený QR kód) opravte v souboru, nebo
        zaškrtněte _Přeskočit řádky s chybami_.
    - **Importovat:** proběhne najednou v jedné transakci, takže buď vše, nebo nic. Chybějící

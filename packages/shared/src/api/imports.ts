@@ -46,6 +46,9 @@ const rowMessageSchema = z.object({
   column: z.number().int().nullable(),
   header: z.string().nullable(),
   message: z.string(),
+  /** For field values: the field key and the cell value (problem list actions). */
+  field: z.string().optional(),
+  value: z.string().optional(),
 });
 
 export const importRowResultSchema = z.object({

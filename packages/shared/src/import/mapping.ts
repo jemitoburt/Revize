@@ -33,7 +33,16 @@ export const importMappingSchema = z.object({
   replacements: z
     .record(
       z.string(),
-      z.array(z.object({ from: z.string().max(500), to: z.string().max(500) })).max(500),
+      z
+        .array(
+          z.object({
+            from: z.string().max(500),
+            to: z.string().max(500),
+            /** "Přeskočit": the value is not imported (the field stays empty). */
+            skip: z.boolean().optional(),
+          }),
+        )
+        .max(500),
     )
     .default({}),
   /**

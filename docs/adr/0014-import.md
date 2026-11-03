@@ -54,3 +54,11 @@ Na přání uživatele import řádek se špatným formátem neodmítne:
 - Rozparsovaný soubor leží v DB (JSONB), takže kontrolu jde opakovat se změněným mapováním bez
   nového nahrání. Staré úlohy je časem potřeba mazat (doplní se s provozními skripty v M9).
 - Import do více provozoven nebo typů najednou se dělá jako více importů.
+
+## Doplnění 2026-11-03: seznam problémů
+
+- Varování hodnot polí nesou klíč pole a hodnotu buňky (`field`, `value`). Kancelář je vidí
+  seskupené po poli a hodnotě s akcemi Nahradit, Přijmout a Přeskočit.
+- _Přeskočit_ je náhrada s `skip: true`: hodnota se nenaimportuje a nepoužije se ani hodnota
+  pro všechny artikly. _Přijmout_ jen potvrdí, že se hodnota naimportuje tak, jak je (bez změny
+  dat). Náhrady i přeskočení se ukládají s mapováním typu.

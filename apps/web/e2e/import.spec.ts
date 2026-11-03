@@ -60,6 +60,15 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   await expect(report).toContainText('Číslo 8001 je v souboru už na řádku 2');
   await expect(page.getByText('Hala A › Řada 1').first()).toBeVisible(); // locations to be created
 
+  // The problem list: one line per field and value; skipping leaves the value out.
+  const problems = page.getByTestId('import-problems');
+  await expect(problems.getByTestId('import-problem')).toHaveCount(1);
+  await expect(problems.getByTestId('import-problem')).toContainText('Kolo');
+  await problems.getByRole('button', { name: 'Přeskočit' }).click();
+  // The field is required, so the row now only tells that its value is missing.
+  await expect(report).toContainText('Chybí povinná hodnota „Typ žebříku“');
+  await expect(problems).toBeHidden();
+
   // Back to the mapping: replace the wrong value everywhere and give all items a load.
   await page.getByRole('button', { name: 'Zpět k mapování' }).click();
   await page.getByRole('button', { name: 'Hodnoty pole Typ žebříku' }).click();

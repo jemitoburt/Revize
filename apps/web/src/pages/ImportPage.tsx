@@ -40,6 +40,7 @@ import {
 } from '../api/hooks.js';
 import { downloadFile } from '../api/client.js';
 import { ImportFieldValues } from '../components/ImportFieldValues.js';
+import { ImportProblems, problemKey } from '../components/ImportProblems.js';
 import { ButtonLink } from '../components/links.js';
 import { notifyError } from '../lib/notify.js';
 
@@ -137,6 +138,8 @@ export function ImportPage() {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [skipErrors, setSkipErrors] = useState(false);
   const [onlyProblems, setOnlyProblems] = useState(true);
+  /** Problem list entries accepted as they are (field|value). */
+  const [accepted, setAccepted] = useState<Set<string>>(new Set());
 
   const upload = useUploadImport();
   const suggest = useImportSuggestion();
@@ -183,10 +186,26 @@ export function ImportPage() {
   const fullMapping = (): ImportMappingInput | null =>
     mapping && siteId && typeId ? { ...mapping, siteId, equipmentTypeId: typeId } : null;
 
-  const runValidation = () => {
-    const m = fullMapping();
+  const runValidation = (next: Mapping | null = mapping) => {
+    const m = next && siteId && typeId ? { ...next, siteId, equipmentTypeId: typeId } : null;
     if (!m || !job) return;
     validate.mutate({ jobId: job.id, mapping: m }, { onSuccess: setReport, onError: notifyError });
+  };
+
+  /** Problem list: a replacement (or skip) for one value of one field, then check again. */
+  const replaceValue = (
+    field: string,
+    from: string,
+    replacement: { to: string; skip?: boolean },
+  ) => {
+    if (!mapping) return;
+    const list = (mapping.replacements?.[field] ?? []).filter((r) => r.from !== from);
+    const next = {
+      ...mapping,
+      replacements: { ...mapping.replacements, [field]: [...list, { from, ...replacement }] },
+    };
+    setMapping(next);
+    runValidation(next);
   };
 
   const runImport = () => {
@@ -462,7 +481,7 @@ export function ImportPage() {
             <Button variant="default" onClick={restart}>
               Jiný soubor
             </Button>
-            <Button onClick={runValidation} loading={validate.isPending}>
+            <Button onClick={() => runValidation()} loading={validate.isPending}>
               Zkontrolovat
             </Button>
           </Group>
@@ -530,6 +549,17 @@ export function ImportPage() {
               bezchybné řádky.
             </Alert>
           )}
+          <ImportProblems
+            report={report}
+            definitions={fields}
+            accepted={accepted}
+            busy={validate.isPending}
+            onReplace={(field, value, to) => replaceValue(field, value, { to })}
+            onSkip={(field, value) => replaceValue(field, value, { to: '', skip: true })}
+            onAccept={(field, value) =>
+              setAccepted((set) => new Set([...set, problemKey(field, value)]))
+            }
+          />
           <Group>
             <SegmentedControl
               data={[
