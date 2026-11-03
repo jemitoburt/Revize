@@ -125,10 +125,22 @@ zkušební kopii ho spusťte před velkou aktualizací.
 
 ## Aktualizace
 
+Vývoj jde do větve `main` (ukázka na GitHub Pages se aktualizuje sama). Na server patří větev
+**`produkce`**. Do ní se `main` přesune jen na váš pokyn a jen tehdy, když prošlo CI:
+
+```sh
+git fetch origin && git push origin origin/main:produkce
+```
+
+V Dokploy nastavte u aplikace větev `produkce`. Automatické nasazení po pushi může zůstat
+zapnuté, protože do `produkce` se nic nedostane samo.
+
+Ruční aktualizace bez Dokploy:
+
 ```sh
 cd /opt/Revize
 scripts/backup.sh /srv/zalohy/revize     # vždy před aktualizací
-git pull
+git pull origin produkce
 docker compose up -d --build             # migrace databáze proběhnou samy
 scripts/smoke-test.sh https://<adresa> <admin-email> '<heslo>'
 ```
