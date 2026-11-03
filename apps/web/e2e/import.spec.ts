@@ -33,6 +33,7 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
     '04001;Hala A;Řada 1;Alve;opěrný;9',
     '4002;Hala A;Řada 2;Krause;Kolo;6',
     ';Hala B;;Hailo;Dvojitý (štaflový);8',
+    '4001;Hala A;Řada 1;Alve;Opěrný;10',
   ].join('\n');
   await page
     .locator('input[type=file]')
@@ -40,7 +41,7 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   await page.getByRole('button', { name: 'Načíst soubor' }).click();
 
   await expect(page.getByText('zebriky.csv')).toBeVisible();
-  await expect(page.getByText('3 řádků')).toBeVisible();
+  await expect(page.getByText('4 řádků')).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Sloupec pro Výrobce' })).toHaveValue(
     'Výrobce (sloupec 4)',
   );
@@ -49,23 +50,28 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   );
   await page.getByRole('button', { name: 'Zkontrolovat' }).click();
 
-  await expect(page.getByText('Nové: 2')).toBeVisible();
+  await expect(page.getByText('Nové: 3')).toBeVisible();
+  await expect(page.getByText('S varováním: 1')).toBeVisible();
   await expect(page.getByText('Chyby: 1')).toBeVisible();
   const report = page.getByTestId('import-report');
-  await expect(report).toContainText('Typ žebříku: „Kolo“ není v číselníku');
-  await expect(page.getByText('Hala A › Řada 1')).toBeVisible(); // locations to be created
+  // An unknown option value does not stop the row: it is added to the type's list.
+  await expect(report).toContainText('Typ žebříku: „Kolo“ je nová hodnota číselníku – přidá se');
+  await expect(page.getByText('Typ žebříku: Kolo')).toBeVisible();
+  await expect(report).toContainText('Číslo 4001 je v souboru už na řádku 2');
+  await expect(page.getByText('Hala A › Řada 1').first()).toBeVisible(); // locations to be created
 
-  const importButton = page.getByRole('button', { name: 'Importovat 2 artiklů' });
+  const importButton = page.getByRole('button', { name: 'Importovat 3 artiklů' });
   await expect(importButton).toBeDisabled();
   await page.getByLabel('Přeskočit řádky s chybami').check();
   await importButton.click();
   await expect(page.getByText('Import dokončen')).toBeVisible();
-  await expect(page.getByText(/Nových artiklů: 2/)).toBeVisible();
+  await expect(page.getByText(/Nových artiklů: 3/)).toBeVisible();
 
   await page.getByRole('link', { name: 'Zobrazit artikly' }).click();
   const rows = page.getByTestId('item-row');
-  await expect(rows).toHaveCount(2);
+  await expect(rows).toHaveCount(3);
   await expect(rows.nth(0)).toContainText('4001');
   await expect(rows.nth(0)).toContainText('Hala A › Řada 1');
-  await expect(rows.nth(1)).toContainText('Hala B');
+  await expect(rows.nth(1)).toContainText('4002');
+  await expect(rows.nth(2)).toContainText('Hala B');
 });

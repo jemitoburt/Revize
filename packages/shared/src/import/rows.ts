@@ -1,8 +1,4 @@
-import {
-  applyDefaultProducts,
-  buildFieldValuesSchema,
-  type FieldDefinition,
-} from '../equipment-fields.js';
+import { applyDefaultProducts, type FieldDefinition } from '../equipment-fields.js';
 import { canonicalItemNumber } from '../item-number.js';
 import { cellText, convertCell, isEmptyCell, parseDate, type RawCell } from './cells.js';
 import type { ImportMapping } from './mapping.js';
@@ -22,12 +18,19 @@ export interface RowCandidate {
   nextInspectionDate: string | null;
   locationPath: string[];
   fieldValues: Record<string, unknown>;
+  /** Errors: the row is not imported (only problems with the item's identity). */
   issues: RowIssue[];
+  /** Warnings: the row is imported, e.g. a value kept as text or a new option value. */
+  warnings: RowIssue[];
+  /** Option values to add to select/multiselect fields, by field key. */
+  newOptions: Record<string, string[]>;
 }
 
 /**
  * Turns one spreadsheet row into an item candidate using the mapping and the type's fields.
- * Only checks what can be checked without the database (formats, required fields, options).
+ * Only checks what can be checked without the database. Formats of field values are not locked
+ * hard: values that do not fit are kept (as text) with a warning, missing required values are
+ * warnings too, so that a messy spreadsheet still imports and is cleaned up in the office.
  *
  * `base` are the current values of an existing item that the row updates: empty cells keep
  * them, and required fields that the file does not contain are satisfied by them.
@@ -40,6 +43,8 @@ export function buildRowCandidate(
   base: Record<string, unknown> = {},
 ): RowCandidate {
   const issues: RowIssue[] = [];
+  const warnings: RowIssue[] = [];
+  const newOptions: Record<string, string[]> = {};
   const at = (index: number | null): RawCell => (index === null ? null : (row[index] ?? null));
   const mappedColumns = [
     mapping.itemNumber,
@@ -73,9 +78,9 @@ export function buildRowCandidate(
   if (mapping.nextInspectionDate !== null && !isEmptyCell(at(mapping.nextInspectionDate))) {
     nextInspectionDate = parseDate(at(mapping.nextInspectionDate));
     if (!nextInspectionDate) {
-      issues.push({
+      warnings.push({
         column: mapping.nextInspectionDate,
-        message: `„${cellText(at(mapping.nextInspectionDate))}“ není datum (např. 31.12.2026)`,
+        message: `„${cellText(at(mapping.nextInspectionDate))}“ není datum (např. 31.12.2026) – nepřevzato`,
       });
     }
   }
@@ -89,32 +94,32 @@ export function buildRowCandidate(
   }
 
   const values: Record<string, unknown> = {};
-  const columnOf = new Map<string, number>();
-  for (const field of definitions.filter((f) => !f.archived)) {
+  const active = definitions.filter((f) => !f.archived);
+  for (const field of active) {
     const index = mapping.fields[field.key] ?? null;
     if (index === null) continue;
-    columnOf.set(field.key, index);
     const converted = convertCell(field, at(index));
-    if (converted.ok) values[field.key] = converted.value;
-    else issues.push({ column: index, message: converted.error });
+    // Empty cells do not overwrite values of an existing item.
+    if (converted.value !== null) values[field.key] = converted.value;
+    if (converted.warning) warnings.push({ column: index, message: converted.warning });
+    if (converted.newOptions) newOptions[field.key] = converted.newOptions;
   }
 
-  const failedKeys = new Set(issues.map((i) => i.column));
-  const filled = Object.fromEntries(
-    // Fields with a conversion error are reported once, not again as "required";
-    // empty cells do not overwrite values of an existing item.
-    Object.entries(values).filter(([k, v]) => !failedKeys.has(columnOf.get(k) ?? -1) && v !== null),
-  );
-  const parsed = buildFieldValuesSchema(definitions).safeParse(
-    applyDefaultProducts(definitions, { ...base, ...filled }),
-  );
-  let fieldValues: Record<string, unknown> = {};
-  if (parsed.success) fieldValues = parsed.data;
-  else {
-    for (const issue of parsed.error.issues) {
-      const key = String(issue.path[0]);
-      if (failedKeys.has(columnOf.get(key) ?? -1)) continue;
-      issues.push({ column: columnOf.get(key) ?? null, message: issue.message });
+  const fieldValues = applyDefaultProducts(definitions, { ...base, ...values });
+  if (!empty) {
+    for (const field of active) {
+      const value = fieldValues[field.key];
+      const missing =
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        (Array.isArray(value) && !value.length);
+      if (field.required && missing) {
+        warnings.push({
+          column: mapping.fields[field.key] ?? null,
+          message: `Chybí povinná hodnota „${field.label}“ – doplňte ji v kanceláři`,
+        });
+      }
     }
   }
 
@@ -127,5 +132,7 @@ export function buildRowCandidate(
     locationPath,
     fieldValues,
     issues,
+    warnings,
+    newOptions,
   };
 }

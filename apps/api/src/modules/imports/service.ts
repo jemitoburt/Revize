@@ -3,6 +3,7 @@ import {
   mappingHeaders,
   newId,
   normalizeText,
+  type FieldDefinition,
   suggestMapping,
   type ImportJob,
   type ImportMapping,
@@ -49,8 +50,25 @@ interface PlannedRow {
 interface Analysis {
   report: ImportReport;
   planned: PlannedRow[];
+  type: typeof equipmentType.$inferSelect;
   customerId: string;
   locationsByKey: Map<string, LocationRow>;
+}
+
+/** Option values that rows bring into select fields, merged per field (first spelling wins). */
+function newOptionsOf(definitions: FieldDefinition[], rows: PlannedRow[]) {
+  return definitions.flatMap((field) => {
+    const known = new Set(field.options.map(normalizeText));
+    const values: string[] = [];
+    for (const { candidate } of rows) {
+      for (const value of candidate.newOptions[field.key] ?? []) {
+        if (known.has(normalizeText(value))) continue;
+        known.add(normalizeText(value));
+        values.push(value);
+      }
+    }
+    return values.length ? [{ fieldKey: field.key, label: field.label, values }] : [];
+  });
 }
 
 function toJobDto(job: JobRow, sheets: string[]): ImportJob {
@@ -189,6 +207,7 @@ export function createImportsService(db: Db) {
           )
         : firstCandidate;
       const issues = candidate.issues.map((i) => ({ ...i, header: header(i.column) }));
+      const warnings = candidate.warnings.map((i) => ({ ...i, header: header(i.column) }));
       const add = (column: number | null, message: string) =>
         issues.push({ column, header: header(column), message });
 
@@ -202,6 +221,7 @@ export function createImportsService(db: Db) {
             itemNumber: null,
             locationPath: [],
             issues: [],
+            warnings: [],
           },
         });
         continue;
@@ -259,6 +279,7 @@ export function createImportsService(db: Db) {
           itemNumber: candidate.itemNumber,
           locationPath: candidate.locationPath,
           issues,
+          warnings,
         },
       });
     }
@@ -266,6 +287,9 @@ export function createImportsService(db: Db) {
     const rows = planned.map((p) => p.result);
     const count = (action: ImportRowResult['action']) =>
       rows.filter((r) => r.action === action).length;
+    const imported = planned.filter(
+      (p) => p.result.action === 'create' || p.result.action === 'update',
+    );
     return {
       report: {
         summary: {
@@ -274,17 +298,28 @@ export function createImportsService(db: Db) {
           update: count('update'),
           skip: count('skip'),
           error: count('error'),
+          warning: imported.filter((p) => p.result.warnings.length > 0).length,
         },
         newLocations: [...newLocations.values()],
+        newOptions: newOptionsOf(definitions, imported),
         rows,
       },
       planned,
+      type,
       customerId: targetSite.customerId,
       locationsByKey,
     };
   }
 
   /** Creates missing locations level by level; returns the location id for every path key. */
+  /** The new option values of the rows that are actually imported. */
+  function newOptionsReport(analysis: Analysis) {
+    const imported = analysis.planned.filter(
+      (p) => p.result.action === 'create' || p.result.action === 'update',
+    );
+    return { newOptions: newOptionsOf(analysis.type.fieldDefinitions, imported) };
+  }
+
   async function ensureLocations(
     tx: DbOrTx,
     auth: AuthContext,
@@ -424,6 +459,35 @@ export function createImportsService(db: Db) {
         analysis.report.newLocations = analysis.report.newLocations.filter((p) =>
           importedKeys.has(pathKey(p)),
         );
+        // New option values go into the type first, so that the item values match its lists.
+        const { newOptions } = newOptionsReport(analysis);
+        if (newOptions.length) {
+          const added = new Map(newOptions.map((o) => [o.fieldKey, o.values]));
+          const fieldDefinitions = analysis.type.fieldDefinitions.map((f) =>
+            added.has(f.key) ? { ...f, options: [...f.options, ...added.get(f.key)!] } : f,
+          );
+          const [changed] = await tx
+            .update(equipmentType)
+            .set({
+              fieldDefinitions,
+              version: analysis.type.version + 1,
+              schemaVersion: analysis.type.schemaVersion + 1,
+              updatedAt: new Date(),
+            })
+            .where(eq(equipmentType.id, analysis.type.id))
+            .returning();
+          await recordAudit(tx, {
+            organizationId: auth.organizationId,
+            actorUserId: auth.userId,
+            action: 'equipmentType.update',
+            entityType: 'equipment_type',
+            entityId: analysis.type.id,
+            before: analysis.type,
+            after: changed,
+            reason: `Import ${job.fileName}: nové hodnoty číselníku`,
+          });
+        }
+
         const { byKey, created: locationsCreated } = await ensureLocations(
           tx,
           auth,

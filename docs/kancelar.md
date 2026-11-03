@@ -38,7 +38,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Režim:** _Jen nové artikly_ (existující číslo je chyba), nebo _Nové i aktualizovat
      existující_. Při aktualizaci prázdná buňka hodnotu artiklu nemaže.
    - **Kontrola:** ukáže, co se založí, aktualizuje a které řádky mají chybu a proč. Do databáze
-     se zatím nic nezapsalo. Chyby opravte v souboru, nebo zaškrtněte _Přeskočit řádky s chybami_.
+     se zatím nic nezapsalo.
+     - _Varování_ (hodnota převzatá jako text, nová hodnota číselníku, chybějící povinný údaj)
+       import nezastaví. Takové hodnoty doplníte nebo opravíte u artiklu.
+     - _Chyby_ (neplatné nebo duplicitní číslo, obsazený QR kód) opravte v souboru, nebo
+       zaškrtněte _Přeskočit řádky s chybami_.
    - **Importovat:** proběhne najednou v jedné transakci, takže buď vše, nebo nic. Chybějící
      umístění se založí, artikly bez čísla dostanou další volná čísla. Každý artikl má záznam
      v auditu.

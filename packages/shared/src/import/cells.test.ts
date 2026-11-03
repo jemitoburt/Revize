@@ -35,25 +35,40 @@ describe('cell conversion', () => {
   });
 
   it('converts values per field kind', () => {
-    expect(convertCell(text!, ' Alve ')).toEqual({ ok: true, value: 'Alve' });
-    expect(convertCell(integer!, '12')).toEqual({ ok: true, value: 12 });
-    expect(convertCell(integer!, '12,5')).toMatchObject({ ok: false });
-    expect(convertCell(number!, '5,6')).toEqual({ ok: true, value: 5.6 });
-    expect(convertCell(bool!, 'ANO')).toEqual({ ok: true, value: true });
-    expect(convertCell(bool!, 'x')).toEqual({ ok: true, value: true });
-    expect(convertCell(bool!, 'ne')).toEqual({ ok: true, value: false });
-    expect(convertCell(bool!, 'možná')).toMatchObject({ ok: false });
-    expect(convertCell(date!, '14.11.2026')).toEqual({ ok: true, value: '2026-11-14' });
-    expect(convertCell(select!, 'operny')).toEqual({ ok: true, value: 'Opěrný' });
-    expect(convertCell(select!, 'dvojity (staflovy)')).toEqual({
-      ok: true,
-      value: 'Dvojitý (štaflový)',
+    expect(convertCell(text!, ' Alve ')).toEqual({ value: 'Alve' });
+    expect(convertCell(integer!, '12')).toEqual({ value: 12 });
+    expect(convertCell(number!, '5,6')).toEqual({ value: 5.6 });
+    expect(convertCell(bool!, 'ANO')).toEqual({ value: true });
+    expect(convertCell(bool!, 'x')).toEqual({ value: true });
+    expect(convertCell(bool!, 'ne')).toEqual({ value: false });
+    expect(convertCell(date!, '14.11.2026')).toEqual({ value: '2026-11-14' });
+    expect(convertCell(select!, 'operny')).toEqual({ value: 'Opěrný' });
+    expect(convertCell(select!, 'dvojity (staflovy)')).toEqual({ value: 'Dvojitý (štaflový)' });
+    expect(convertCell(multi!, 'a; B')).toEqual({ value: ['A', 'B'] });
+    expect(convertCell(text!, '')).toEqual({ value: null });
+  });
+
+  it('is tolerant: units, rounding, text kept with a warning, new option values', () => {
+    expect(convertCell(integer!, '2 000 kg')).toEqual({
+      value: 2000,
+      warning: '„2 000 kg“ převzato jako 2000',
     });
-    expect(convertCell(select!, 'Kolo')).toMatchObject({
-      ok: false,
-      error: expect.stringContaining('není v číselníku'),
+    expect(convertCell(number!, 'cca 2,5 m').value).toBe(2.5);
+    expect(convertCell(integer!, '12,5')).toEqual({
+      value: 13,
+      warning: '12.5 zaokrouhleno na 13',
     });
-    expect(convertCell(multi!, 'a; B')).toEqual({ ok: true, value: ['A', 'B'] });
-    expect(convertCell(text!, '')).toEqual({ ok: true, value: null });
+    expect(convertCell(integer!, '2 až 3')).toMatchObject({
+      value: '2 až 3',
+      warning: expect.stringContaining('uloženo jako text'),
+    });
+    expect(convertCell(bool!, 'možná')).toMatchObject({ value: 'možná' });
+    expect(convertCell(date!, 'jaro 2026')).toMatchObject({ value: 'jaro 2026' });
+    expect(convertCell(select!, 'Kolo')).toEqual({
+      value: 'Kolo',
+      warning: '„Kolo“ je nová hodnota číselníku – přidá se',
+      newOptions: ['Kolo'],
+    });
+    expect(convertCell(multi!, 'a; Z')).toMatchObject({ value: ['A', 'Z'], newOptions: ['Z'] });
   });
 });

@@ -208,7 +208,9 @@ export function ImportPage() {
       return { ...m, location: location.filter((c) => c !== undefined) };
     });
 
-  const rows = report?.rows.filter((r) => !onlyProblems || r.action === 'error') ?? [];
+  const rows =
+    report?.rows.filter((r) => !onlyProblems || r.action === 'error' || r.warnings.length > 0) ??
+    [];
   const summary = report?.summary;
 
   return (
@@ -425,10 +427,27 @@ export function ImportPage() {
               <Badge size="lg" color="gray">
                 Prázdné řádky: {summary.skip}
               </Badge>
+              <Badge size="lg" color="orange">
+                S varováním: {summary.warning}
+              </Badge>
               <Badge size="lg" color="red">
                 Chyby: {summary.error}
               </Badge>
             </Group>
+            {report.newOptions.length > 0 && (
+              <Stack gap={4} mt="sm">
+                <Text size="sm" fw={500}>
+                  Do číselníků typu se přidají nové hodnoty:
+                </Text>
+                <List size="sm">
+                  {report.newOptions.map((o) => (
+                    <List.Item key={o.fieldKey}>
+                      {o.label}: {o.values.join(', ')}
+                    </List.Item>
+                  ))}
+                </List>
+              </Stack>
+            )}
             {report.newLocations.length > 0 && (
               <Stack gap={4} mt="sm">
                 <Text size="sm" fw={500}>
@@ -443,6 +462,13 @@ export function ImportPage() {
               </Stack>
             )}
           </Paper>
+          {summary.warning > 0 && (
+            <Alert color="orange" title="Některé hodnoty neodpovídají formátu">
+              Řádky s varováním se naimportují. Hodnoty, které nejsou číslo nebo datum, se uloží
+              jako text a chybějící povinné údaje zůstanou prázdné – doplníte je u artiklu v
+              kanceláři.
+            </Alert>
+          )}
           {summary.error > 0 && (
             <Alert color="red" title="Některé řádky mají chyby">
               Opravte je v souboru a nahrajte ho znovu, upravte mapování, nebo naimportujte jen
@@ -452,7 +478,7 @@ export function ImportPage() {
           <Group>
             <SegmentedControl
               data={[
-                { value: 'problems', label: 'Jen chyby' },
+                { value: 'problems', label: 'Chyby a varování' },
                 { value: 'all', label: 'Všechny řádky' },
               ]}
               value={onlyProblems ? 'problems' : 'all'}
@@ -487,12 +513,18 @@ export function ImportPage() {
                         {issue.message}
                       </Text>
                     ))}
+                    {r.warnings.map((warning, i) => (
+                      <Text key={`w${i}`} size="sm" c="orange.8">
+                        {warning.header ? `${warning.header}: ` : ''}
+                        {warning.message}
+                      </Text>
+                    ))}
                   </Table.Td>
                 </Table.Tr>
               ))}
             </Table.Tbody>
           </Table>
-          {rows.length === 0 && <Text c="dimmed">Žádné řádky s chybami.</Text>}
+          {rows.length === 0 && <Text c="dimmed">Žádné řádky s chybami ani varováním.</Text>}
           {rows.length > 500 && <Text c="dimmed">Zobrazeno prvních 500 řádků.</Text>}
           <Group justify="space-between">
             <Button variant="default" onClick={() => setReport(null)}>

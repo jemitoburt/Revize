@@ -42,12 +42,17 @@ describe('buildRowCandidate', () => {
       mapping,
       ladder,
     );
-    const byColumn = Object.fromEntries(candidate.issues.map((i) => [i.column, i.message]));
-    expect(byColumn[0]).toContain('není číslo artiklu');
+    // Only the item number is an error; everything else is imported with a warning.
+    expect(candidate.issues.map((i) => [i.column, i.message])).toEqual([
+      [0, '„10001.5“ není číslo artiklu (1–8 číslic)'],
+    ]);
+    const byColumn = Object.fromEntries(candidate.warnings.map((i) => [i.column, i.message]));
     expect(byColumn[3]).toContain('není datum');
-    expect(byColumn[4]).toContain('povinné');
-    expect(byColumn[5]).toContain('není v číselníku');
-    expect(byColumn[6]).toContain('„deset“ není číslo');
+    expect(byColumn[4]).toContain('Chybí povinná hodnota „Výrobce“');
+    expect(byColumn[5]).toContain('nová hodnota číselníku');
+    expect(byColumn[6]).toContain('„deset“ není číslo – uloženo jako text');
+    expect(candidate.fieldValues).toMatchObject({ ladder_type: 'Kolo', rungs: 'deset' });
+    expect(candidate.newOptions).toEqual({ ladder_type: ['Kolo'] });
     expect(
       buildRowCandidate([10001, null, '', '', 'Alve', 'Opěrný', 8], 4, mapping, ladder).itemNumber,
     ).toBe('10001');

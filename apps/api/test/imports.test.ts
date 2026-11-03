@@ -99,7 +99,14 @@ describe('import', () => {
 
     const mapping = { siteId: site.id, equipmentTypeId: ladder.id, ...suggestion };
     const report = (await api('POST', `/api/imports/${job.id}/validate`, { mapping })).json();
-    expect(report.summary).toEqual({ total: 6, create: 3, update: 0, skip: 1, error: 2 });
+    expect(report.summary).toEqual({
+      total: 6,
+      create: 4,
+      update: 0,
+      skip: 1,
+      error: 1,
+      warning: 1,
+    });
     const byRow = Object.fromEntries(
       report.rows.map((r: { rowNumber: number }) => [r.rowNumber, r]),
     );
@@ -109,16 +116,19 @@ describe('import', () => {
       locationPath: ['Hala A', 'Řada 1'],
     });
     expect(byRow[4]).toMatchObject({ action: 'skip' });
-    const errors5 = byRow[5].issues.map(
+    // Formats are not locked hard: the row imports, its problems are warnings.
+    expect(byRow[5]).toMatchObject({ action: 'create', issues: [] });
+    const warnings5 = byRow[5].warnings.map(
       (i: { header: string; message: string }) => `${i.header}: ${i.message}`,
     );
-    expect(errors5).toEqual(
-      expect.arrayContaining([
-        expect.stringContaining('Typ žebříku: „Kolo“ není v číselníku'),
-        expect.stringContaining('Počet příček: „deset“ není číslo'),
-        expect.stringContaining('Příští revize: „31.2.2026“ není datum'),
-      ]),
-    );
+    expect(warnings5).toEqual([
+      'Příští revize: „31.2.2026“ není datum (např. 31.12.2026) – nepřevzato',
+      'Typ žebříku: „Kolo“ je nová hodnota číselníku – přidá se',
+      'Počet příček: „deset“ není číslo – uloženo jako text',
+    ]);
+    expect(report.newOptions).toEqual([
+      { fieldKey: 'ladder_type', label: 'Typ žebříku', values: ['Kolo'] },
+    ]);
     expect(byRow[6].issues[0].message).toBe('Číslo 4001 je v souboru už na řádku 2');
     expect(byRow[7]).toMatchObject({
       action: 'create',
@@ -154,7 +164,7 @@ describe('import', () => {
     const result = (
       await api('POST', `/api/imports/${job.id}/commit`, { mapping, skipErrors: true })
     ).json();
-    expect(result).toEqual({ created: 3, updated: 0, skipped: 3, locationsCreated: 3 });
+    expect(result).toEqual({ created: 4, updated: 0, skipped: 2, locationsCreated: 3 });
 
     const items = (await api('GET', `/api/items?siteId=${site.id}&sort=itemNumber`)).json().items;
     expect(
@@ -165,6 +175,7 @@ describe('import', () => {
     ).toEqual([
       ['4001', 'Hala A › Řada 1'],
       ['4002', 'Hala A › Řada 2'],
+      ['4003', 'Hala A › Řada 1'],
       ['9000', ''],
       ['9001', 'Hala B'], // automatic number after the highest one
     ]);
@@ -172,6 +183,11 @@ describe('import', () => {
       fieldValues: { manufacturer: 'Alve', ladder_type: 'Opěrný', rungs: 9 },
       nextInspectionDate: '2026-11-14',
     });
+    // Kept as imported; the new option value is now part of the type's list.
+    expect(items[2].fieldValues).toMatchObject({ ladder_type: 'Kolo', rungs: 'deset' });
+    const type = (await api('GET', `/api/equipment-types/${ladder.id}`)).json();
+    const ladderType = type.fieldDefinitions.find((f: { key: string }) => f.key === 'ladder_type');
+    expect(ladderType.options).toContain('Kolo');
 
     const locations = (await api('GET', `/api/sites/${site.id}/locations`)).json();
     expect(locations.map((l: { pathNames: string[] }) => l.pathNames.join(' › '))).toEqual([

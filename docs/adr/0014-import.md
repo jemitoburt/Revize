@@ -27,6 +27,20 @@ nechat databázi napůl naplněnou a technik musí před zápisem vidět, co se 
   uvozovky v řádku záhlaví. `.xls` se nepodporuje.
 - Limity: 10 MB, 20 000 řádků, 200 sloupců.
 
+## Upřesnění 2026-11-03: formáty nejsou tvrdě zamčené
+
+Na přání uživatele import řádek se špatným formátem neodmítne:
+
+- **Čísla** se čtou tolerantně, třeba „2 000 kg“ nebo „cca 2,5 m“. Desetinné číslo v poli pro
+  celé číslo se zaokrouhlí.
+- **Co nejde převést** (číslo, ano/ne, datum), se uloží jako text a v reportu je varování.
+  V kanceláři pak formulář artiklu chce hodnotu opravit, než ho jde uložit.
+- **Hodnota mimo číselník** se přijme a při importu se doplní do číselníku typu (audit s názvem
+  souboru).
+- **Chybějící povinná hodnota** je varování, údaj se doplní v kanceláři.
+- **Chybou** (řádek se neimportuje) zůstává jen to, co se týká identity artiklu: neplatné nebo
+  duplicitní číslo, obsazený QR kód, jiný typ, neexistující umístění.
+
 ## Důsledky
 
 - Rozparsovaný soubor leží v DB (JSONB), takže kontrolu jde opakovat se změněným mapováním bez
