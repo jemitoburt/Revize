@@ -632,3 +632,11 @@ export function useLogoUrl(hasLogo: boolean, version: string) {
     staleTime: Infinity,
   }).data;
 }
+
+/** Distinct values of a column of an uploaded import file (for value replacements). */
+export const useColumnValues = (jobId: string, column: number | null) =>
+  useQuery<{ value: string; count: number }[], ApiRequestError>({
+    queryKey: ['import-values', jobId, column],
+    queryFn: () => api.get(`/imports/${jobId}/columns/${column}/values`),
+    enabled: column !== null,
+  });

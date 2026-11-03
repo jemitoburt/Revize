@@ -24,7 +24,25 @@ export const importMappingSchema = z.object({
   /** Rows without an item number get the next free number (else they are errors). */
   autoNumber: z.boolean().default(true),
   fields: z.record(z.string(), columnRef).default({}),
+  /**
+   * Per field key: replace a cell value with another one in every row ("Kolo" → "Opěrný").
+   * Matched like options (case and diacritics do not matter); applied before conversion.
+   */
+  replacements: z
+    .record(
+      z.string(),
+      z.array(z.object({ from: z.string().max(500), to: z.string().max(500) })).max(500),
+    )
+    .default({}),
+  /**
+   * Per field key: value for every row whose cell is empty or whose field has no column
+   * ("150 kg" for all ladders). Written like a cell, so it is converted the same way.
+   */
+  defaults: z.record(z.string(), z.string().max(500)).default({}),
 });
+
+/** Replacements and default values remembered with the mapping of a type. */
+export type MappingValues = Pick<ImportMapping, 'replacements' | 'defaults'>;
 export type ImportMapping = z.output<typeof importMappingSchema>;
 export type ImportMappingInput = z.input<typeof importMappingSchema>;
 

@@ -41,6 +41,14 @@ Na přání uživatele import řádek se špatným formátem neodmítne:
 - **Chybou** (řádek se neimportuje) zůstává jen to, co se týká identity artiklu: neplatné nebo
   duplicitní číslo, obsazený QR kód, jiný typ, neexistující umístění.
 
+- **Náhrady a hodnota pro všechny** jsou součástí mapování a ukládají se s ním
+  (`import_mapping.values`, migrace `0007`).
+  - `replacements` jsou páry „z → na“ zvlášť pro každé pole, uplatní se před převodem jen na jeho
+    sloupec.
+  - `defaults` je hodnota pole pro prázdné buňky nebo chybějící sloupec. U existujících artiklů
+    nepřepíše vyplněnou hodnotu.
+  - Hodnoty sloupce s počty vrací `GET /imports/:id/columns/:column/values`.
+
 ## Důsledky
 
 - Rozparsovaný soubor leží v DB (JSONB), takže kontrolu jde opakovat se změněným mapováním bez

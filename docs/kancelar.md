@@ -35,6 +35,14 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Mapování:** ke každému poli vyberte sloupec, vedle uvidíte ukázku hodnot. Systém navrhne
      sloupce podle záhlaví a pro daný typ si pamatuje poslední použité mapování. Umístění může
      být ve více sloupcích (Hala, Řada, Pozice) nebo v jednom s oddělovačem (`Hala A / Řada 1`).
+   - **Hodnoty…** u každého pole (platí jen pro to jedno pole, ne pro celý soubor):
+     - _Hodnota pro všechny artikly_ se použije, když pole v souboru nemá sloupec, nebo když je
+       buňka prázdná (např. nosnost „150 kg“). Při aktualizaci nepřepíše vyplněnou hodnotu
+       artiklu.
+     - _Nahradit hodnoty ve sloupci_ ukáže všechny hodnoty sloupce s počtem řádků. Ke každé
+       můžete zadat náhradu (např. „Kolo“ → „Opěrný“) a ta platí pro všechny řádky. Velikost
+       písmen ani diakritika nehrají roli.
+     - Náhrady i hodnoty si systém zapamatuje s mapováním typu pro příští soubor.
    - **Režim:** _Jen nové artikly_ (existující číslo je chyba), nebo _Nové i aktualizovat
      existující_. Při aktualizaci prázdná buňka hodnotu artiklu nemaže.
    - **Kontrola:** ukáže, co se založí, aktualizuje a které řádky mají chybu a proč. Do databáze

@@ -1,6 +1,13 @@
 import { applyDefaultProducts, type FieldDefinition } from '../equipment-fields.js';
 import { canonicalItemNumber } from '../item-number.js';
-import { cellText, convertCell, isEmptyCell, parseDate, type RawCell } from './cells.js';
+import {
+  cellText,
+  convertCell,
+  isEmptyCell,
+  normalizeText,
+  parseDate,
+  type RawCell,
+} from './cells.js';
 import type { ImportMapping } from './mapping.js';
 
 export interface RowIssue {
@@ -97,11 +104,34 @@ export function buildRowCandidate(
   const active = definitions.filter((f) => !f.archived);
   for (const field of active) {
     const index = mapping.fields[field.key] ?? null;
-    if (index === null) continue;
-    const converted = convertCell(field, at(index));
+    const fallback = mapping.defaults[field.key]?.trim() ?? '';
+    let cell: RawCell = index === null ? null : at(index);
+    let fromDefault = false;
+    if (!isEmptyCell(cell)) {
+      const text = normalizeText(cellText(cell));
+      const replacement = mapping.replacements[field.key]?.find(
+        (r) => normalizeText(r.from) === text,
+      );
+      if (replacement) cell = replacement.to;
+    }
+    if (isEmptyCell(cell) && fallback) {
+      // Updates keep the item's own value; the default only fills what is missing.
+      if (base[field.key] !== undefined && base[field.key] !== null && base[field.key] !== '')
+        continue;
+      cell = fallback;
+      fromDefault = true;
+    }
+    if (index === null && isEmptyCell(cell)) continue;
+    const converted = convertCell(field, cell);
     // Empty cells do not overwrite values of an existing item.
     if (converted.value !== null) values[field.key] = converted.value;
-    if (converted.warning) warnings.push({ column: index, message: converted.warning });
+    // The value for all items was typed in the mapping: "150 kg" → 150 needs no warning per row,
+    // only a value that cannot be converted at all (kept as text) does.
+    const keptAsText =
+      converted.value === cell && typeof cell === 'string' && field.kind !== 'text';
+    if (converted.warning && (!fromDefault || keptAsText)) {
+      warnings.push({ column: index, message: converted.warning });
+    }
     if (converted.newOptions) newOptions[field.key] = converted.newOptions;
   }
 

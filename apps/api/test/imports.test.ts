@@ -331,3 +331,50 @@ describe('import', () => {
     expect((await upload('a.csv', Buffer.from('a\n1'), inspector)).statusCode).toBe(403);
   });
 });
+
+describe('import value replacements and defaults', () => {
+  it('lists column values, replaces values, fills defaults and remembers both', async () => {
+    const { site, ladder } = await setup();
+    const job = (await upload('seznam.csv', Buffer.from(CSV, 'utf8'))).json();
+    const values = (await api('GET', `/api/imports/${job.id}/columns/4/values`)).json();
+    expect(values).toEqual(
+      expect.arrayContaining([
+        { value: 'Opěrný', count: 2 },
+        { value: 'Kolo', count: 1 },
+      ]),
+    );
+
+    const suggestion = (
+      await api('GET', `/api/imports/${job.id}/suggestion?equipmentTypeId=${ladder.id}`)
+    ).json();
+    const mapping = {
+      ...suggestion,
+      siteId: site.id,
+      equipmentTypeId: ladder.id,
+      replacements: { ladder_type: [{ from: 'Kolo', to: 'Opěrný' }] },
+      defaults: { max_load_kg: '150 kg' },
+    };
+    delete mapping.fromSavedMapping;
+    const report = (await api('POST', `/api/imports/${job.id}/validate`, { mapping })).json();
+    expect(report.newOptions).toEqual([]);
+    await api('POST', `/api/imports/${job.id}/commit`, { mapping, skipErrors: true });
+    const items = (await api('GET', `/api/items?siteId=${site.id}&sort=itemNumber`)).json().items;
+    const item4003 = items.find((i: { itemNumber: string }) => i.itemNumber === '4003');
+    expect(item4003.fieldValues).toMatchObject({ ladder_type: 'Opěrný', max_load_kg: 150 });
+    expect(
+      items.every(
+        (i: { fieldValues: { max_load_kg: number } }) => i.fieldValues.max_load_kg === 150,
+      ),
+    ).toBe(true);
+
+    // The next file of the same type gets them back with the mapping.
+    const next = (await upload('dalsi.csv', Buffer.from(CSV, 'utf8'))).json();
+    const remembered = (
+      await api('GET', `/api/imports/${next.id}/suggestion?equipmentTypeId=${ladder.id}`)
+    ).json();
+    expect(remembered).toMatchObject({
+      replacements: { ladder_type: [{ from: 'Kolo', to: 'Opěrný' }] },
+      defaults: { max_load_kg: '150 kg' },
+    });
+  });
+});

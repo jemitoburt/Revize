@@ -101,3 +101,61 @@ describe('buildRowCandidate with a default product', () => {
     expect(row('7200').fieldValues.bay_load_kg).toBe(7200);
   });
 });
+
+describe('buildRowCandidate with replacements and default values', () => {
+  const withValues = importMappingSchema.parse({
+    ...mapping,
+    fields: { manufacturer: 4, ladder_type: 5, rungs: 6 },
+    replacements: { ladder_type: [{ from: 'kolo', to: 'Opěrný' }] },
+    defaults: { max_load_kg: '150 kg', manufacturer: 'Neznámý' },
+  });
+
+  it('replaces values in every row and fills fields the sheet does not have', () => {
+    const candidate = buildRowCandidate(
+      ['1', '', '', '', 'Alve', 'Kolo', 8],
+      2,
+      withValues,
+      ladder,
+    );
+    expect(candidate.fieldValues).toMatchObject({
+      manufacturer: 'Alve',
+      ladder_type: 'Opěrný',
+      max_load_kg: 150,
+    });
+    expect(candidate.newOptions).toEqual({});
+    expect(candidate.warnings).toEqual([]);
+    // The default also fills an empty cell of a mapped column.
+    expect(
+      buildRowCandidate(['2', '', '', '', '', 'Opěrný', 8], 3, withValues, ladder).fieldValues
+        .manufacturer,
+    ).toBe('Neznámý');
+  });
+
+  it('replaces only in the field it belongs to', () => {
+    // "8" → "10" for the rungs must not touch an "8" elsewhere (here: the manufacturer column).
+    const perField = importMappingSchema.parse({
+      ...withValues,
+      replacements: { rungs: [{ from: '8', to: '10' }] },
+    });
+    expect(
+      buildRowCandidate(['1', '', '', '', '8', 'Opěrný', 8], 2, perField, ladder).fieldValues,
+    ).toMatchObject({ manufacturer: '8', rungs: 10 });
+  });
+
+  it('keeps an existing value instead of the default when updating', () => {
+    const candidate = buildRowCandidate(
+      ['1', '', '', '', 'Alve', 'Opěrný', 8],
+      2,
+      withValues,
+      ladder,
+      {
+        max_load_kg: 120,
+      },
+    );
+    expect(candidate.fieldValues.max_load_kg).toBe(120);
+  });
+
+  it('does not turn an empty row into an item', () => {
+    expect(buildRowCandidate(['', '', '', '', '', '', ''], 4, withValues, ladder).empty).toBe(true);
+  });
+});

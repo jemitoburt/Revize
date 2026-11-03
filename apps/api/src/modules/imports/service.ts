@@ -1,5 +1,6 @@
 import {
   buildRowCandidate,
+  cellText,
   mappingHeaders,
   newId,
   normalizeText,
@@ -403,14 +404,35 @@ export function createImportsService(db: Db) {
             eq(importMapping.equipmentTypeId, equipmentTypeId),
           ),
         );
+      // Replacements and defaults of fields the type still has.
+      const keys = new Set(type.fieldDefinitions.map((f) => f.key));
+      const pick = <T>(record: Record<string, T> | undefined) =>
+        Object.fromEntries(Object.entries(record ?? {}).filter(([key]) => keys.has(key)));
       return {
         ...suggestMapping(
           job.headers,
           type.fieldDefinitions,
           (saved?.headers ?? {}) as SavedHeaders,
         ),
+        replacements: pick(saved?.values.replacements),
+        defaults: pick(saved?.values.defaults),
         fromSavedMapping: saved !== undefined,
       };
+    },
+
+    /** Distinct values of one column with their counts (most frequent first, at most 200). */
+    async columnValues(auth: AuthContext, jobId: string, column: number) {
+      const job = await getJob(db, auth, jobId);
+      if (column >= job.headers.length) throw notFound('Sloupec v souboru není.');
+      const counts = new Map<string, number>();
+      for (const row of job.rows as RawCell[][]) {
+        const text = cellText(row[column] ?? null);
+        if (text) counts.set(text, (counts.get(text) ?? 0) + 1);
+      }
+      return [...counts]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'cs'))
+        .slice(0, 200)
+        .map(([value, count]) => ({ value, count }));
     },
 
     async validate(
@@ -592,10 +614,15 @@ export function createImportsService(db: Db) {
             organizationId: auth.organizationId,
             equipmentTypeId: mapping.equipmentTypeId,
             headers: mappingHeaders(mapping, job.headers),
+            values: { replacements: mapping.replacements, defaults: mapping.defaults },
           })
           .onConflictDoUpdate({
             target: [importMapping.organizationId, importMapping.equipmentTypeId],
-            set: { headers: mappingHeaders(mapping, job.headers), updatedAt: now },
+            set: {
+              headers: mappingHeaders(mapping, job.headers),
+              values: { replacements: mapping.replacements, defaults: mapping.defaults },
+              updatedAt: now,
+            },
           });
         await recordAudit(tx, {
           organizationId: auth.organizationId,

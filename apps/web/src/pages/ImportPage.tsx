@@ -28,7 +28,7 @@ import {
   type ImportResult,
   type ImportRowResult,
 } from '@revize/shared';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   useCommitImport,
   useCustomers,
@@ -39,6 +39,7 @@ import {
   useValidateImport,
 } from '../api/hooks.js';
 import { downloadFile } from '../api/client.js';
+import { ImportFieldValues } from '../components/ImportFieldValues.js';
 import { ButtonLink } from '../components/links.js';
 import { notifyError } from '../lib/notify.js';
 
@@ -68,12 +69,15 @@ function ColumnSelect({
   job,
   value,
   onChange,
+  extra,
 }: {
   label: string;
   required?: boolean;
   job: ImportJob;
   value: number | null;
   onChange: (value: number | null) => void;
+  /** E.g. the "Hodnoty…" button of a field. */
+  extra?: ReactNode;
 }) {
   const options = [
     { value: '', label: '— nepoužít —' },
@@ -110,6 +114,7 @@ function ColumnSelect({
           {preview}
         </Text>
       </Table.Td>
+      {extra !== undefined && <Table.Td w={1}>{extra}</Table.Td>}
     </Table.Tr>
   );
 }
@@ -124,6 +129,8 @@ export function ImportPage() {
   const [file, setFile] = useState<File | null>(null);
   const [job, setJob] = useState<ImportJob | null>(null);
   const [mapping, setMapping] = useState<Mapping | null>(null);
+  /** Field whose values dialog (replacements, value for all items) is open. */
+  const [valuesOf, setValuesOf] = useState<string | null>(null);
   const [fromSaved, setFromSaved] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -293,6 +300,25 @@ export function ImportPage() {
 
       {step === 1 && job && mapping && (
         <Stack>
+          {valuesOf && fields.some((f) => f.key === valuesOf) && (
+            <ImportFieldValues
+              key={valuesOf}
+              jobId={job.id}
+              field={fields.find((f) => f.key === valuesOf)!}
+              column={mapping.fields[valuesOf] ?? null}
+              replacements={mapping.replacements?.[valuesOf] ?? []}
+              defaultValue={mapping.defaults?.[valuesOf] ?? ''}
+              opened
+              onClose={() => setValuesOf(null)}
+              onSave={(replacements, defaultValue) =>
+                setMapping({
+                  ...mapping,
+                  replacements: { ...mapping.replacements, [valuesOf]: replacements },
+                  defaults: { ...mapping.defaults, [valuesOf]: defaultValue },
+                })
+              }
+            />
+          )}
           <Paper withBorder p="md">
             <Group justify="space-between">
               <Text>
@@ -353,18 +379,40 @@ export function ImportPage() {
                     />
                   ),
                 )}
-                {fields.map((f) => (
-                  <ColumnSelect
-                    key={f.key}
-                    label={f.label}
-                    required={f.required}
-                    job={job}
-                    value={mapping.fields[f.key] ?? null}
-                    onChange={(v) =>
-                      setMapping({ ...mapping, fields: { ...mapping.fields, [f.key]: v } })
-                    }
-                  />
-                ))}
+                {fields.map((f) => {
+                  const count = mapping.replacements?.[f.key]?.length ?? 0;
+                  const fallback = mapping.defaults?.[f.key] ?? '';
+                  return (
+                    <ColumnSelect
+                      key={f.key}
+                      label={f.label}
+                      required={f.required}
+                      job={job}
+                      value={mapping.fields[f.key] ?? null}
+                      onChange={(v) =>
+                        setMapping({ ...mapping, fields: { ...mapping.fields, [f.key]: v } })
+                      }
+                      extra={
+                        <Group gap={6} wrap="nowrap" justify="flex-end">
+                          {fallback && (
+                            <Badge variant="light" title="Hodnota pro všechny artikly">
+                              = {fallback}
+                            </Badge>
+                          )}
+                          {count > 0 && <Badge variant="light">náhrad: {count}</Badge>}
+                          <Button
+                            size="xs"
+                            variant="subtle"
+                            aria-label={`Hodnoty pole ${f.label}`}
+                            onClick={() => setValuesOf(f.key)}
+                          >
+                            Hodnoty…
+                          </Button>
+                        </Group>
+                      }
+                    />
+                  );
+                })}
               </Table.Tbody>
             </Table>
           </Paper>

@@ -1,0 +1,1 @@
+ALTER TABLE "import_mapping" ADD COLUMN "values" jsonb DEFAULT '{}'::jsonb NOT NULL;

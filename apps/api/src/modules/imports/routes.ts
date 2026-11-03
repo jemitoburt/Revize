@@ -1,6 +1,7 @@
 import {
   IMPORT_LIMITS,
   apiErrorSchema,
+  columnValuesSchema,
   commitImportSchema,
   idSchema,
   importJobSchema,
@@ -74,6 +75,20 @@ export const importsRoutes: FastifyPluginAsyncZod<{ imports: ImportsService; db:
       },
     },
     (req) => imports.suggestion(authOf(req), req.params.id, req.query.equipmentTypeId),
+  );
+
+  app.get(
+    '/imports/:id/columns/:column/values',
+    {
+      preHandler: guard,
+      schema: {
+        tags,
+        summary: 'Hodnoty ve sloupci souboru s počty (pro náhrady hodnot)',
+        params: z.object({ id: idSchema, column: z.coerce.number().int().min(0) }),
+        response: { 200: columnValuesSchema, ...errors },
+      },
+    },
+    (req) => imports.columnValues(authOf(req), req.params.id, req.params.column),
   );
 
   app.post(

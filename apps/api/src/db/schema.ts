@@ -438,6 +438,14 @@ export const importMapping = pgTable(
       .notNull()
       .references(() => equipmentType.id),
     headers: jsonb('headers').$type<Record<string, string | string[] | undefined>>().notNull(),
+    /** Value replacements and default values of the last import (`MappingValues`). */
+    values: jsonb('values')
+      .$type<{
+        replacements?: Record<string, { from: string; to: string }[]>;
+        defaults?: Record<string, string>;
+      }>()
+      .notNull()
+      .default({}),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.organizationId, t.equipmentTypeId] })],

@@ -60,6 +60,21 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   await expect(report).toContainText('Číslo 4001 je v souboru už na řádku 2');
   await expect(page.getByText('Hala A › Řada 1').first()).toBeVisible(); // locations to be created
 
+  // Back to the mapping: replace the wrong value everywhere and give all items a load.
+  await page.getByRole('button', { name: 'Zpět k mapování' }).click();
+  await page.getByRole('button', { name: 'Hodnoty pole Typ žebříku' }).click();
+  await expect(page.getByTestId('column-values')).toContainText('Kolo');
+  await page.getByRole('combobox', { name: 'Nahradit Kolo' }).fill('Opěrný');
+  await page.getByRole('button', { name: 'Použít' }).click();
+  await expect(page.getByText('náhrad: 1')).toBeVisible();
+  await page.getByRole('button', { name: 'Hodnoty pole Max. zatížení' }).click();
+  await page.getByLabel('Hodnota pro všechny artikly').fill('150 kg');
+  await page.getByRole('button', { name: 'Použít' }).click();
+  await expect(page.getByText('= 150 kg')).toBeVisible();
+  await page.getByRole('button', { name: 'Zkontrolovat' }).click();
+  await expect(page.getByText('S varováním: 0')).toBeVisible();
+  await expect(page.getByText('Typ žebříku: Kolo')).toHaveCount(0);
+
   const importButton = page.getByRole('button', { name: 'Importovat 3 artiklů' });
   await expect(importButton).toBeDisabled();
   await page.getByLabel('Přeskočit řádky s chybami').check();
@@ -74,4 +89,6 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   await expect(rows.nth(0)).toContainText('Hala A › Řada 1');
   await expect(rows.nth(1)).toContainText('4002');
   await expect(rows.nth(2)).toContainText('Hala B');
+  const imported = await (await page.request.get('/api/items?q=4002')).json();
+  expect(imported.items[0].fieldValues).toMatchObject({ ladder_type: 'Opěrný', max_load_kg: 150 });
 });

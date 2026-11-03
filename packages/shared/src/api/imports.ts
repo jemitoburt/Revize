@@ -24,8 +24,19 @@ export const importJobSchema = z.object({
 export type ImportJob = z.infer<typeof importJobSchema>;
 
 export const importSuggestionSchema = importMappingSchema
-  .pick({ itemNumber: true, qrCode: true, nextInspectionDate: true, location: true, fields: true })
+  .pick({
+    itemNumber: true,
+    qrCode: true,
+    nextInspectionDate: true,
+    location: true,
+    fields: true,
+    replacements: true,
+    defaults: true,
+  })
   .extend({ fromSavedMapping: z.boolean() });
+
+/** Distinct values of a column of the file (for replacements). */
+export const columnValuesSchema = z.array(z.object({ value: z.string(), count: z.number().int() }));
 
 export const IMPORT_ACTIONS = ['create', 'update', 'skip', 'error'] as const;
 export type ImportAction = (typeof IMPORT_ACTIONS)[number];
