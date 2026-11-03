@@ -20,6 +20,7 @@ import {
 } from '@mantine/core';
 import {
   LOCATION_SEPARATOR,
+  canonicalItemNumber,
   findScannedItem,
   newId,
   outcomeLabel,
@@ -33,6 +34,7 @@ import {
 import {
   IconArrowLeft,
   IconCamera,
+  IconCloudUpload,
   IconDialpad,
   IconFlag,
   IconPlus,
@@ -45,18 +47,22 @@ import {
   useDeletePhoto,
   useEquipmentTypes,
   useInspection,
+  useCreateFieldItem,
   useInspectionItems,
+  useOutbox,
+  usePendingPhotos,
   usePhotos,
   useUploadPhoto,
 } from '../api/hooks.js';
 import { ItemForm } from '../components/ItemForm.js';
 import { ButtonLink } from '../components/links.js';
-import { notifyError } from '../lib/notify.js';
+import { notifyError, notifySaved } from '../lib/notify.js';
+import { cancelPhoto } from '../offline/outbox.js';
 import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { listenForHardwareScanner, scanFeedback } from '../platform/scanner.js';
 import { ItemSheet } from './ItemSheet.js';
 import { NumberPad } from './NumberPad.js';
-import { PhotoStrip } from './PhotoStrip.js';
+import { PhotoStrip, useLocalPhotos } from './PhotoStrip.js';
 import { ScannerOverlay } from './ScannerOverlay.js';
 
 type Filter = 'unchecked' | 'defects' | 'all';
@@ -90,10 +96,13 @@ function groupOf(item: InspectionItem) {
 function ItemRow({
   item,
   type,
+  pending,
   onOpen,
 }: {
   item: InspectionItem;
   type: EquipmentType | undefined;
+  /** Changes of this item are still waiting on the device. */
+  pending: boolean;
   onOpen: () => void;
 }) {
   const position = item.locationPath.length > 1 ? item.locationPath.at(-1) : null;
@@ -116,6 +125,13 @@ function ItemRow({
             </div>
           </Group>
           <Group gap="xs" wrap="nowrap">
+            {pending && (
+              <IconCloudUpload
+                size={20}
+                color="var(--mantine-color-orange-6)"
+                aria-label="Čeká na odeslání"
+              />
+            )}
             {item.status === 'out_of_service' && !item.result?.takenOutOfService && (
               <Badge color="gray">Mimo provoz</Badge>
             )}
@@ -137,6 +153,7 @@ function ItemRow({
 
 function InspectionPhotos({ inspectionId, readOnly }: { inspectionId: string; readOnly: boolean }) {
   const photos = usePhotos({ inspectionId });
+  const local = useLocalPhotos(usePendingPhotos({ owner: 'inspection', inspectionId }));
   const upload = useUploadPhoto();
   const remove = useDeletePhoto();
   const add = async () => {
@@ -159,9 +176,11 @@ function InspectionPhotos({ inspectionId, readOnly }: { inspectionId: string; re
       title="Celkové fotky kontroly"
       description="Hala, přístup, situace – nepatří k žádnému artiklu."
       photos={photos.data ?? []}
+      local={local}
       busy={upload.isPending}
       disabled={readOnly}
       onAdd={() => void add()}
+      onDeleteLocal={(p) => void cancelPhoto(p.id)}
       onDelete={(p: Photo) => {
         if (window.confirm('Smazat fotku?')) remove.mutate({ id: p.id }, { onError: notifyError });
       }}
@@ -191,6 +210,9 @@ export function InspectionPage() {
   const [photosOpen, setPhotosOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
+  const outbox = useOutbox();
+  const pendingItems = useMemo(() => new Set(outbox.map((c) => c.itemId)), [outbox]);
+  const createItem = useCreateFieldItem(inspectionId);
   const readOnly = inspection.data?.status === 'closed';
   const progress = progressOf(items);
   const openItem = items.find((i) => i.id === open?.id) ?? null;
@@ -403,6 +425,7 @@ export function InspectionPage() {
                 key={item.id}
                 item={item}
                 type={typeById.get(item.equipmentTypeId)}
+                pending={pendingItems.has(item.id)}
                 onOpen={() => setOpen({ id: item.id, source: 'list' })}
               />
             ))}
@@ -497,12 +520,32 @@ export function InspectionPage() {
                 : {}),
               ...(newItem.qrCode ? { qrCode: newItem.qrCode } : {}),
             }}
-            onDone={(saved) => {
-              setNewItem(null);
-              if (!saved) return;
-              // Show the new item and record its result right away.
-              void itemsQuery.refetch().then(() => setOpen({ id: saved.id, source: 'scan' }));
+            onCreate={async (body, locationPath) => {
+              const number = body.itemNumber ? canonicalItemNumber(body.itemNumber) : null;
+              const taken = number && items.find((i) => i.itemNumber === number);
+              if (taken) throw new Error(`Číslo ${number} už má jiný artikl v této provozovně.`);
+              const created = await createItem.mutateAsync({
+                body,
+                preview: {
+                  id: body.id,
+                  // Without a number the server assigns the next free one when it gets the item.
+                  itemNumber: number ?? 'nový',
+                  qrCode: body.qrCode || null,
+                  equipmentTypeId: body.equipmentTypeId,
+                  locationId: body.locationId ?? null,
+                  locationPath,
+                  fieldValues: body.fieldValues ?? {},
+                  status: 'in_service',
+                  nextInspectionDate: body.nextInspectionDate ?? null,
+                  itemPhotoCount: 0,
+                  result: null,
+                },
+              });
+              notifySaved(`Artikl ${created.itemNumber} založen v zařízení`);
+              // Record its result right away.
+              setOpen({ id: created.id, source: 'scan' });
             }}
+            onDone={() => setNewItem(null)}
           />
         )}
       </Drawer>
@@ -520,8 +563,10 @@ export function InspectionPage() {
       <Modal opened={finishing} onClose={() => setFinishing(false)} title="Ukončit práci" centered>
         <Stack>
           <Text>
-            Všechny výsledky jsou uložené na serveru. Zkontrolováno {progress.checked} z{' '}
-            {progress.total}
+            {outbox.length === 0
+              ? 'Všechny výsledky jsou odeslané na server.'
+              : `V zařízení čeká na odeslání ${outbox.length} změn. Odešlou se samy, jakmile bude připojení – aplikaci můžete zavřít.`}{' '}
+            Zkontrolováno {progress.checked} z {progress.total}
             {progress.total > progress.checked &&
               `, nezkontrolováno zbývá ${progress.total - progress.checked}`}
             .

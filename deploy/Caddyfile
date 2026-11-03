@@ -11,7 +11,7 @@
 	}
 
 	# The service worker and the app shells must never be cached, otherwise updates hang.
-	@nocache path / /index.html /spike/ /spike/index.html /spike/sw.js /spike/manifest.webmanifest
+	@nocache path / /index.html /sw.js /registerSW.js /manifest.webmanifest /spike/ /spike/index.html /spike/sw.js /spike/manifest.webmanifest
 	header @nocache Cache-Control "no-cache"
 
 	handle /spike/* {

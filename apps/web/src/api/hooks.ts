@@ -1,3 +1,4 @@
+import { newId, outcomeLabel, recordResultSchema } from '@revize/shared';
 import type {
   CurrentUser,
   Customer,
@@ -39,7 +40,18 @@ import type {
 } from '@revize/shared';
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type { z } from 'zod';
-import { ApiRequestError, api, fetchBlob, queryString, uploadFile } from './client.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { enqueue } from '../offline/outbox.js';
+import { applyPending } from '../offline/overlay.js';
+import { localDb, type OutboxRow, type PhotoBlobRow } from '../platform/local-db.js';
+import {
+  ApiRequestError,
+  api,
+  fetchBlob,
+  forgetSnapshot,
+  queryString,
+  uploadFile,
+} from './client.js';
 
 type In<T extends z.ZodType> = z.input<T>;
 
@@ -90,6 +102,8 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.post<void>('/auth/logout'),
     onSettled: () => {
+      // Without this the stored copy would keep the device "signed in" while offline.
+      void forgetSnapshot('/auth/me');
       client.setQueryData(['me'], null);
       client.removeQueries({ predicate: (q) => q.queryKey[0] !== 'me' });
     },
@@ -312,10 +326,16 @@ export const useInspection = (id: string) =>
     queryKey: ['inspections', id],
     queryFn: () => api.get(`/inspections/${id}`),
   });
+/** The working list with the writes still waiting on this device applied (ADR-0004). */
 export const useInspectionItems = (id: string) =>
   useQuery<InspectionItem[], ApiRequestError>({
     queryKey: ['inspection-items', id],
-    queryFn: () => api.get(`/inspections/${id}/items`),
+    queryFn: async () =>
+      applyPending(
+        await api.get<InspectionItem[]>(`/inspections/${id}/items`),
+        id,
+        await localDb.outbox.toArray(),
+      ),
   });
 export const useStartInspection = () =>
   useApiMutation(
@@ -324,33 +344,70 @@ export const useStartInspection = () =>
     [['inspections']],
   );
 
-/** Saves a result and puts it straight into the cached working list (no reload of the list). */
+/** The current user from the cache (field writes record who made them). */
+function currentUser(client: ReturnType<typeof useQueryClient>): CurrentUser {
+  const me = client.getQueryData<CurrentUser | null>(['me']);
+  if (!me) throw new Error('Nejste přihlášeni.');
+  return me;
+}
+
+/**
+ * Records a result on the device (outbox, ADR-0004) and shows it in the working list at once;
+ * it is sent to the server in the background, also later when there is no connection now.
+ */
 export function useRecordResult(inspectionId: string) {
   const client = useQueryClient();
-  return useMutation<
-    InspectionResult,
-    ApiRequestError,
-    { itemId: string; body: RecordResultInput }
-  >({
-    mutationFn: ({ itemId, body }) =>
-      api.put(`/inspections/${inspectionId}/results/${itemId}`, body),
-    onSuccess: (result, { itemId }) => {
-      setItemResult(client, inspectionId, itemId, result);
-      void client.invalidateQueries({ queryKey: ['inspections'] });
-      // Taking out of service changes the item in the office lists too.
-      if (result.takenOutOfService) void client.invalidateQueries({ queryKey: ['items'] });
+  return useMutation<InspectionResult, Error, { itemId: string; body: RecordResultInput }>({
+    mutationFn: async ({ itemId, body }) => {
+      const me = currentUser(client);
+      const parsed = recordResultSchema.parse(body);
+      const preview: InspectionResult = {
+        id: parsed.id,
+        itemId,
+        outcome: parsed.outcome,
+        defectDescription: parsed.outcome === 'defect' ? parsed.defectDescription : null,
+        takenOutOfService: parsed.outcome === 'defect' && parsed.takenOutOfService,
+        recordedAt: parsed.recordedAt,
+        recordedBy: me.id,
+        recordedByName: me.displayName,
+        photoCount: 0,
+        version: 0,
+      };
+      await enqueue({
+        id: newId(),
+        kind: 'result',
+        method: 'PUT',
+        path: `/inspections/${inspectionId}/results/${itemId}`,
+        body: parsed,
+        group: `item:${itemId}`,
+        preview,
+        label: `Výsledek: ${outcomeLabel(preview)}`,
+        inspectionId,
+        itemId,
+      });
+      return preview;
     },
+    onSuccess: (result, { itemId }) => setItemResult(client, inspectionId, itemId, result),
   });
 }
 
 export function useDeleteResult(inspectionId: string) {
   const client = useQueryClient();
-  return useMutation<void, ApiRequestError, { itemId: string }>({
-    mutationFn: ({ itemId }) => api.delete(`/inspections/${inspectionId}/results/${itemId}`),
-    onSuccess: (_, { itemId }) => {
-      setItemResult(client, inspectionId, itemId, null);
-      void client.invalidateQueries({ queryKey: ['inspections'] });
-    },
+  return useMutation<void, Error, { itemId: string }>({
+    mutationFn: ({ itemId }) =>
+      enqueue({
+        id: newId(),
+        kind: 'result-delete',
+        method: 'DELETE',
+        path: `/inspections/${inspectionId}/results/${itemId}`,
+        body: null,
+        group: `item:${itemId}`,
+        preview: null,
+        label: 'Zrušení výsledku',
+        inspectionId,
+        itemId,
+      }),
+    onSuccess: (_, { itemId }) => setItemResult(client, inspectionId, itemId, null),
   });
 }
 
@@ -365,12 +422,42 @@ function setItemResult(
       i.id === itemId
         ? {
             ...i,
-            result,
+            result: result && { ...result, photoCount: i.result?.photoCount ?? 0 },
             ...(result?.takenOutOfService ? { status: 'out_of_service' as const } : {}),
           }
         : i,
     ),
   );
+}
+
+/** Creates an item in the field (outbox) and adds it to the working list of the inspection. */
+export function useCreateFieldItem(inspectionId: string) {
+  const client = useQueryClient();
+  return useMutation<
+    InspectionItem,
+    Error,
+    { body: In<typeof createItemSchema> & { id: string }; preview: InspectionItem }
+  >({
+    mutationFn: async ({ body, preview }) => {
+      await enqueue({
+        id: newId(),
+        kind: 'item',
+        method: 'POST',
+        path: '/items',
+        body,
+        group: `item:${body.id}`,
+        preview,
+        label: `Nový artikl ${preview.itemNumber}`,
+        inspectionId,
+        itemId: body.id,
+      });
+      return preview;
+    },
+    onSuccess: (item) =>
+      client.setQueryData<InspectionItem[]>(['inspection-items', inspectionId], (items) =>
+        items && !items.some((i) => i.id === item.id) ? [...items, item] : items,
+      ),
+  });
 }
 
 export const usePhotos = (query: { itemId?: string; inspectionId?: string }) =>
@@ -379,6 +466,28 @@ export const usePhotos = (query: { itemId?: string; inspectionId?: string }) =>
     queryFn: () => api.get(`/photos${queryString(query)}`),
     enabled: Boolean(query.itemId || query.inspectionId),
   });
+
+/** Photos taken on this device that are not on the server yet. */
+export function usePendingPhotos(filter: {
+  owner: PhotoOwner;
+  itemId?: string;
+  inspectionId?: string;
+}): PhotoBlobRow[] {
+  return (
+    useLiveQuery(
+      () =>
+        localDb.photos
+          .filter(
+            (p) =>
+              p.owner === filter.owner &&
+              (filter.itemId === undefined || p.itemId === filter.itemId) &&
+              (filter.inspectionId === undefined || p.inspectionId === filter.inspectionId),
+          )
+          .sortBy('createdAt'),
+      [filter.owner, filter.itemId, filter.inspectionId],
+    ) ?? []
+  );
+}
 
 export interface PhotoUpload {
   id: string;
@@ -389,26 +498,47 @@ export interface PhotoUpload {
   takenAt?: string;
 }
 
+const PHOTO_LABELS: Record<PhotoOwner, string> = {
+  item: 'Fotka artiklu',
+  result: 'Fotka závady',
+  inspection: 'Fotka kontroly',
+};
+
+/** Stores the photo on the device and sends it in the background (after its result). */
 export function useUploadPhoto() {
-  const client = useQueryClient();
-  return useMutation<Photo, ApiRequestError, PhotoUpload>({
-    mutationFn: ({ id, file, ...fields }) =>
-      uploadFile<Photo>(
-        `/photos/${id}`,
-        file,
-        Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined)) as Record<
-          string,
-          string
-        >,
-        { method: 'PUT', fileName: `${id}.jpg` },
-      ),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ['photos'] });
-      void client.invalidateQueries({ queryKey: ['inspection-items'] });
+  return useMutation<void, Error, PhotoUpload>({
+    mutationFn: async ({ id, file, ...fields }) => {
+      const textFields = Object.fromEntries(
+        Object.entries(fields).filter(([, v]) => v !== undefined),
+      ) as Record<string, string>;
+      await enqueue(
+        {
+          id,
+          kind: 'photo',
+          method: 'PUT',
+          path: `/photos/${id}`,
+          body: textFields,
+          group: fields.itemId ? `item:${fields.itemId}` : `inspection:${fields.inspectionId}`,
+          preview: null,
+          label: PHOTO_LABELS[fields.owner],
+          inspectionId: fields.inspectionId ?? null,
+          itemId: fields.itemId ?? null,
+        },
+        {
+          id,
+          blob: file,
+          owner: fields.owner,
+          itemId: fields.itemId ?? null,
+          inspectionId: fields.inspectionId ?? null,
+          draft: false,
+          createdAt: new Date().toISOString(),
+        },
+      );
     },
   });
 }
 
+/** Deletes a photo on the server (needs a connection; unsent photos use `cancelPhoto`). */
 export function useDeletePhoto() {
   const client = useQueryClient();
   return useMutation<void, ApiRequestError, { id: string }>({
@@ -429,4 +559,9 @@ export function usePhotoUrl(id: string, variant: 'thumbnail' | 'original') {
     gcTime: 5 * 60_000,
   });
   return query.data;
+}
+
+/** Number of field writes on this device not yet accepted by the server. */
+export function useOutbox(): OutboxRow[] {
+  return useLiveQuery(() => localDb.outbox.orderBy('seq').toArray(), []) ?? [];
 }

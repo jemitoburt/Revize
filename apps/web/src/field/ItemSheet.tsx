@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   useDeletePhoto,
   useDeleteResult,
+  usePendingPhotos,
   usePhotos,
   useRecordResult,
   useUploadPhoto,
@@ -32,7 +33,8 @@ import {
 import { displayFields, formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { pickPhoto, preparePhoto } from '../platform/photos.js';
-import { PhotoStrip, type LocalPhoto } from './PhotoStrip.js';
+import { cancelPhoto, saveDraftPhoto } from '../offline/outbox.js';
+import { PhotoStrip, useLocalPhotos } from './PhotoStrip.js';
 
 export interface ItemSheetProps {
   inspectionId: string;
@@ -94,18 +96,23 @@ function SheetBody({
   );
   const [description, setDescription] = useState(current?.defectDescription ?? '');
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
-  const [localPhotos, setLocalPhotos] = useState<LocalPhoto[]>([]);
-  const [uploadingItemPhoto, setUploadingItemPhoto] = useState(false);
-  const [uploadFailed, setUploadFailed] = useState(false);
+  const [busyItemPhoto, setBusyItemPhoto] = useState(false);
+  // Photos on this device: drafts (defect photos before the result is saved) and unsent ones.
+  const localDefect = useLocalPhotos(
+    usePendingPhotos({ owner: 'result', itemId: item.id, inspectionId }),
+  );
+  const localItem = useLocalPhotos(usePendingPhotos({ owner: 'item', itemId: item.id }));
+  const drafts = localDefect.filter((p) => p.draft);
 
-  // Object URLs of local photos are released when the card closes.
-  const localUrls = useRef<string[]>([]);
-  useEffect(() => () => localUrls.current.forEach((url) => URL.revokeObjectURL(url)), []);
+  // Defect photos left from an unsaved card (app closed): show the defect form again.
+  useEffect(() => {
+    if (drafts.length > 0 && !choice) setChoice({ outcome: 'defect', takenOutOfService: false });
+  }, [drafts.length, choice]);
 
   const itemPhotos = (photos.data ?? []).filter((p) => p.owner === 'item');
   const defectPhotos = (photos.data ?? []).filter((p) => p.owner === 'result');
   const fields = type ? displayFields(type.fieldDefinitions, item.fieldValues) : [];
-  const saving = record.isPending || upload.isPending;
+  const saving = record.isPending;
 
   const save = async (next: Choice) => {
     if (next.outcome === 'defect' && !description.trim()) {
@@ -129,23 +136,21 @@ function SheetBody({
       notifyError(error);
       return;
     }
-    // Defect photos belong to the result, so they go up once it exists.
-    for (const photo of localPhotos) {
-      try {
+    // Defect photos belong to the result: queued after it, so they reach the server in order.
+    try {
+      for (const photo of next.outcome === 'defect' ? drafts : []) {
         await upload.mutateAsync({
           id: photo.id,
           file: photo.blob,
           owner: 'result',
           itemId: item.id,
           inspectionId,
-          takenAt: new Date().toISOString(),
+          takenAt: photo.createdAt,
         });
-        setLocalPhotos((list) => list.filter((p) => p.id !== photo.id));
-      } catch (error) {
-        setUploadFailed(true);
-        notifyError(error);
-        return;
       }
+    } catch (error) {
+      notifyError(error);
+      return;
     }
     notifySaved(`${item.itemNumber}: ${outcomeLabel(result)}`);
     onSaved(result);
@@ -155,10 +160,15 @@ function SheetBody({
     const file = await pickPhoto();
     if (!file) return;
     try {
-      const blob = await preparePhoto(file);
-      const url = URL.createObjectURL(blob);
-      localUrls.current.push(url);
-      setLocalPhotos((list) => [...list, { id: newId(), blob, url }]);
+      await saveDraftPhoto({
+        id: newId(),
+        blob: await preparePhoto(file),
+        owner: 'result',
+        itemId: item.id,
+        inspectionId,
+        draft: true,
+        createdAt: new Date().toISOString(),
+      });
     } catch (error) {
       notifyError(error);
     }
@@ -167,7 +177,7 @@ function SheetBody({
   const addItemPhoto = async () => {
     const file = await pickPhoto();
     if (!file) return;
-    setUploadingItemPhoto(true);
+    setBusyItemPhoto(true);
     try {
       await upload.mutateAsync({
         id: newId(),
@@ -179,7 +189,7 @@ function SheetBody({
     } catch (error) {
       notifyError(error);
     } finally {
-      setUploadingItemPhoto(false);
+      setBusyItemPhoto(false);
     }
   };
 
@@ -278,17 +288,12 @@ function SheetBody({
           <PhotoStrip
             title="Fotky závady"
             photos={defectPhotos}
-            local={localPhotos}
+            local={localDefect}
             disabled={readOnly}
             onAdd={() => void addDefectPhoto()}
             onDelete={confirmDelete}
-            onDeleteLocal={(p) => setLocalPhotos((list) => list.filter((x) => x.id !== p.id))}
+            onDeleteLocal={(p) => void cancelPhoto(p.id)}
           />
-          {uploadFailed && (
-            <Alert color="red">
-              Výsledek je uložený, ale některé fotky se nenahrály. Zkuste znovu Uložit.
-            </Alert>
-          )}
           <Button
             size="lg"
             color={choice.takenOutOfService ? 'red' : 'orange'}
@@ -306,9 +311,11 @@ function SheetBody({
         title="Fotky artiklu"
         description="Výrobní štítek, celkový pohled – zůstanou u artiklu i pro další kontroly."
         photos={itemPhotos}
-        busy={uploadingItemPhoto}
+        local={localItem}
+        busy={busyItemPhoto}
         onAdd={() => void addItemPhoto()}
         onDelete={confirmDelete}
+        onDeleteLocal={(p) => void cancelPhoto(p.id)}
       />
 
       <Group justify="space-between" mt="md">

@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 // Keep the browser's Host header: the API compares it with Origin to block cross-site writes
 // (the string shorthand would set changeOrigin and every write would be rejected).
@@ -16,7 +17,23 @@ export default defineConfig(({ mode }) => {
   const demo = mode === 'demo';
   return {
     base: process.env.BASE_PATH ?? '/',
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Service worker: the app opens without a connection (ADR-0004). API data is not cached
+      // here – the field mode keeps it in IndexedDB. New versions wait for the user's tap.
+      VitePWA({
+        registerType: 'prompt',
+        injectRegister: false,
+        manifest: false,
+        workbox: {
+          globPatterns: [`**/*.{js,css,html,wasm,png,svg,webmanifest${demo ? ',data' : ''}}`],
+          navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/\/api\//, /\/spike\//],
+          // The demo precaches PostgreSQL (PGlite, ~16 MB) so that it starts offline too.
+          maximumFileSizeToCacheInBytes: (demo ? 20 : 4) * 1024 * 1024,
+        },
+      }),
+    ],
     worker: { format: 'es' as const },
     server: { proxy },
     preview: { proxy },

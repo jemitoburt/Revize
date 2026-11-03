@@ -1,7 +1,8 @@
 import { ActionIcon, Box, Button, Group, Image, Loader, Modal, Stack, Text } from '@mantine/core';
 import type { Photo } from '@revize/shared';
 import { IconCamera, IconTrash } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { PhotoBlobRow } from '../platform/local-db.js';
 import { usePhotoUrl } from '../api/hooks.js';
 
 /** A photo taken on this device that is not on the server yet. */
@@ -9,6 +10,39 @@ export interface LocalPhoto {
   id: string;
   blob: Blob;
   url: string;
+  draft: boolean;
+  createdAt: string;
+}
+
+/** Object URLs for photos stored on the device, released when they disappear. */
+export function useLocalPhotos(rows: readonly PhotoBlobRow[]): LocalPhoto[] {
+  const urls = useRef(new Map<string, string>());
+  const photos = useMemo(
+    () =>
+      rows.map((row) => {
+        let url = urls.current.get(row.id);
+        if (!url) {
+          url = URL.createObjectURL(row.blob);
+          urls.current.set(row.id, url);
+        }
+        return { id: row.id, blob: row.blob, url, draft: row.draft, createdAt: row.createdAt };
+      }),
+    [rows],
+  );
+  useEffect(() => {
+    const ids = new Set(rows.map((r) => r.id));
+    for (const [id, url] of urls.current) {
+      if (!ids.has(id)) {
+        URL.revokeObjectURL(url);
+        urls.current.delete(id);
+      }
+    }
+  }, [rows]);
+  useEffect(() => {
+    const current = urls.current;
+    return () => current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+  return photos;
 }
 
 const SIZE = 88;
@@ -126,7 +160,9 @@ export function PhotoStrip({
             <Group justify="space-between">
               {'local' in open && (
                 <Text size="sm" c="dimmed">
-                  Nahraje se po uložení výsledku.
+                  {open.local.draft
+                    ? 'Uložená v zařízení, odešle se po uložení výsledku.'
+                    : 'Uložená v zařízení, čeká na odeslání.'}
                 </Text>
               )}
               <ActionIcon

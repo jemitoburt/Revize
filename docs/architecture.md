@@ -1,6 +1,6 @@
 # Architektura – Revize (fáze 1)
 
-> Schválený návrh (2026-10-26). Stav: M0, M2, M3, M4, M5 hotovo (M5 včetně ukázkové verze na GitHub Pages, ADR-0015); M1 čeká na další kolo testu na iPadu. Rozhodnutí jsou rozepsaná v `docs/adr/`, licence v `docs/licenses.md`.
+> Schválený návrh (2026-10-26). Stav: M0, M2, M3, M4, M5, M6 hotovo (M5 včetně ukázkové verze na GitHub Pages, ADR-0015), nasazení a zálohy připravené (`docs/provoz.md`); M1 čeká na další kolo testu na iPadu. Rozhodnutí jsou rozepsaná v `docs/adr/`, licence v `docs/licenses.md`.
 
 ## Kontext
 

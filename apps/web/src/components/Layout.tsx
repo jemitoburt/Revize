@@ -14,7 +14,7 @@ import {
 import { ROLE_LABELS, type CurrentUser, type Permission } from '@revize/shared';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { DEMO } from '../api/client.js';
-import { useLogout } from '../api/hooks.js';
+import { useLogout, useOutbox } from '../api/hooks.js';
 import { DemoBadge, DemoResetItem } from '../demo/DemoParts.js';
 import { AuthGate } from './AuthGate.js';
 
@@ -41,6 +41,7 @@ const NAV: { to: string; label: string; icon: typeof IconUser; permission: Permi
 export function UserMenu({ user }: { user: CurrentUser }) {
   const logout = useLogout();
   const navigate = useNavigate();
+  const outbox = useOutbox();
   return (
     <Menu position="bottom-end" withinPortal>
       <Menu.Target>
@@ -63,11 +64,21 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         </Menu.Item>
         <Menu.Item
           leftSection={<IconLogout size={16} />}
-          onClick={() =>
+          onClick={() => {
+            const unsent = outbox.filter((c) => c.userId === user.id).length;
+            if (
+              unsent > 0 &&
+              !window.confirm(
+                `V zařízení čeká na odeslání ${unsent} změn. Zůstanou uložené a odešlou se po ` +
+                  'vašem dalším přihlášení na tomto zařízení. Odhlásit?',
+              )
+            ) {
+              return;
+            }
             logout.mutate(undefined, {
               onSettled: () => void navigate({ to: '/prihlaseni' }),
-            })
-          }
+            });
+          }}
         >
           Odhlásit
         </Menu.Item>

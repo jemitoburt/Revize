@@ -17,8 +17,10 @@ import {
   newId,
   type Item,
   type ItemStatus,
+  type createItemSchema,
 } from '@revize/shared';
 import { useMemo, useState, type FormEvent } from 'react';
+import type { z } from 'zod';
 import type { ApiRequestError } from '../api/client.js';
 import {
   useCreateItem,
@@ -45,7 +47,15 @@ export interface ItemFormProps {
   fixedSite?: boolean;
   /** Field mode: only the equipment types of the inspection. */
   allowedTypeIds?: readonly string[];
-  /** Called with the saved item. */
+  /**
+   * Field mode: stores the new item on the device (outbox) instead of calling the API. Gets the
+   * request body and the location path names for the preview.
+   */
+  onCreate?: (
+    body: z.input<typeof createItemSchema> & { id: string },
+    locationPath: string[],
+  ) => Promise<void>;
+  /** Called with the saved item (not with field-mode items created through `onCreate`). */
   onDone: (saved?: Item) => void;
 }
 
@@ -54,6 +64,7 @@ export function ItemForm({
   defaults = {},
   fixedSite,
   allowedTypeIds,
+  onCreate,
   onDone,
 }: ItemFormProps) {
   const create = useCreateItem();
@@ -171,10 +182,13 @@ export function ItemForm({
         handlers,
       );
     } else {
-      create.mutate(
-        { id: createId, ...common, ...(itemNumber.trim() ? { itemNumber } : {}) },
-        handlers,
-      );
+      const body = { id: createId, ...common, ...(itemNumber.trim() ? { itemNumber } : {}) };
+      if (onCreate) {
+        const path = locations.data?.find((l) => l.id === locationId)?.pathNames ?? [];
+        onCreate(body, path).then(() => onDone(), notifyError);
+        return;
+      }
+      create.mutate(body, handlers);
     }
   };
 

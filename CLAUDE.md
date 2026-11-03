@@ -49,6 +49,8 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
   `src/platform/` adapters.
   - Mantine components as router links via `components/links.tsx` (`AnchorLink`, `ButtonLink`).
   - Forms with custom validation use `noValidate`, so every error shows on its field in Czech.
+  - Field writes never call the API directly: use the outbox hooks (`useRecordResult`,
+    `useUploadPhoto`, `useCreateFieldItem`, …) so that they reach IndexedDB first (ADR-0004).
   - Requests go through `src/api/transport.ts`; `vite build --mode demo` swaps it for
     `src/demo/transport.ts` and aliases Node modules to `src/demo/shims` (ADR-0015).
   - e2e (`apps/web/e2e`) runs the real API on a fresh database (`e2e/start-api.mjs`); Mantine
@@ -118,5 +120,12 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   (ADR-0015); inspections, idempotent results ("later recordedAt wins"), photos with thumbnails
   (ADR-0007, ADR-0011); field UI (list by location, scanner, number pad, keyboard-wedge, item card,
   photos, new item). Guide: `docs/teren.md`.
-- Next: M6 offline queue (Dexie cache + outbox). Server hosting still open (user's QNAP is 32-bit
-  ARM, not suitable; candidates: small x86/ARM64 box or VPS).
+- Deployment – done: `docs/provoz.md` (Caddy+LE or behind a proxy), `scripts/backup.sh`,
+  `restore.sh`, `test-restore.sh` (runs in CI). The user has a server; hosting details pending.
+- M6 offline – done (ADR-0004 "Provedení"): GET snapshots in IndexedDB (`api/client.ts`), field
+  writes through the outbox (`src/offline/outbox.ts`, groups per item/inspection, attention state,
+  draft defect photos), overlay of pending changes, service worker (prompted updates), sync badge
+  with emergency ZIP export; e2e `e2e/field/offline.spec.ts`; web unit tests (`vitest.config.ts`,
+  fake-indexeddb).
+- Next: M7 office inspections (close/reopen, next dates), PDF protocol built from the user's sample
+  layout with office settings (logo, header, texts with placeholders), exports.

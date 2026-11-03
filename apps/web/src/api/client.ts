@@ -1,4 +1,5 @@
 import type { ApiError } from '@revize/shared';
+import { localDb } from '../platform/local-db.js';
 import { send } from './transport.js';
 
 /** Error returned by the API: machine code, Czech message, optional per-field issues. */
@@ -30,8 +31,29 @@ type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 /** True in the GitHub Pages build, where the API runs inside the browser (ADR-0015). */
 export const DEMO = import.meta.env.VITE_DEMO === 'true';
 
-/** Same-origin JSON requests; the session cookie authenticates (ADR-0005). */
+/** Reads the field mode needs without a connection (ADR-0004): the last answer is kept. */
+const OFFLINE_READS = [
+  '/auth/me',
+  '/inspections',
+  '/equipment-types',
+  '/customers',
+  '/sites',
+  '/photos',
+];
+const offlineReadable = (method: Method, path: string) =>
+  method === 'GET' && OFFLINE_READS.some((prefix) => path.startsWith(prefix));
+
+/** Forgets the stored copy of a read (e.g. the signed-in user after logout). */
+export async function forgetSnapshot(path: string): Promise<void> {
+  await localDb.snapshots.delete(`GET ${path}`).catch(() => undefined);
+}
+
+/**
+ * Same-origin JSON requests; the session cookie authenticates (ADR-0005). Without a connection
+ * the reads listed in `OFFLINE_READS` answer from the copy stored on the device.
+ */
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
+  const snapshotKey = `GET ${path}`;
   let response: Response;
   try {
     response = await send(path, {
@@ -41,6 +63,10 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
+    if (offlineReadable(method, path)) {
+      const stored = await localDb.snapshots.get(snapshotKey).catch(() => undefined);
+      if (stored) return stored.value as T;
+    }
     throw new ApiRequestError(0, {
       error: 'network',
       message: 'Server není dostupný. Zkontrolujte připojení.',
@@ -54,6 +80,11 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
         ? (data as ApiError)
         : { error: 'http_' + response.status, message: `Chyba serveru (${response.status}).` };
     throw new ApiRequestError(response.status, error);
+  }
+  if (offlineReadable(method, path)) {
+    void localDb.snapshots
+      .put({ key: snapshotKey, value: data, savedAt: new Date().toISOString() })
+      .catch(() => undefined);
   }
   return data as T;
 }

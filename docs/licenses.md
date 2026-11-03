@@ -19,6 +19,7 @@ Kontrolu dělá `pnpm run check:licenses` (skript `scripts/check-licenses.mjs`),
 | PostgreSQL                                 | PostgreSQL                      | databáze                          | M2     |
 | @node-rs/argon2                            | MIT                             | hash hesel                        | M2     |
 | React, TanStack, Mantine, Dexie            | MIT / Apache-2.0                | frontend                          | M3     |
+| dexie-react-hooks, fflate, fake-indexeddb  | Apache-2.0 / MIT                | offline fronta, ZIP, testy        | M6     |
 | exceljs, papaparse, archiver               | MIT                             | import XLSX/CSV, export, ZIP      | M4, M7 |
 | PGlite (@electric-sql/pglite)              | Apache-2.0 / PostgreSQL         | ukázková verze v prohlížeči       | M5     |
 | @noble/hashes, buffer                      | MIT                             | náhrady Node modulů v ukázce      | M5     |

@@ -7,5 +7,6 @@ export * from './inspection.js';
 export * from './item-number.js';
 export * from './locale.js';
 export * from './location-path.js';
+export * from './outbox.js';
 export * from './permissions.js';
 export * from './scan-payload.js';

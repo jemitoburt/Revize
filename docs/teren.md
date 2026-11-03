@@ -59,10 +59,24 @@ v auditu.
   - Výsledky se ukládají průběžně, takže nic dalšího ukládat nemusíte.
   - Kontrola zůstává otevřená. Uzavření, protokol a exporty dělá kancelář (M7).
 
-## Omezení této verze
+## Práce bez signálu
 
-- **Je potřeba připojení k serveru.** Výsledek je potvrzený teprve po odpovědi serveru. Při
-  výpadku se zobrazí chyba a výsledek ani fotky se neuloží. Ukládání bez signálu do zařízení
-  s pozdějším odesláním přinese M6.
-- **Ukázková verze na GitHub Pages:** data jsou jen v tom prohlížeči, ve kterém pracujete.
-  Nezadávejte skutečná data zákazníků. Obnovit ukázková data jde v uživatelském menu.
+- **Ukládání:** každý výsledek, fotka i nový artikl se nejdřív uloží do iPadu a teprve potom se
+  ukáže jako uložený. Na server se odešle sám, jakmile je připojení. Zavřít aplikaci nebo vypnout
+  iPad nevadí.
+- **Stav v záhlaví:** _Vše odesláno_ / _Neodesláno: N_ / _Offline_ / _Vyžaduje pozornost_.
+  Klepnutím zobrazíte seznam změn v zařízení. Jsou tam tlačítka **Odeslat nyní** a **Stáhnout
+  neodeslaná data** (ZIP s daty a fotkami pro kancelář, kdyby se iPad už nikdy nepřipojil).
+  Ikonka mráčku u artiklu v seznamu znamená, že jeho změny ještě čekají.
+- **Před odjezdem** otevřete kontrolu, dokud máte signál. Seznam artiklů se uloží do iPadu.
+- **Bez připojení nejde:** zahájit novou kontrolu, smazat fotku, která už je na serveru,
+  a přihlásit se.
+- **Odmítnutá změna** (např. číslo artiklu už mezitím založil někdo jiný) zůstane v seznamu jako
+  _Vyžaduje pozornost_ s důvodem. Nic se nesmaže. Po vyřešení klepněte na **Zkusit znovu**.
+- **Odhlášení:** pokud něco čeká na odeslání, aplikace se zeptá. Data zůstanou v iPadu a odešlou se
+  po vašem dalším přihlášení.
+
+## Ukázková verze
+
+Na GitHub Pages jsou data jen v prohlížeči, ve kterém pracujete. Nezadávejte skutečná data
+zákazníků. Obnovit ukázková data jde v uživatelském menu.
