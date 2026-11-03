@@ -117,6 +117,7 @@ export function createProtocolsService(
           .filter((i) => i.equipmentTypeId === type.id)
           .map((i) => ({
             itemNumber: i.itemNumber,
+            designation: i.designation,
             location: i.locationPath.join(LOCATION_SEPARATOR) || 'Bez umístění',
             details: displayFields(type.fieldDefinitions, i.fieldValues)
               .slice(0, DETAIL_FIELDS)

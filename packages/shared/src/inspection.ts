@@ -1,4 +1,5 @@
 import type { InspectionItem, InspectionProgress, Severity } from './api/inspections.js';
+import { normalizeDesignation } from './item-number.js';
 import type { ScanTarget } from './scan-payload.js';
 
 /**
@@ -10,11 +11,12 @@ export function shouldApplyResult(existingRecordedAt: Date, incomingRecordedAt: 
   return incomingRecordedAt.getTime() >= existingRecordedAt.getTime();
 }
 
-type ScanCandidate = Pick<InspectionItem, 'qrCode' | 'itemNumber'>;
+type ScanCandidate = Pick<InspectionItem, 'qrCode' | 'itemNumber' | 'designation'>;
 
 /**
- * The item a scanned code or typed number refers to: the QR code first, then (for purely
- * numeric codes) the item number without leading zeros (ADR-0012).
+ * The item a scanned code or typed text refers to: the QR code first, then (for purely
+ * numeric codes) číslo TZ without leading zeros (ADR-0012), then the designation ("Ž-01",
+ * case, spaces and dashes ignored).
  */
 export function findScannedItem<T extends ScanCandidate>(
   items: readonly T[],
@@ -22,9 +24,13 @@ export function findScannedItem<T extends ScanCandidate>(
 ): T | null {
   const byQr = items.find((i) => i.qrCode !== null && i.qrCode === target.code);
   if (byQr) return byQr;
-  if (target.kind === 'digits')
-    return items.find((i) => i.itemNumber === target.itemNumber) ?? null;
-  return null;
+  if (target.kind === 'digits') {
+    const byNumber = items.find((i) => i.itemNumber === target.itemNumber);
+    if (byNumber) return byNumber;
+  }
+  const wanted = normalizeDesignation(target.code);
+  if (!wanted) return null;
+  return items.find((i) => i.designation && normalizeDesignation(i.designation) === wanted) ?? null;
 }
 
 /** Progress of an inspection from its working list (the server computes the same in SQL). */

@@ -21,6 +21,7 @@ import {
 import {
   LOCATION_SEPARATOR,
   canonicalItemNumber,
+  normalizeDesignation,
   findScannedItem,
   newId,
   outcomeLabel,
@@ -80,8 +81,12 @@ function matches(item: InspectionItem, text: string) {
   const q = text.trim().toLowerCase();
   if (!q) return true;
   const digits = q.replace(/^0+/, '');
+  const designation = normalizeDesignation(q);
   return (
     (digits !== '' && item.itemNumber.startsWith(digits)) ||
+    (designation !== '' &&
+      item.designation !== null &&
+      normalizeDesignation(item.designation).includes(designation)) ||
     (item.qrCode?.toLowerCase().includes(q) ?? false) ||
     JSON.stringify(item.fieldValues).toLowerCase().includes(q)
   );
@@ -117,7 +122,14 @@ function ItemRow({
               {item.itemNumber}
             </Text>
             <div>
-              <Text fw={500}>{type?.name ?? '?'}</Text>
+              <Text fw={500}>
+                {item.designation && (
+                  <Text span fw={700} mr={8}>
+                    {item.designation}
+                  </Text>
+                )}
+                {type?.name ?? '?'}
+              </Text>
               <Text size="sm" c="dimmed">
                 {[position, typeof manufacturer === 'string' ? manufacturer : null]
                   .filter(Boolean)
@@ -399,7 +411,7 @@ export function InspectionPage() {
         />
         <TextInput
           size="md"
-          placeholder="Hledat číslo, QR, výrobce…"
+          placeholder="Hledat číslo TZ, označení, QR…"
           aria-label="Hledat"
           leftSection={<IconSearch size={18} />}
           value={search}
@@ -524,13 +536,23 @@ export function InspectionPage() {
             onCreate={async (body, locationPath) => {
               const number = body.itemNumber ? canonicalItemNumber(body.itemNumber) : null;
               const taken = number && items.find((i) => i.itemNumber === number);
-              if (taken) throw new Error(`Číslo ${number} už má jiný artikl v této provozovně.`);
+              if (taken) throw new Error(`Číslo TZ ${number} už má jiný artikl.`);
+              const key = body.designation ? normalizeDesignation(body.designation) : '';
+              const sameDesignation =
+                key &&
+                items.find((i) => i.designation && normalizeDesignation(i.designation) === key);
+              if (sameDesignation) {
+                throw new Error(
+                  `Označení ${body.designation} už má artikl ${sameDesignation.itemNumber}.`,
+                );
+              }
               const created = await createItem.mutateAsync({
                 body,
                 preview: {
                   id: body.id,
                   // Without a number the server assigns the next free one when it gets the item.
                   itemNumber: number ?? 'nový',
+                  designation: body.designation || null,
                   qrCode: body.qrCode || null,
                   equipmentTypeId: body.equipmentTypeId,
                   locationId: body.locationId ?? null,

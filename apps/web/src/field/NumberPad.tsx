@@ -39,7 +39,7 @@ export function NumberPad({ opened, onClose, onNumber }: NumberPadProps) {
 
   const big = { size: 'xl', h: 72, fz: 28 } as const;
   return (
-    <Modal opened={opened} onClose={close} title="Číslo artiklu" centered size="sm" zIndex={260}>
+    <Modal opened={opened} onClose={close} title="Číslo TZ" centered size="sm" zIndex={260}>
       <Stack>
         <Text
           ta="center"

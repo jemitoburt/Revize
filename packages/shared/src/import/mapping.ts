@@ -14,6 +14,8 @@ export const importMappingSchema = z.object({
   /** `create`: existing numbers are errors; `upsert`: rows with an existing number update it. */
   mode: z.enum(['create', 'upsert']).default('create'),
   itemNumber: columnRef.default(null),
+  /** Designation such as "Ž-01" (prefix + number). */
+  designation: columnRef.default(null),
   qrCode: columnRef.default(null),
   nextInspectionDate: columnRef.default(null),
   /** Columns forming the location path from the top (e.g. Hala, Řada, Pozice). */
@@ -46,11 +48,15 @@ export type MappingValues = Pick<ImportMapping, 'replacements' | 'defaults'>;
 export type ImportMapping = z.output<typeof importMappingSchema>;
 export type ImportMappingInput = z.input<typeof importMappingSchema>;
 
-export type MappingTarget = 'itemNumber' | 'qrCode' | 'nextInspectionDate' | 'location';
+export type MappingTarget =
+  'itemNumber' | 'designation' | 'qrCode' | 'nextInspectionDate' | 'location';
 
 /** Header names (normalized) that commonly mean the standard targets. */
 const STANDARD_HEADERS: Record<MappingTarget, string[]> = {
   itemNumber: [
+    'cislo tz',
+    'c tz',
+    'tz',
     'cislo',
     'cislo artiklu',
     'c artiklu',
@@ -61,6 +67,14 @@ const STANDARD_HEADERS: Record<MappingTarget, string[]> = {
     'inv cislo',
     'item number',
     'number',
+  ],
+  designation: [
+    'oznaceni',
+    'oznaceni regalu',
+    'oznaceni zebriku',
+    'oznaceni voziku',
+    'oznaceni tz',
+    'popisne oznaceni',
   ],
   qrCode: ['qr', 'qr kod', 'qr code', 'kod stitku', 'stitek'],
   nextInspectionDate: [
@@ -97,7 +111,10 @@ export function suggestMapping(
   headers: readonly string[],
   definitions: readonly FieldDefinition[],
   saved: SavedHeaders = {},
-): Pick<ImportMapping, 'itemNumber' | 'qrCode' | 'nextInspectionDate' | 'location' | 'fields'> {
+): Pick<
+  ImportMapping,
+  'itemNumber' | 'designation' | 'qrCode' | 'nextInspectionDate' | 'location' | 'fields'
+> {
   const normalized = headers.map((h) => normalizeText(h));
   const used = new Set<number>();
   const find = (candidates: string[]) => {
@@ -116,6 +133,7 @@ export function suggestMapping(
   };
 
   const itemNumber = fromSaved('itemNumber') ?? find(STANDARD_HEADERS.itemNumber);
+  const designation = fromSaved('designation') ?? find(STANDARD_HEADERS.designation);
   const qrCode = fromSaved('qrCode') ?? find(STANDARD_HEADERS.qrCode);
   const nextInspectionDate =
     fromSaved('nextInspectionDate') ?? find(STANDARD_HEADERS.nextInspectionDate);
@@ -155,7 +173,7 @@ export function suggestMapping(
         return i;
       });
   }
-  return { itemNumber, qrCode, nextInspectionDate, location, fields };
+  return { itemNumber, designation, qrCode, nextInspectionDate, location, fields };
 }
 
 /** The header names of a mapping, for saving and re-applying it to the next file. */
@@ -163,6 +181,7 @@ export function mappingHeaders(mapping: ImportMapping, headers: readonly string[
   const name = (i: number | null) => (i === null ? undefined : headers[i]);
   const result: SavedHeaders = {
     itemNumber: name(mapping.itemNumber),
+    designation: name(mapping.designation),
     qrCode: name(mapping.qrCode),
     nextInspectionDate: name(mapping.nextInspectionDate),
     location: mapping.location.map((i) => headers[i]).filter((h): h is string => h !== undefined),

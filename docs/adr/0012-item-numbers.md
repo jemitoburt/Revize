@@ -1,4 +1,4 @@
-# ADR-0012: Čísla artiklů – číselné řady 1–8 číslic, úvodní nuly bez významu
+# ADR-0012: Čísla artiklů (číslo TZ) a označení
 
 **Stav:** přijato (2026-10-26), nahrazuje původní předpoklad pevně pětimístného čísla
 
@@ -25,3 +25,22 @@ Technik chce na číselníku zadávat rychle a vyhledání má proběhnout bez p
   různé artikly), tento model ji nepodporuje. Taková řada by se musela evidovat přes QR kód
   nebo s jiným prefixem.
 - Import (M4) převede čísla na kanonický tvar a duplicity nahlásí po řádcích.
+
+## Změna 2026-11-03: číslo TZ a označení
+
+Na přání uživatele (rozhodnutí v chatu):
+
+- **Číslo TZ** (dosavadní číslo artiklu) má **4 nebo 5 číslic** a je **unikátní v celé
+  evidenci**, ne jen u zákazníka. Úvodní nuly dál nemají význam. Automaticky přidělené číslo je
+  další po nejvyšším čísle TZ organizace, nejméně 1000.
+- **Označení** (`item.designation`) je nepovinný text, např. „Ž-01“. U regálu předvolba obvykle
+  označuje místo v hale („A1-12“). V provozovně je **unikátní** mezi artikly v evidenci (vyřazený
+  artikl označení uvolní). Porovnává se bez ohledu na velikost písmen, mezery, pomlčky, tečky
+  a lomítka (`normalizeDesignation`, sloupec `designation_key`), takže „Ž-01“ = „ž 01“.
+- **Vyhledávání:** v terénu i v kanceláři podle čísla TZ i podle označení. Skener a čtečka
+  hledají QR kód, potom číslo TZ, potom označení.
+- **Import:** sloupec „Označení“ jde namapovat. Při aktualizaci existujících artiklů se řádek
+  bez čísla TZ spáruje podle označení v provozovně. Číslo TZ jiného zákazníka je chyba.
+- **Migrace `0010`:** pokud stávající data mají stejné číslo u dvou zákazníků, unikátní index
+  v celé evidenci se zatím nevytvoří (zapíše se varování). API ale nové duplicity odmítá.
+  Starší čísla delší než 5 číslic zůstávají platná.

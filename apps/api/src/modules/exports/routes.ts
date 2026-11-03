@@ -50,7 +50,7 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
       preHandler: read,
       schema: {
         tags,
-        summary: 'Fotky kontroly v ZIP (názvy podle čísla artiklu, popis v EXIF/IPTC, fotky.csv)',
+        summary: 'Fotky kontroly v ZIP (názvy podle čísla TZ, popis v EXIF/IPTC, fotky.csv)',
         params,
       },
     },

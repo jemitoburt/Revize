@@ -21,6 +21,7 @@ export interface RowCandidate {
   rowNumber: number;
   empty: boolean;
   itemNumber: string | null;
+  designation: string | null;
   qrCode: string | null;
   nextInspectionDate: string | null;
   locationPath: string[];
@@ -55,6 +56,7 @@ export function buildRowCandidate(
   const at = (index: number | null): RawCell => (index === null ? null : (row[index] ?? null));
   const mappedColumns = [
     mapping.itemNumber,
+    mapping.designation,
     mapping.qrCode,
     mapping.nextInspectionDate,
     ...mapping.location,
@@ -70,13 +72,16 @@ export function buildRowCandidate(
     if (!itemNumber || (typeof raw === 'number' && !Number.isInteger(raw))) {
       issues.push({
         column: mapping.itemNumber,
-        message: `„${cellText(raw)}“ není číslo artiklu (1–8 číslic)`,
+        message: `„${cellText(raw)}“ není číslo TZ (4 nebo 5 číslic) – patří-li do Označení, namapujte sloupec tam`,
       });
       itemNumber = null;
     }
   } else if (!mapping.autoNumber && !empty) {
-    issues.push({ column: mapping.itemNumber, message: 'Chybí číslo artiklu' });
+    issues.push({ column: mapping.itemNumber, message: 'Chybí číslo TZ' });
   }
+
+  const designationText = cellText(at(mapping.designation)).trim();
+  const designation = designationText === '' ? null : designationText.slice(0, 50);
 
   const qrText = cellText(at(mapping.qrCode));
   const qrCode = qrText === '' ? null : qrText;
@@ -157,6 +162,7 @@ export function buildRowCandidate(
     rowNumber,
     empty,
     itemNumber,
+    designation,
     qrCode,
     nextInspectionDate,
     locationPath,

@@ -269,7 +269,7 @@ export function ItemsPage() {
           />
           <TextInput
             label="Hledat"
-            placeholder="Číslo, QR, výrobce…"
+            placeholder="Číslo TZ, označení, QR…"
             leftSection={<IconSearch size={16} />}
             w={220}
             value={text}
@@ -329,7 +329,8 @@ export function ItemsPage() {
                 />
               </Table.Th>
             )}
-            <Table.Th>Číslo</Table.Th>
+            <Table.Th>Číslo TZ</Table.Th>
+            <Table.Th>Označení</Table.Th>
             <Table.Th>Typ</Table.Th>
             <Table.Th>Umístění</Table.Th>
             <Table.Th>Výrobce / popis</Table.Th>
@@ -358,6 +359,7 @@ export function ItemsPage() {
               <Table.Td fw={700} ff="monospace">
                 {item.itemNumber}
               </Table.Td>
+              <Table.Td fw={600}>{item.designation ?? ''}</Table.Td>
               <Table.Td>{item.equipmentTypeName}</Table.Td>
               <Table.Td>{locationLabel(item.locationPath)}</Table.Td>
               <Table.Td>{firstText(item)}</Table.Td>

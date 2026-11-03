@@ -255,8 +255,9 @@ describe('import', () => {
     await workbook.xlsx.load(template.rawPayload as unknown as ArrayBuffer);
     const sheet = workbook.getWorksheet('Artikly')!;
     const headers = (sheet.getRow(1).values as string[]).slice(1);
-    expect(headers.slice(0, 6)).toEqual([
-      'Číslo artiklu',
+    expect(headers.slice(0, 7)).toEqual([
+      'Číslo TZ',
+      'Označení',
       'QR kód',
       'Hala',
       'Řada',
@@ -266,7 +267,8 @@ describe('import', () => {
     expect(workbook.getWorksheet('Nápověda')).toBeDefined();
 
     const values: Record<string, unknown> = {
-      'Číslo artiklu': 10001,
+      'Číslo TZ': 10001,
+      Označení: 'Ž-07',
       'QR kód': 'R10001',
       Hala: 'Hala A',
       Řada: 'Řada 3',
@@ -294,6 +296,7 @@ describe('import', () => {
     const [created] = (await api('GET', `/api/items?siteId=${site.id}`)).json().items;
     expect(created).toMatchObject({
       itemNumber: '10001',
+      designation: 'Ž-07',
       qrCode: 'R10001',
       locationPath: ['Hala A', 'Řada 3', 'Pozice 12'],
       nextInspectionDate: '2027-01-31',

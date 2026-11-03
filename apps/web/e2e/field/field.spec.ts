@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { PHOTO, createData, login, sheet } from './helpers.js';
+import { PHOTO, createData, login, sheet, wedgeScan } from './helpers.js';
 
 test('technician inspects a site: number pad, camera, defect with photo, new item', async ({
   page,
@@ -71,15 +71,25 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await expect(sheet(page).getByRole('button', { name: 'Zobrazit fotku' })).toHaveCount(1);
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
+  await expect(sheet(page)).toBeHidden();
+
+  // The designation finds the item too (scanner or keyboard), case and dashes ignored.
+  await wedgeScan(page, 'a101');
+  await expect(sheet(page).getByTestId('designation')).toHaveText('A1-01');
+  await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
+  await expect(sheet(page)).toBeHidden();
 
   // A Bluetooth scanner reads an unknown label: create the item with that code.
-  await page.keyboard.type('R20001\n');
+  await wedgeScan(page, 'R20001');
   await expect(page.getByText('nepatří žádnému artiklu')).toBeVisible();
   await page.getByRole('button', { name: 'Založit artikl s tímto kódem' }).click();
   const form = page.getByRole('dialog').filter({ hasText: 'Nový artikl' });
   await expect(form.getByLabel('QR kód')).toHaveValue('R20001');
   await form.getByRole('combobox', { name: 'Typ vybavení' }).click();
   await page.getByRole('option', { name: 'Žebřík (terén)' }).click();
+  // Číslo TZ typed (the automatic one depends on items of the other tests).
+  await form.getByLabel('Číslo TZ').fill('10003');
+  await form.getByLabel('Označení', { exact: true }).fill('Ž-03');
   await form.getByLabel('Výrobce').fill('Krause');
   await form.getByRole('combobox', { name: 'Typ žebříku' }).click();
   await page.getByRole('option', { name: 'Opěrný', exact: true }).click();

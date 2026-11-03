@@ -202,7 +202,8 @@ export function createExportsService(
         toCsv([
           [
             'Soubor',
-            'Kontrolní číslo',
+            'Číslo TZ',
+            'Označení',
             'Typ vybavení',
             'Umístění',
             'Výsledek',
@@ -215,6 +216,7 @@ export function createExportsService(
             .map((p) => [
               p.fileName,
               p.item?.itemNumber ?? '',
+              p.item?.designation ?? '',
               p.item ? typeName(p.item) : '',
               p.item?.locationPath.join(LOCATION_SEPARATOR) ?? '',
               p.item ? outcomeLabel(p.item.result) : '',

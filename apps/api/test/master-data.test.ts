@@ -224,7 +224,7 @@ describe('equipment types', () => {
 });
 
 describe('items', () => {
-  it('assigns numbers, accepts 4- and 5-digit series and keeps numbers unique', async () => {
+  it('assigns numbers from 1000, keeps číslo TZ unique in the organization', async () => {
     const { site, ladder } = await setup();
     const base = {
       siteId: site.id,
@@ -236,7 +236,7 @@ describe('items', () => {
     const auto = await api('POST', '/api/items', base);
     expect(auto.statusCode).toBe(201);
     expect(auto.json()).toMatchObject({
-      itemNumber: '1',
+      itemNumber: '1000',
       equipmentTypeName: 'Žebřík',
       status: 'in_service',
     });
@@ -252,8 +252,47 @@ describe('items', () => {
     expect(errorCode(await api('POST', '/api/items', { ...base, qrCode: 'R10001' }))).toBe(
       'qr_code_taken',
     );
-    expect((await api('POST', '/api/items', { ...base, itemNumber: '123456789' })).statusCode).toBe(
+    expect((await api('POST', '/api/items', { ...base, itemNumber: '123456' })).statusCode).toBe(
       400,
+    );
+
+    // Unique across customers too.
+    const other = (await api('POST', '/api/customers', { name: 'Jiný zákazník s.r.o.' })).json<{
+      id: string;
+    }>();
+    const otherSite = (
+      await api('POST', `/api/customers/${other.id}/sites`, { name: 'Sklad Ostrava' })
+    ).json<{ id: string }>();
+    expect(
+      errorCode(
+        await api('POST', '/api/items', { ...base, siteId: otherSite.id, itemNumber: '10001' }),
+      ),
+    ).toBe('item_number_taken');
+  });
+
+  it('keeps the designation unique within the site (case, spaces and dashes ignored)', async () => {
+    const { site, ladder } = await setup();
+    const base = {
+      siteId: site.id,
+      locationId: null,
+      equipmentTypeId: ladder.id,
+      fieldValues: ladderValues,
+    };
+    const first = await api('POST', '/api/items', { ...base, designation: ' Ž-01 ' });
+    expect(first.json()).toMatchObject({ designation: 'Ž-01' });
+    expect(errorCode(await api('POST', '/api/items', { ...base, designation: 'ž 01' }))).toBe(
+      'designation_taken',
+    );
+    const second = (await api('POST', '/api/items', { ...base, designation: 'Ž-02' })).json();
+    const found = (await api('GET', `/api/items?siteId=${site.id}&q=ž02`)).json();
+    expect(found.items.map((i: { id: string }) => i.id)).toEqual([second.id]);
+    // Retiring frees the designation.
+    await api('PATCH', `/api/items/${first.json().id}`, {
+      retired: true,
+      version: first.json().version,
+    });
+    expect((await api('POST', '/api/items', { ...base, designation: 'Ž-01' })).statusCode).toBe(
+      201,
     );
   });
 

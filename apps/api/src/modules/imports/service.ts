@@ -1,8 +1,10 @@
 import {
   buildRowCandidate,
   cellText,
+  designationOf,
   mappingHeaders,
   newId,
+  normalizeDesignation,
   normalizeText,
   type FieldDefinition,
   suggestMapping,
@@ -15,7 +17,7 @@ import {
   type RowCandidate,
   type SavedHeaders,
 } from '@revize/shared';
-import { and, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNotNull, isNull, max, sql } from 'drizzle-orm';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db, DbOrTx } from '../../db/client.js';
 import {
@@ -155,11 +157,27 @@ export function createImportsService(db: Db) {
         .from(item)
         .where(
           and(
-            eq(item.customerId, targetSite.customerId),
+            // Číslo TZ is unique in the whole organization (ADR-0012).
+            eq(item.organizationId, auth.organizationId),
             inArray(item.itemNumber, numbers.slice(i, i + INSERT_CHUNK)),
           ),
         );
       rows.forEach((r) => existingByNumber.set(r.itemNumber, r));
+    }
+    // Designations of the site's items (unique within the site).
+    const existingByDesignation = new Map<string, ItemRow>();
+    if (mapping.designation !== null) {
+      const rows = await tx
+        .select()
+        .from(item)
+        .where(
+          and(
+            eq(item.siteId, targetSite.id),
+            isNull(item.retiredAt),
+            isNotNull(item.designationKey),
+          ),
+        );
+      rows.forEach((r) => existingByDesignation.set(r.designationKey!, r));
     }
 
     const siteLocations = await tx
@@ -193,10 +211,17 @@ export function createImportsService(db: Db) {
     const newLocations = new Map<string, string[]>();
     const planned: PlannedRow[] = [];
 
+    const seenDesignations = new Map<string, number>();
     for (const [index, firstCandidate] of first.entries()) {
+      const designationKey = firstCandidate.designation
+        ? normalizeDesignation(firstCandidate.designation) || null
+        : null;
+      // Without číslo TZ, an update finds the item by its designation in the site.
       const existing = firstCandidate.itemNumber
         ? (existingByNumber.get(firstCandidate.itemNumber) ?? null)
-        : null;
+        : designationKey && mapping.mode === 'upsert'
+          ? (existingByDesignation.get(designationKey) ?? null)
+          : null;
       const updating = existing !== null && mapping.mode === 'upsert';
       const candidate = updating
         ? buildRowCandidate(
@@ -220,6 +245,7 @@ export function createImportsService(db: Db) {
             rowNumber: candidate.rowNumber,
             action: 'skip',
             itemNumber: null,
+            designation: null,
             locationPath: [],
             issues: [],
             warnings: [],
@@ -236,7 +262,9 @@ export function createImportsService(db: Db) {
             `Číslo ${candidate.itemNumber} je v souboru už na řádku ${earlier}`,
           );
         else seenNumbers.set(candidate.itemNumber, candidate.rowNumber);
-        if (existing && mapping.mode === 'create') {
+        if (existing && existing.customerId !== targetSite.customerId) {
+          add(mapping.itemNumber, `Číslo TZ ${candidate.itemNumber} už má artikl jiného zákazníka`);
+        } else if (existing && mapping.mode === 'create') {
           add(
             mapping.itemNumber,
             `Artikl ${candidate.itemNumber} už v evidenci je (zvolte „aktualizovat existující“)`,
@@ -247,6 +275,22 @@ export function createImportsService(db: Db) {
         }
         if (updating && existing.retiredAt)
           add(mapping.itemNumber, `Artikl ${candidate.itemNumber} je vyřazený z evidence`);
+      }
+
+      if (designationKey) {
+        const earlier = seenDesignations.get(designationKey);
+        if (earlier !== undefined)
+          add(
+            mapping.designation,
+            `Označení ${candidate.designation} je v souboru už na řádku ${earlier}`,
+          );
+        else seenDesignations.set(designationKey, candidate.rowNumber);
+        const owner = existingByDesignation.get(designationKey);
+        if (owner && owner.id !== existing?.id)
+          add(
+            mapping.designation,
+            `Označení ${candidate.designation} už v provozovně má artikl ${owner.itemNumber}`,
+          );
       }
 
       if (candidate.qrCode) {
@@ -277,7 +321,8 @@ export function createImportsService(db: Db) {
         result: {
           rowNumber: candidate.rowNumber,
           action: issues.length ? 'error' : updating ? 'update' : 'create',
-          itemNumber: candidate.itemNumber,
+          itemNumber: candidate.itemNumber ?? (updating ? existing.itemNumber : null),
+          designation: candidate.designation,
           locationPath: candidate.locationPath,
           issues,
           warnings,
@@ -523,14 +568,18 @@ export function createImportsService(db: Db) {
         const [highest] = await tx
           .select({ value: sql<string | null>`max(${item.itemNumber}::bigint)::text` })
           .from(item)
-          .where(eq(item.customerId, analysis.customerId));
+          .where(
+            and(eq(item.organizationId, auth.organizationId), sql`length(${item.itemNumber}) <= 5`),
+          );
         const inFile = analysis.planned
           .map((p) => p.candidate.itemNumber)
           .filter((n): n is string => n !== null);
-        let next = BigInt(
-          [highest?.value ?? '0', ...inFile].reduce((a, b) => (BigInt(a) > BigInt(b) ? a : b)),
-        );
-        const nextNumber = () => (++next).toString();
+        // Číslo TZ has 4 or 5 digits: the series starts at 1000.
+        let next = Math.max(999, ...[highest?.value ?? '0', ...inFile].map(Number));
+        const nextNumber = () => {
+          if (++next > 99_999) throw new AppError(409, 'numbers_exhausted', 'Došla čísla TZ.');
+          return String(next);
+        };
 
         const now = new Date();
         const inserts: (typeof item.$inferInsert)[] = [];
@@ -547,6 +596,7 @@ export function createImportsService(db: Db) {
               locationId: locationIdOf(candidate.locationPath),
               equipmentTypeId: mapping.equipmentTypeId,
               itemNumber: candidate.itemNumber ?? nextNumber(),
+              ...designationOf(candidate.designation),
               qrCode: candidate.qrCode,
               fieldValues: candidate.fieldValues,
               nextInspectionDate: candidate.nextInspectionDate,
@@ -570,6 +620,9 @@ export function createImportsService(db: Db) {
                 ? { locationId: locationIdOf(candidate.locationPath) }
                 : {}),
               ...(mapping.qrCode !== null && candidate.qrCode ? { qrCode: candidate.qrCode } : {}),
+              ...(mapping.designation !== null && candidate.designation
+                ? designationOf(candidate.designation)
+                : {}),
               ...(mapping.nextInspectionDate !== null && candidate.nextInspectionDate
                 ? { nextInspectionDate: candidate.nextInspectionDate }
                 : {}),

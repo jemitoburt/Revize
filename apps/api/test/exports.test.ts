@@ -105,7 +105,7 @@ describe('inspection exports', () => {
 
     const csv = await api('GET', `/api/inspections/${id}/export.csv`);
     expect(csv.headers['content-type']).toContain('text/csv');
-    expect(csv.body.startsWith('﻿Kontrolní číslo;Typ vybavení;')).toBe(true);
+    expect(csv.body.startsWith('﻿Číslo TZ;Označení;Typ vybavení;')).toBe(true);
     expect(csv.body).toContain('"Uvolněná příčka; ""č. 3"""');
     expect(csv.body).toContain('Nezkontrolováno');
 
@@ -125,7 +125,7 @@ describe('inspection exports', () => {
     expect(Object.keys(zip).sort()).toEqual(
       [`${number}_01.jpg`, `${number}_02.jpg`, 'fotky.csv', 'kontrola_01.jpg'].sort(),
     );
-    expect(strFromU8(zip['fotky.csv']!)).toContain(`${number}_02.jpg;${number};Žebřík;`);
+    expect(strFromU8(zip['fotky.csv']!)).toContain(`${number}_02.jpg;${number};Ž-02;Žebřík;`);
 
     const dir = await mkdtemp(join(tmpdir(), 'revize-test-'));
     try {

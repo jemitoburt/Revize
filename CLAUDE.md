@@ -113,7 +113,8 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
 - M2 backend foundation – done: full DB schema + migration, auth (sessions, roles/permissions),
   users, audit, OpenAPI, FileStorage (local disk), Docker Compose stack, demo seed.
 - M3 master data – done: API (customers, sites, location tree, equipment types incl. standards
-  library, items with bulk updates) and office UI; item numbers 1–8 digits (ADR-0012).
+  library, items with bulk updates) and office UI. Item number = číslo TZ (4–5 digits, unique in
+  the organization) + optional designation unique per site (`designation_key`, ADR-0012).
 - M4 import – done: upload (XLSX via exceljs, CSV via papaparse with UTF-8/cp1250 and delimiter
   detection) → mapping (suggested from headers, remembered per type) → dry-run report per row →
   commit in one transaction (ADR-0014). Row conversion/validation lives in `packages/shared/src/import`.

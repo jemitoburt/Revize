@@ -7,7 +7,7 @@ test('without a connection results and photos stay on the device, survive a relo
 }) => {
   await login(page, 'admin@revize.local', 'admin-heslo-123');
   await expect(page.getByRole('heading', { name: 'Zákazníci' })).toBeVisible();
-  await createData(page.request, ' offline');
+  await createData(page.request, ' offline', 2);
   await page.goto('/teren');
   const inspectionId = await startInspection(page, ' offline');
 
@@ -21,13 +21,13 @@ test('without a connection results and photos stay on the device, survive a relo
 
   await context.setOffline(true);
   await page.getByRole('button', { name: 'Číslo', exact: true }).click();
-  for (const digit of '04001') {
+  for (const digit of '05001') {
     await page.getByRole('dialog').getByRole('button', { name: digit, exact: true }).click();
   }
   await sheet(page).getByRole('button', { name: 'V pořádku' }).click();
   await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
 
-  await page.getByTestId('item-10002').click();
+  await page.getByTestId('item-20002').click();
   await sheet(page).getByRole('button', { name: 'Žlutá' }).click();
   await sheet(page).getByLabel('Popis závady').fill('Uvolněná příčka');
   const chooser = page.waitForEvent('filechooser');
@@ -43,7 +43,7 @@ test('without a connection results and photos stay on the device, survive a relo
   await expect(page.getByTestId('progress')).toHaveText('2 / 3 zkontrolováno', { timeout: 15_000 });
   await expect(page.getByTestId('sync-status')).toHaveText('Neodesláno: 3');
   await page.getByText('Závady (1)').click();
-  await page.getByTestId('item-10002').click();
+  await page.getByTestId('item-20002').click();
   await expect(sheet(page).getByRole('alert').getByText('Uvolněná příčka')).toBeVisible();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
@@ -55,11 +55,11 @@ test('without a connection results and photos stay on the device, survive a relo
   const byNumber = Object.fromEntries(
     items.map((i: { itemNumber: string; result: unknown }) => [i.itemNumber, i.result]),
   );
-  expect(byNumber['4001']).toMatchObject({ outcome: 'ok' });
-  expect(byNumber['10002']).toMatchObject({
+  expect(byNumber['5001']).toMatchObject({ outcome: 'ok' });
+  expect(byNumber['20002']).toMatchObject({
     outcome: 'defect',
     defectDescription: 'Uvolněná příčka',
     photoCount: 1,
   });
-  expect(byNumber['10001']).toBeNull();
+  expect(byNumber['20001']).toBeNull();
 });

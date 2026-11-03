@@ -272,7 +272,8 @@ export function InspectionDetailPage() {
       <Table data-testid="inspection-results">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Číslo</Table.Th>
+            <Table.Th>Číslo TZ</Table.Th>
+            <Table.Th>Označení</Table.Th>
             <Table.Th>Typ</Table.Th>
             <Table.Th>Umístění</Table.Th>
             <Table.Th>Výsledek</Table.Th>
@@ -287,6 +288,7 @@ export function InspectionDetailPage() {
               <Table.Td ff="monospace" fw={700}>
                 {i.itemNumber}
               </Table.Td>
+              <Table.Td fw={600}>{i.designation ?? ''}</Table.Td>
               <Table.Td>{typeName.get(i.equipmentTypeId)}</Table.Td>
               <Table.Td>{i.locationPath.join(LOCATION_SEPARATOR) || '–'}</Table.Td>
               <Table.Td>

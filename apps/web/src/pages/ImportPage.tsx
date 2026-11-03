@@ -45,6 +45,7 @@ import { notifyError } from '../lib/notify.js';
 
 type Mapping = Omit<ImportMappingInput, 'siteId' | 'equipmentTypeId'> & {
   itemNumber: number | null;
+  designation: number | null;
   qrCode: number | null;
   nextInspectionDate: number | null;
   location: number[];
@@ -350,10 +351,16 @@ export function ImportPage() {
             <Table>
               <Table.Tbody>
                 <ColumnSelect
-                  label="Číslo artiklu"
+                  label="Číslo TZ"
                   job={job}
                   value={mapping.itemNumber}
                   onChange={(v) => setMapping({ ...mapping, itemNumber: v })}
+                />
+                <ColumnSelect
+                  label="Označení (např. Ž-01)"
+                  job={job}
+                  value={mapping.designation}
+                  onChange={(v) => setMapping({ ...mapping, designation: v })}
                 />
                 <ColumnSelect
                   label="QR kód"
@@ -538,7 +545,8 @@ export function ImportPage() {
               <Table.Tr>
                 <Table.Th>Řádek</Table.Th>
                 <Table.Th>Výsledek</Table.Th>
-                <Table.Th>Číslo</Table.Th>
+                <Table.Th>Číslo TZ</Table.Th>
+                <Table.Th>Označení</Table.Th>
                 <Table.Th>Umístění</Table.Th>
                 <Table.Th>Problémy</Table.Th>
               </Table.Tr>
@@ -553,6 +561,7 @@ export function ImportPage() {
                   <Table.Td ff="monospace">
                     {r.itemNumber ?? (r.action === 'create' ? 'automaticky' : '')}
                   </Table.Td>
+                  <Table.Td fw={600}>{r.designation ?? ''}</Table.Td>
                   <Table.Td>{r.locationPath.join(' › ')}</Table.Td>
                   <Table.Td>
                     {r.issues.map((issue, i) => (

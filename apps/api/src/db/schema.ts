@@ -192,10 +192,14 @@ export const item = pgTable(
       .notNull()
       .references(() => equipmentType.id),
     /**
-     * Numeric series of any length up to 8 digits, stored without leading zeros (ADR-0012),
-     * unique within the customer.
+     * Číslo TZ: 4 or 5 digits (older data up to 8), stored without leading zeros, unique in
+     * the organization (ADR-0012).
      */
     itemNumber: varchar('item_number', { length: 8 }).notNull(),
+    /** Designation such as "Ž-01" (prefix + number), optional. */
+    designation: text('designation'),
+    /** `normalizeDesignation(designation)`: unique within the site among items in records. */
+    designationKey: text('designation_key'),
     /** Content of the QR label; independent of the item number (phase 2 labels). */
     qrCode: text('qr_code'),
     fieldValues: jsonb('field_values').$type<Record<string, unknown>>().notNull().default({}),
@@ -207,7 +211,10 @@ export const item = pgTable(
     ...version,
   },
   (t) => [
-    uniqueIndex('item_customer_number_key').on(t.customerId, t.itemNumber),
+    uniqueIndex('item_org_number_key').on(t.organizationId, t.itemNumber),
+    uniqueIndex('item_site_designation_key')
+      .on(t.siteId, t.designationKey)
+      .where(sql`${t.designationKey} is not null and ${t.retiredAt} is null`),
     uniqueIndex('item_org_qr_key').on(t.organizationId, t.qrCode),
     index('item_site_idx').on(t.siteId),
     index('item_location_idx').on(t.locationId),

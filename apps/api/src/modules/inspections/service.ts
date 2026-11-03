@@ -369,6 +369,7 @@ export function createInspectionsService(db: Db) {
       return rows.map((r) => ({
         id: r.item.id,
         itemNumber: r.item.itemNumber,
+        designation: r.item.designation,
         qrCode: r.item.qrCode,
         equipmentTypeId: r.item.equipmentTypeId,
         locationId: r.item.locationId,

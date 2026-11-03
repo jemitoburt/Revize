@@ -71,6 +71,11 @@ export function ItemSheet(props: ItemSheetProps) {
             <Title order={2} ff="monospace">
               {props.item.itemNumber}
             </Title>
+            {props.item.designation && (
+              <Title order={3} data-testid="designation">
+                {props.item.designation}
+              </Title>
+            )}
             <Text c="dimmed">{props.type?.name}</Text>
           </Group>
         )

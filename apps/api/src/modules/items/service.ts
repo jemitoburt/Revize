@@ -2,7 +2,9 @@ import {
   applyDefaultProducts,
   buildFieldValuesSchema,
   canonicalItemNumber,
+  designationOf,
   newId,
+  normalizeDesignation,
   type Item,
   type ItemStatus,
   type bulkUpdateItemsSchema,
@@ -23,9 +25,14 @@ type ItemRow = typeof item.$inferSelect;
 type Joined = { item: ItemRow; typeName: string; pathIds: string[] | null };
 
 const numberTaken = () =>
-  new AppError(409, 'item_number_taken', 'Toto číslo artiklu už u zákazníka existuje.', [
-    { path: ['itemNumber'], message: 'Číslo už má jiný artikl' },
+  new AppError(409, 'item_number_taken', 'Toto číslo TZ už v evidenci existuje.', [
+    { path: ['itemNumber'], message: 'Číslo TZ už má jiný artikl' },
   ]);
+const designationTaken = () =>
+  new AppError(409, 'designation_taken', 'Toto označení už v provozovně má jiný artikl.', [
+    { path: ['designation'], message: 'Označení už v provozovně má jiný artikl' },
+  ]);
+
 const qrTaken = () =>
   new AppError(409, 'qr_code_taken', 'Tento QR kód už má jiný artikl.', [
     { path: ['qrCode'], message: 'QR kód už má jiný artikl' },
@@ -51,7 +58,9 @@ function mapUniqueViolation(error: unknown): never {
   const constraint =
     (error as { constraint?: string; cause?: { constraint?: string } }).constraint ??
     (error as { cause?: { constraint?: string } }).cause?.constraint;
-  if (constraint === 'item_customer_number_key') throw numberTaken();
+  if (constraint === 'item_customer_number_key' || constraint === 'item_org_number_key')
+    throw numberTaken();
+  if (constraint === 'item_site_designation_key') throw designationTaken();
   if (constraint === 'item_org_qr_key') throw qrTaken();
   throw error;
 }
@@ -71,6 +80,7 @@ export function createItemsService(db: Db) {
       equipmentTypeId: row.equipmentTypeId,
       equipmentTypeName: typeName,
       itemNumber: row.itemNumber,
+      designation: row.designation,
       qrCode: row.qrCode,
       fieldValues: row.fieldValues,
       status: row.status as ItemStatus,
@@ -163,7 +173,7 @@ export function createItemsService(db: Db) {
     const canonical = canonicalItemNumber(input);
     if (!canonical) {
       throw validationError([
-        { path: ['itemNumber'], message: 'Číslo artiklu: 1–8 číslic (úvodní nuly se nepočítají)' },
+        { path: ['itemNumber'], message: 'Číslo TZ: 4 nebo 5 číslic (úvodní nuly se nepočítají)' },
       ]);
     }
     return canonical;
@@ -172,18 +182,36 @@ export function createItemsService(db: Db) {
   async function assertUnique(
     tx: DbOrTx,
     auth: AuthContext,
-    customerId: string,
-    itemNumber: string | null,
-    qrCode: string | null,
+    unique: {
+      itemNumber: string | null;
+      qrCode: string | null;
+      /** Checked within this site when set. */
+      designation?: { siteId: string; key: string | null };
+    },
     exceptId?: string,
   ) {
+    const { itemNumber, qrCode, designation } = unique;
+    if (designation?.key) {
+      const [row] = await tx
+        .select({ id: item.id })
+        .from(item)
+        .where(
+          and(
+            eq(item.siteId, designation.siteId),
+            eq(item.designationKey, designation.key),
+            isNull(item.retiredAt),
+            exceptId ? ne(item.id, exceptId) : undefined,
+          ),
+        );
+      if (row) throw designationTaken();
+    }
     if (itemNumber) {
       const [row] = await tx
         .select({ id: item.id })
         .from(item)
         .where(
           and(
-            eq(item.customerId, customerId),
+            eq(item.organizationId, auth.organizationId),
             eq(item.itemNumber, itemNumber),
             exceptId ? ne(item.id, exceptId) : undefined,
           ),
@@ -205,14 +233,17 @@ export function createItemsService(db: Db) {
     }
   }
 
-  async function nextItemNumber(tx: DbOrTx, customerId: string): Promise<string> {
+  /** Next free číslo TZ of the organization (after the highest 4–5 digit number). */
+  async function nextItemNumber(tx: DbOrTx, auth: AuthContext): Promise<string> {
     const [row] = await tx
       .select({ value: sql<string | null>`max(${item.itemNumber}::bigint)::text` })
       .from(item)
-      .where(eq(item.customerId, customerId));
-    const next = BigInt(row?.value ?? '0') + 1n;
-    if (next > 99_999_999n) throw new AppError(409, 'numbers_exhausted', 'Došla čísla artiklů.');
-    return next.toString();
+      .where(
+        and(eq(item.organizationId, auth.organizationId), sql`length(${item.itemNumber}) <= 5`),
+      );
+    const next = Math.max(Number(row?.value ?? '0') + 1, 1000);
+    if (next > 99_999) throw new AppError(409, 'numbers_exhausted', 'Došla čísla TZ.');
+    return String(next);
   }
 
   const audit = (
@@ -268,12 +299,20 @@ export function createItemsService(db: Db) {
     const itemNumber =
       input.itemNumber !== undefined ? canonicalOrFail(input.itemNumber) : undefined;
     const qrCode = input.qrCode !== undefined ? input.qrCode : undefined;
+    const designation =
+      input.designation !== undefined ? designationOf(input.designation) : undefined;
+    const designationKey = designation ? designation.designationKey : current.designationKey;
     await assertUnique(
       tx,
       auth,
-      current.customerId,
-      itemNumber ?? null,
-      qrCode ?? null,
+      {
+        itemNumber: itemNumber ?? null,
+        qrCode: qrCode ?? null,
+        // Checked when it changes or the item moves to another site.
+        ...(designation !== undefined || siteId !== current.siteId
+          ? { designation: { siteId, key: designationKey } }
+          : {}),
+      },
       current.id,
     );
 
@@ -289,6 +328,7 @@ export function createItemsService(db: Db) {
         locationId: input.locationId,
         equipmentTypeId: input.equipmentTypeId,
         itemNumber,
+        ...(designation ?? {}),
         qrCode,
         fieldValues,
         status: input.status,
@@ -332,7 +372,7 @@ export function createItemsService(db: Db) {
         const pattern = `%${likePattern(query.q)}%`;
         const number = canonicalItemNumber(query.q);
         filters.push(
-          sql`(${number ? sql`${item.itemNumber} like ${`${number}%`} or ` : sql``}${item.qrCode} ilike ${pattern} or ${item.fieldValues}::text ilike ${pattern})`,
+          sql`(${number ? sql`${item.itemNumber} like ${`${number}%`} or ` : sql``}${item.qrCode} ilike ${pattern} or ${item.designation} ilike ${pattern} or ${item.designationKey} like ${`%${likePattern(normalizeDesignation(query.q))}%`} or ${item.fieldValues}::text ilike ${pattern})`,
         );
       }
       const where = and(...filters);
@@ -375,8 +415,13 @@ export function createItemsService(db: Db) {
         const fieldValues = validateValues(type.fieldDefinitions, input.fieldValues);
         const itemNumber = input.itemNumber
           ? canonicalOrFail(input.itemNumber)
-          : await nextItemNumber(tx, targetSite.customerId);
-        await assertUnique(tx, auth, targetSite.customerId, itemNumber, input.qrCode ?? null);
+          : await nextItemNumber(tx, auth);
+        const designation = designationOf(input.designation);
+        await assertUnique(tx, auth, {
+          itemNumber,
+          qrCode: input.qrCode ?? null,
+          designation: { siteId: input.siteId, key: designation.designationKey },
+        });
 
         const created = await tx
           .insert(item)
@@ -388,6 +433,7 @@ export function createItemsService(db: Db) {
             locationId: input.locationId,
             equipmentTypeId: input.equipmentTypeId,
             itemNumber,
+            ...designation,
             qrCode: input.qrCode ?? null,
             fieldValues,
             nextInspectionDate: input.nextInspectionDate ?? null,

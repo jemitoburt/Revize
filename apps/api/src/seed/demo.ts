@@ -1,6 +1,7 @@
 import {
   EQUIPMENT_TYPE_PRESETS,
   buildFieldValuesSchema,
+  designationOf,
   locationPath,
   newId,
   type EquipmentTypePreset,
@@ -109,12 +110,17 @@ export async function seedDemo(db: Db, organizationId: string): Promise<boolean>
       ...positions.slice(0, 30).map((locationId, i) => {
         const n = 10001 + i;
         const isLadder = i % 3 === 0;
+        // Designation: ladders "Ž-01"…, racks by hall, row and position ("A1-01").
+        const designation = isLadder
+          ? `Ž-${String(i / 3 + 1).padStart(2, '0')}`
+          : `${i < 15 ? 'A' : 'B'}${Math.floor((i % 15) / 5) + 1}-${String((i % 5) + 1).padStart(2, '0')}`;
         return {
           ...base,
           id: newId(),
           locationId,
           equipmentTypeId: typeIds.get(isLadder ? ladder.key : rack.key)!,
           itemNumber: String(n),
+          ...designationOf(designation),
           qrCode: `R${n}`,
           fieldValues: isLadder
             ? valuesFor(ladder, ladderValues(i))
@@ -129,6 +135,7 @@ export async function seedDemo(db: Db, organizationId: string): Promise<boolean>
         locationId,
         equipmentTypeId: typeIds.get(ladder.key)!,
         itemNumber: String(4001 + i),
+        ...designationOf(`Ž-${21 + i}`),
         qrCode: null,
         fieldValues: valuesFor(ladder, ladderValues(i)),
         nextInspectionDate: `${year}-11-15`,

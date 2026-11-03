@@ -1,7 +1,15 @@
 import { FIELD_KIND_LABELS, type FieldDefinition } from '@revize/shared';
 import ExcelJS from 'exceljs';
 
-const STANDARD_COLUMNS = ['Číslo artiklu', 'QR kód', 'Hala', 'Řada', 'Pozice', 'Příští kontrola'];
+const STANDARD_COLUMNS = [
+  'Číslo TZ',
+  'Označení',
+  'QR kód',
+  'Hala',
+  'Řada',
+  'Pozice',
+  'Příští kontrola',
+];
 
 /**
  * Empty XLSX for one equipment type: the columns the import recognizes automatically, option
@@ -48,14 +56,20 @@ export async function importTemplate(
   help.getRow(1).font = { bold: true };
   help.addRows([
     [
-      'Číslo artiklu',
-      'Číslo (1–8 číslic)',
+      'Číslo TZ',
+      'Číslo (4 nebo 5 číslic)',
       'ne',
-      'Prázdné = přidělí se další volné číslo. Úvodní nuly se nepočítají.',
+      'V celé evidenci jen jednou. Prázdné = přidělí se další volné číslo. Úvodní nuly se nepočítají.',
     ],
-    ['QR kód', 'Text', 'ne', 'Obsah QR štítku, pokud se liší od čísla artiklu.'],
+    [
+      'Označení',
+      'Text',
+      'ne',
+      'Např. Ž-01 nebo A1-12 (předvolba a číslo), v provozovně jen jednou.',
+    ],
+    ['QR kód', 'Text', 'ne', 'Obsah QR štítku, pokud se liší od čísla TZ.'],
     ['Hala / Řada / Pozice', 'Text', 'ne', 'Umístění; chybějící se při importu mohou založit.'],
-    ['Příští kontrola', 'Datum', 'ne', 'Např. 31.12.2026'],
+    ['Příští kontrola', 'Datum', 'ne', 'Např. 31/12/2026'],
     ...fields.map((f) => [
       f.label,
       FIELD_KIND_LABELS[f.kind],

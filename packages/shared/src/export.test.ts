@@ -34,6 +34,7 @@ const rack: ExportType = {
 const item = (over: Partial<InspectionItem> = {}): InspectionItem => ({
   id: '00000000-0000-4000-8000-0000000000aa',
   itemNumber: '10001',
+  designation: 'Ž-01',
   qrCode: null,
   equipmentTypeId: ladder.id,
   locationId: null,
@@ -49,8 +50,14 @@ const item = (over: Partial<InspectionItem> = {}): InspectionItem => ({
 describe('export table', () => {
   it('has the union of active fields (by header) between item and result columns', () => {
     const headers = exportColumns([ladder, rack]).map((c) => c.header);
-    expect(headers.slice(0, 4)).toEqual(['Kontrolní číslo', 'Typ vybavení', 'Umístění', 'QR kód']);
-    expect(headers.slice(4, 8)).toEqual([
+    expect(headers.slice(0, 5)).toEqual([
+      'Číslo TZ',
+      'Označení',
+      'Typ vybavení',
+      'Umístění',
+      'QR kód',
+    ]);
+    expect(headers.slice(5, 9)).toEqual([
       'Výrobce',
       'Počet příček',
       'Stabilizátor',
@@ -83,6 +90,7 @@ describe('export table', () => {
     );
     expect(row).toEqual([
       '10001',
+      'Ž-01',
       'Žebřík',
       'Hala A › Řada 1',
       '',
@@ -106,7 +114,9 @@ describe('export table', () => {
   it('names and describes photos', () => {
     expect(photoFileName('10001', 0, 'image/jpeg')).toBe('10001_01.jpg');
     expect(photoFileName('kontrola', 11, 'image/png')).toBe('kontrola_12.png');
-    expect(photoCaption(item(), 'Žebřík')).toBe('Kontrolní číslo 10001 – Žebřík – Hala A › Řada 1');
+    expect(photoCaption(item(), 'Žebřík')).toBe(
+      'Číslo TZ 10001 – označení Ž-01 – Žebřík – Hala A › Řada 1',
+    );
   });
 });
 

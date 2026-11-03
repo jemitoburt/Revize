@@ -64,6 +64,8 @@ export interface ProtocolCompany {
 
 export interface ProtocolItem {
   itemNumber: string;
+  /** "Ž-01", printed before the description. */
+  designation?: string | null;
   location: string;
   /** Name with description: the type and selected field values ("Alve · Opěrný · 8 příček"). */
   details: string;
@@ -319,7 +321,9 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     // "nehodící se škrtněte": the answer that does not apply is struck through.
     const yes = i.outcome === 'ok' || i.outcome === 'green';
     const answered = i.outcome !== 'unchecked';
-    return `<tr><td>${escape(i.itemNumber)}</td><td>${escape(i.details)}${
+    return `<tr><td>${escape(i.itemNumber)}</td><td>${
+      i.designation ? `<strong>${escape(i.designation)}</strong> ` : ''
+    }${escape(i.details)}${
       i.location ? `<div class="where">${escape(i.location)}</div>` : ''
     }</td><td class="c-yn${answered && !yes ? ' struck' : ''}">ANO</td><td class="c-yn${
       answered && yes ? ' struck' : ''
@@ -345,9 +349,9 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
 
   const defectCard = (d: (typeof defects)[number]) => `
 <div class="defect">
-  <strong>Kontrolní číslo ${escape(d.itemNumber)}</strong> – ${escape(d.typeName)}${
-    d.location ? `, ${escape(d.location)}` : ''
-  }
+  <strong>Kontrolní číslo ${escape(d.itemNumber)}${
+    d.designation ? `, označení ${escape(d.designation)}` : ''
+  }</strong> – ${escape(d.typeName)}${d.location ? `, ${escape(d.location)}` : ''}
   <div>${escape(d.defectDescription ?? '')}</div>
   <div class="small">${escape(SEVERITY_LABELS[d.outcome].protocol)}</div>
   ${d.photos.length ? `<div class="photos">${d.photos.map((p) => `<img src="${p}" alt="">`).join('')}</div>` : ''}

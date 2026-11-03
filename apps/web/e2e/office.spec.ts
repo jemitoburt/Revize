@@ -149,7 +149,10 @@ test('items: create with validation and automatic number, 4-digit series, status
   await page.getByRole('option', { name: 'Víceúčelový', exact: true }).click();
   await drawer.getByRole('textbox', { name: 'Počet příček / stupňů na díl' }).fill('9');
   await drawer.getByRole('button', { name: 'Založit artikl' }).click();
-  await expect(page.getByText('Artikl 1 založen')).toBeVisible();
+  // Číslo TZ is assigned from the organization's series (other tests add items too).
+  const created = page.getByText(/^Artikl \d{4,5} založen$/);
+  await expect(created).toBeVisible();
+  const autoNumber = (await created.textContent())!.match(/\d+/)![0];
 
   // A 4-digit series item typed with a leading zero, in another position.
   await page.getByRole('button', { name: 'Nový artikl' }).click();
@@ -157,25 +160,25 @@ test('items: create with validation and automatic number, 4-digit series, status
   await page.getByRole('option', { name: 'Hala A › Řada 1 › Pozice 10', exact: true }).click();
   await drawer.getByRole('combobox', { name: 'Typ vybavení' }).click();
   await page.getByRole('option', { name: 'Regál', exact: true }).click();
-  await drawer.getByLabel('Číslo artiklu').fill('04001');
+  await drawer.getByLabel('Číslo TZ').fill('07001');
   await drawer.getByRole('textbox', { name: 'Nosnost pole' }).fill('3000');
   await drawer.getByRole('button', { name: 'Založit artikl' }).click();
-  await expect(page.getByText('Artikl 4001 založen')).toBeVisible();
+  await expect(page.getByText('Artikl 7001 založen')).toBeVisible();
 
   const rows = page.getByTestId('item-row');
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(0)).toContainText('Hala A › Řada 1 › Pozice 2');
-  await expect(rows.nth(1)).toContainText('4001');
+  await expect(rows.nth(1)).toContainText('7001');
 
   // Search by number prefix ignores leading zeros.
-  await page.getByLabel('Hledat').fill('040');
+  await page.getByLabel('Hledat').fill('070');
   await expect(rows).toHaveCount(1);
   await page.getByLabel('Hledat').fill('');
   await expect(rows).toHaveCount(2);
 
   // Taking an item out of service needs a reason.
   await rows.nth(0).click();
-  const edit = page.getByRole('dialog', { name: 'Artikl 1' });
+  const edit = page.getByRole('dialog', { name: `Artikl ${autoNumber}` });
   await edit.getByText('Vyřazen z provozu', { exact: true }).click();
   await edit.getByRole('button', { name: 'Uložit' }).click();
   await expect(edit.getByText('Uveďte důvod změny stavu')).toBeVisible();

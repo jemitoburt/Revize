@@ -198,6 +198,8 @@ export const itemSchema = z.object({
   equipmentTypeId: idSchema,
   equipmentTypeName: z.string(),
   itemNumber: z.string(),
+  /** "Ž-01": prefix and number; unique within the site when set. */
+  designation: z.string().nullable(),
   qrCode: z.string().nullable(),
   fieldValues: z.record(z.string(), z.unknown()),
   status: z.enum(ITEM_STATUSES),
@@ -213,8 +215,9 @@ const itemFields = {
   siteId: idSchema,
   locationId: idSchema.nullable(),
   equipmentTypeId: idSchema,
-  /** Any 1–8 digits; stored without leading zeros (ADR-0012). */
-  itemNumber: z.string().trim().max(8),
+  /** Číslo TZ: 4 or 5 digits, unique in the organization; stored without leading zeros. */
+  itemNumber: z.string().trim().max(5, 'Číslo TZ má nejvýš 5 číslic'),
+  designation: optionalText(50),
   qrCode: optionalText(200),
   fieldValues: z.record(z.string(), z.unknown()),
   nextInspectionDate: isoDate.nullable(),
@@ -227,6 +230,7 @@ export const createItemSchema = z.object({
   itemNumber: itemFields.itemNumber.optional(),
   nextInspectionDate: itemFields.nextInspectionDate.optional(),
   qrCode: itemFields.qrCode,
+  designation: itemFields.designation,
 });
 
 export const updateItemSchema = z
@@ -250,7 +254,7 @@ export const listItemsQuerySchema = z.object({
   /** Includes the whole subtree of the location. */
   locationId: idSchema.optional(),
   status: z.enum(ITEM_STATUSES).optional(),
-  /** Item number (prefix, leading zeros ignored), QR code or any field value. */
+  /** Číslo TZ (prefix, leading zeros ignored), designation, QR code or any field value. */
   q: z.string().trim().max(100).optional(),
   includeRetired: z
     .enum(['true', 'false'])

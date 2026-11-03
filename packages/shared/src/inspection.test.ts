@@ -16,9 +16,9 @@ describe('shouldApplyResult', () => {
 
 describe('findScannedItem', () => {
   const items = [
-    { itemNumber: '4001', qrCode: null },
-    { itemNumber: '10001', qrCode: 'R10001' },
-    { itemNumber: '10002', qrCode: '4001' },
+    { itemNumber: '4001', qrCode: null, designation: 'Ž-01' },
+    { itemNumber: '10001', qrCode: 'R10001', designation: null },
+    { itemNumber: '10002', qrCode: '4001', designation: 'A1-12' },
   ];
   it('finds by QR code first, then by item number without leading zeros', () => {
     expect(findScannedItem(items, parseScanPayload('R10001')!)?.itemNumber).toBe('10001');
@@ -28,6 +28,10 @@ describe('findScannedItem', () => {
     expect(findScannedItem(items, parseScanPayload('https://x.cz/q/R10001')!)?.itemNumber).toBe(
       '10001',
     );
+  });
+  it('finds by designation, ignoring case, spaces and dashes', () => {
+    expect(findScannedItem(items, parseScanPayload('ž 01')!)?.itemNumber).toBe('4001');
+    expect(findScannedItem(items, parseScanPayload('a112')!)?.itemNumber).toBe('10002');
   });
   it('returns null for unknown codes', () => {
     expect(findScannedItem(items, parseScanPayload('99999')!)).toBeNull();

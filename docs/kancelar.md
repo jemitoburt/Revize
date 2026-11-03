@@ -20,7 +20,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Text protokolu** se zástupnými údaji (Zákazník, Datum kontroly…) a náhled.
 5. **Artikly:**
    - Filtrujte zákazníka a provozovnu, pak **Nový artikl**. Pole se nabídnou podle typu.
-     Bez čísla se přidělí další volné. Čísla mají 1–8 číslic a `04001` = `4001`.
+   - **Číslo TZ** má 4 nebo 5 číslic a v celé evidenci je jen jednou. Bez čísla se přidělí
+     další volné. `04001` = `4001`.
+   - **Označení** (např. Ž-01, u regálu A1-12) je nepovinné a v provozovně jen jednou. Velikost
+     písmen, mezery a pomlčky se při porovnání nepočítají. Hledat jde podle obojího.
    - Kliknutím na řádek artikl upravíte. Změna stavu (vyřazen z provozu ↔ v provozu) vyžaduje
      důvod a zapíše se do auditu.
    - Hromadné akce na zaškrtnutých artiklech: přesun, stav, datum příští kontroly, vyřazení

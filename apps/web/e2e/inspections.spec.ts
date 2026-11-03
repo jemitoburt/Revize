@@ -7,7 +7,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
 }) => {
   await login(page, 'admin@revize.local', 'admin-heslo-123');
   await expect(page.getByRole('heading', { name: 'Zákazníci' })).toBeVisible();
-  const { site, type } = await createData(page.request, ' kancelář');
+  const { site, type } = await createData(page.request, ' kancelář', 3);
 
   // Company details for the protocol header.
   await page.getByRole('navigation').getByRole('link', { name: 'Nastavení' }).click();
@@ -30,8 +30,8 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
     page.request.put(`/api/inspections/${inspectionId}/results/${byNumber[itemNumber]}`, {
       data: { id: crypto.randomUUID(), recordedAt: new Date().toISOString(), ...data },
     });
-  await record('10001', { outcome: 'ok' });
-  await record('10002', { outcome: 'defect', defectDescription: 'Ohnutá štěřina' });
+  await record('30001', { outcome: 'ok' });
+  await record('30002', { outcome: 'defect', defectDescription: 'Ohnutá štěřina' });
 
   await page.getByRole('navigation').getByRole('link', { name: 'Kontroly', exact: true }).click();
   await page.getByRole('row', { name: /Sklad Zlín kancelář/ }).click();
@@ -63,7 +63,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   const csv = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export' }).click();
   await page.getByRole('menuitem', { name: 'Výsledky – CSV' }).click();
-  expect(readFileSync(await (await csv).path(), 'utf8')).toContain('Kontrolní číslo;');
+  expect(readFileSync(await (await csv).path(), 'utf8')).toContain('Číslo TZ;Označení;');
 
   // Closing sets the next inspection date of the checked items.
   await page.getByRole('button', { name: 'Uzavřít kontrolu' }).click();
@@ -71,7 +71,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await page.getByRole('dialog').getByRole('button', { name: 'Uzavřít kontrolu' }).click();
   await expect(page.getByText('Uzavřená', { exact: true })).toBeVisible();
   await expect(page.getByText('03/11/2027')).toBeVisible();
-  const item = await (await page.request.get(`/api/items/${byNumber['10001']}`)).json();
+  const item = await (await page.request.get(`/api/items/${byNumber['30001']}`)).json();
   expect(item.nextInspectionDate).toBe('2027-11-03');
 
   await page.getByRole('button', { name: 'Protokol' }).click();
@@ -85,7 +85,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await page.getByRole('button', { name: 'Znovu otevřít' }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Znovu otevřít' }).click();
   await expect(page.getByText('Uveďte důvod znovuotevření')).toBeVisible();
-  await page.getByLabel('Důvod').fill('Doplnění artiklu 4001');
+  await page.getByLabel('Důvod').fill('Doplnění artiklu 6001');
   await page.getByRole('dialog').getByRole('button', { name: 'Znovu otevřít' }).click();
   await expect(page.getByText('Otevřená', { exact: true })).toBeVisible();
 });

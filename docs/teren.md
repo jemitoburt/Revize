@@ -20,7 +20,9 @@ techniků současně. Stačí v ní zapsat první výsledek.
 ## Práce v kontrole
 
 - **Seznam** je seřazený podle umístění (hala › řada › pozice) a čísla artiklu.
-  - Filtry: _Nezkontrolované_ / _Závady_ / _Vše_, hala, typ a hledání (číslo, QR kód, výrobce…).
+  - Filtry: _Nezkontrolované_ / _Závady_ / _Vše_, hala, typ a hledání (číslo TZ, označení,
+    QR kód, výrobce…). Označení se hledá bez ohledu na velká písmena a pomlčky (`ž01` najde
+    „Ž-01“).
   - Nahoře je počet zkontrolovaných a počty v pořádku, závad a vyřazených.
   - Klepnutím na řádek otevřete kartu artiklu. Po uložení výsledku se sama otevře další
     nezkontrolovaná položka seznamu.
@@ -33,7 +35,8 @@ techniků současně. Stačí v ní zapsat první výsledek.
   - Pětimístné číslo se otevře samo po páté číslici.
   - Čtyřmístné číslo zadejte s nulou na začátku (`04001`).
   - Jiné délky potvrďte **OK**.
-- **Bluetooth čtečka** v režimu klávesnice funguje kdykoli, když je otevřená kontrola.
+- **Bluetooth čtečka** v režimu klávesnice funguje kdykoli, když je otevřená kontrola. Najde
+  artikl podle QR kódu, čísla TZ i označení.
 - **Neznámý kód:** aplikace nabídne **Založit artikl s tímto kódem**. QR kód se předvyplní.
 
 ## Karta artiklu

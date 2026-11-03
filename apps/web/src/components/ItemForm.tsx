@@ -86,6 +86,7 @@ export function ItemForm({
   );
   const [itemNumber, setItemNumber] = useState(item?.itemNumber ?? '');
   const [qrCode, setQrCode] = useState(item?.qrCode ?? defaults.qrCode ?? '');
+  const [designation, setDesignation] = useState(item?.designation ?? '');
   // Client id of a new item: a repeated save (e.g. after a timeout) cannot create it twice.
   const [createId] = useState(newId);
   const [nextInspection, setNextInspection] = useState(item?.nextInspectionDate ?? '');
@@ -130,6 +131,7 @@ export function ItemForm({
     'locationId',
     'equipmentTypeId',
     'itemNumber',
+    'designation',
     'qrCode',
     'nextInspectionDate',
     'reason',
@@ -167,6 +169,7 @@ export function ItemForm({
       locationId,
       equipmentTypeId: typeId!,
       qrCode,
+      designation,
       fieldValues: parsed.data,
       nextInspectionDate: nextInspection || null,
     };
@@ -242,13 +245,20 @@ export function ItemForm({
             onChange={changeType}
           />
           <TextInput
-            label="Číslo artiklu"
-            description="1–8 číslic; prázdné = další volné číslo"
+            label="Číslo TZ"
+            description="4 nebo 5 číslic, v celé evidenci jen jednou; prázdné = další volné"
             inputMode="numeric"
             placeholder={item ? undefined : 'automaticky'}
             value={itemNumber}
             error={errors.itemNumber}
-            onChange={(e) => setItemNumber(e.currentTarget.value.replace(/\D/g, '').slice(0, 8))}
+            onChange={(e) => setItemNumber(e.currentTarget.value.replace(/\D/g, '').slice(0, 5))}
+          />
+          <TextInput
+            label="Označení"
+            description="Např. Ž-01 nebo A1-12 (předvolba a číslo), v provozovně jen jednou"
+            value={designation}
+            error={errors.designation}
+            onChange={(e) => setDesignation(e.currentTarget.value)}
           />
           <TextInput
             label="QR kód štítku"

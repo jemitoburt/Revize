@@ -44,7 +44,10 @@ describe('buildRowCandidate', () => {
     );
     // Only the item number is an error; everything else is imported with a warning.
     expect(candidate.issues.map((i) => [i.column, i.message])).toEqual([
-      [0, '„10001.5“ není číslo artiklu (1–8 číslic)'],
+      [
+        0,
+        '„10001.5“ není číslo TZ (4 nebo 5 číslic) – patří-li do Označení, namapujte sloupec tam',
+      ],
     ]);
     const byColumn = Object.fromEntries(candidate.warnings.map((i) => [i.column, i.message]));
     expect(byColumn[3]).toContain('není datum');
@@ -62,7 +65,7 @@ describe('buildRowCandidate', () => {
     expect(buildRowCandidate(['', null, '', '', '', '', ''], 5, mapping, ladder).empty).toBe(true);
     const strict = { ...mapping, autoNumber: false };
     const missing = buildRowCandidate(['', null, '', '', 'Alve', 'Opěrný', 8], 6, strict, ladder);
-    expect(missing.issues).toEqual([{ column: 0, message: 'Chybí číslo artiklu' }]);
+    expect(missing.issues).toEqual([{ column: 0, message: 'Chybí číslo TZ' }]);
   });
 });
 

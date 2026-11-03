@@ -24,7 +24,8 @@ export interface ExportColumn {
 }
 
 const FIXED_BEFORE: ExportColumn[] = [
-  { header: 'Kontrolní číslo', width: 12 },
+  { header: 'Číslo TZ', width: 10 },
+  { header: 'Označení', width: 12 },
   { header: 'Typ vybavení', width: 22 },
   { header: 'Umístění', width: 28 },
   { header: 'QR kód', width: 14 },
@@ -83,6 +84,7 @@ export function exportRow(
   const severity = result ? severityOf(result) : null;
   return [
     item.itemNumber,
+    item.designation ?? '',
     type?.name ?? '',
     item.locationPath.join(LOCATION_SEPARATOR),
     item.qrCode ?? '',
@@ -110,12 +112,13 @@ export function photoFileName(prefix: string, index: number, mimeType: string): 
 
 /** Caption written into a defect photo (EXIF/IPTC) and into the photo list. */
 export function photoCaption(
-  item: Pick<InspectionItem, 'itemNumber' | 'locationPath' | 'result'>,
+  item: Pick<InspectionItem, 'itemNumber' | 'designation' | 'locationPath' | 'result'>,
   typeName: string,
 ): string {
   const severity = item.result ? severityOf(item.result) : null;
   return [
-    `Kontrolní číslo ${item.itemNumber}`,
+    `Číslo TZ ${item.itemNumber}`,
+    item.designation ? `označení ${item.designation}` : '',
     typeName,
     item.locationPath.join(LOCATION_SEPARATOR),
     severity ? SEVERITY_LABELS[severity].protocol : '',

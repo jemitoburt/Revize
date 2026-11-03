@@ -26,6 +26,7 @@ export type ImportJob = z.infer<typeof importJobSchema>;
 export const importSuggestionSchema = importMappingSchema
   .pick({
     itemNumber: true,
+    designation: true,
     qrCode: true,
     nextInspectionDate: true,
     location: true,
@@ -51,6 +52,7 @@ export const importRowResultSchema = z.object({
   rowNumber: z.number().int(),
   action: z.enum(IMPORT_ACTIONS),
   itemNumber: z.string().nullable().describe('null = will be assigned automatically'),
+  designation: z.string().nullable(),
   locationPath: z.array(z.string()),
   /** Errors: the row is not imported. */
   issues: z.array(rowMessageSchema),

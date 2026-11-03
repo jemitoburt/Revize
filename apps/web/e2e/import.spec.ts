@@ -30,10 +30,10 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
 
   const csv = [
     'Číslo;Hala;Řada;Výrobce;Typ žebříku;Počet příček',
-    '04001;Hala A;Řada 1;Alve;opěrný;9',
-    '4002;Hala A;Řada 2;Krause;Kolo;6',
+    '08001;Hala A;Řada 1;Alve;opěrný;9',
+    '8002;Hala A;Řada 2;Krause;Kolo;6',
     ';Hala B;;Hailo;Dvojitý (štaflový);8',
-    '4001;Hala A;Řada 1;Alve;Opěrný;10',
+    '8001;Hala A;Řada 1;Alve;Opěrný;10',
   ].join('\n');
   await page
     .locator('input[type=file]')
@@ -57,7 +57,7 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   // An unknown option value does not stop the row: it is added to the type's list.
   await expect(report).toContainText('Typ žebříku: „Kolo“ je nová hodnota číselníku – přidá se');
   await expect(page.getByText('Typ žebříku: Kolo')).toBeVisible();
-  await expect(report).toContainText('Číslo 4001 je v souboru už na řádku 2');
+  await expect(report).toContainText('Číslo 8001 je v souboru už na řádku 2');
   await expect(page.getByText('Hala A › Řada 1').first()).toBeVisible(); // locations to be created
 
   // Back to the mapping: replace the wrong value everywhere and give all items a load.
@@ -85,10 +85,10 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   await page.getByRole('link', { name: 'Zobrazit artikly' }).click();
   const rows = page.getByTestId('item-row');
   await expect(rows).toHaveCount(3);
-  await expect(rows.nth(0)).toContainText('4001');
+  await expect(rows.nth(0)).toContainText('8001');
   await expect(rows.nth(0)).toContainText('Hala A › Řada 1');
-  await expect(rows.nth(1)).toContainText('4002');
+  await expect(rows.nth(1)).toContainText('8002');
   await expect(rows.nth(2)).toContainText('Hala B');
-  const imported = await (await page.request.get('/api/items?q=4002')).json();
+  const imported = await (await page.request.get('/api/items?q=8002')).json();
   expect(imported.items[0].fieldValues).toMatchObject({ ladder_type: 'Opěrný', max_load_kg: 150 });
 });

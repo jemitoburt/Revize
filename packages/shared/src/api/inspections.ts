@@ -85,6 +85,7 @@ export type InspectionResult = z.infer<typeof inspectionResultSchema>;
 export const inspectionItemSchema = z.object({
   id: idSchema,
   itemNumber: z.string(),
+  designation: z.string().nullable(),
   qrCode: z.string().nullable(),
   equipmentTypeId: idSchema,
   locationId: idSchema.nullable(),
