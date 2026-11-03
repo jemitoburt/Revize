@@ -1,0 +1,61 @@
+# Dokploy variant: Traefik owns public ports 80/443 and routes HTTPS to web:80.
+# Set required secrets and host-specific values in the Dokploy Compose environment.
+name: revize
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: revize
+      POSTGRES_USER: revize
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in Dokploy}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U revize -d revize']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://revize:${POSTGRES_PASSWORD}@db:5432/revize
+      COOKIE_SECURE: 'true'
+      ORG_NAME: ${ORG_NAME:-Revizní firma}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@revize.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in Dokploy}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?Set TRUSTED_ORIGINS to the HTTPS domain}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - files:/data/files
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ':80'
+    networks:
+      - default
+      - dokploy-network
+
+volumes:
+  db-data:
+  files:
+
+networks:
+  dokploy-network:
+    external: true
