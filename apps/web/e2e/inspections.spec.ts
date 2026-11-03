@@ -45,7 +45,8 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(preview.getByText('Revize Novák s.r.o.').first()).toBeVisible();
   await expect(preview.getByText('Osvědčení č. 42/2025')).toBeVisible();
   const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Stáhnout PDF' }).click();
+  await page.getByRole('button', { name: 'Stáhnout', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'PDF (A4)' }).click();
   const pdf = readFileSync(await (await download).path());
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   await page.keyboard.press('Escape');

@@ -70,8 +70,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
 9. **Kontroly:**
    - Přehled otevřených a uzavřených kontrol s postupem a počtem závad. Řádek otevře detail
      s výsledky všech artiklů (filtry Závady a Nezkontrolované).
-   - **Protokol:** náhled přesně v podobě tisku, **Stáhnout PDF** a **Tisk**. Dokud kontrola
-     není uzavřená, je protokol označený jako předběžný.
+   - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
+     dvěma stranami na list (A4 na šířku) a Word (DOCX, dá se dál upravovat). Dokud kontrola
+     není uzavřená, je protokol označený jako předběžný. Fotky z iPadu se v protokolu objeví,
+     až se odešlou (stav „Vše odesláno“).
    - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
      kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
      Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.

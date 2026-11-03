@@ -6,26 +6,27 @@ Kontrolu dělá `pnpm run check:licenses` (skript `scripts/check-licenses.mjs`),
 
 ## Hlavní komponenty
 
-| Komponenta                                 | Licence                         | Použití                           | Fáze   |
-| ------------------------------------------ | ------------------------------- | --------------------------------- | ------ |
-| TypeScript, Vite, Vitest, ESLint, Prettier | Apache-2.0 / MIT                | build a testy                     | M0     |
-| zxing-wasm (wrapper) + zxing-cpp           | MIT + Apache-2.0                | dekódování QR v prohlížeči        | M1     |
-| qrcode (node-qrcode)                       | MIT                             | testovací arch QR, později štítky | M1     |
-| vite-plugin-pwa, Workbox                   | MIT                             | service worker, PWA               | M1     |
-| Playwright, playwright-core                | Apache-2.0                      | e2e testy, render PDF protokolu   | M1, M7 |
-| Chromium (balíček Alpine v obrazu API)     | BSD-3-Clause a další permisivní | headless render PDF               | M7     |
-| Fastify, @fastify/*                        | MIT                             | API                               | M2     |
-| Drizzle ORM, drizzle-kit                   | Apache-2.0                      | ORM, migrace                      | M2     |
-| PostgreSQL                                 | PostgreSQL                      | databáze                          | M2     |
-| @node-rs/argon2                            | MIT                             | hash hesel                        | M2     |
-| React, TanStack, Mantine, Dexie            | MIT / Apache-2.0                | frontend                          | M3     |
-| dexie-react-hooks, fflate, fake-indexeddb  | Apache-2.0 / MIT                | offline fronta, ZIP, testy        | M6     |
-| exceljs, papaparse                         | MIT                             | import XLSX/CSV, export XLSX      | M4, M7 |
-| exiftool-vendored                          | MIT (ExifTool viz výjimky)      | EXIF/IPTC exportovaných fotek     | M7     |
-| PGlite (@electric-sql/pglite)              | Apache-2.0 / PostgreSQL         | ukázková verze v prohlížeči       | M5     |
-| @noble/hashes, buffer                      | MIT                             | náhrady Node modulů v ukázce      | M5     |
-| Caddy                                      | Apache-2.0                      | reverse proxy, HTTPS              | M2     |
-| Noto Sans (fonty)                          | OFL-1.1                         | písmo PDF protokolu               | M7     |
+| Komponenta                                 | Licence                         | Použití                                 | Fáze   |
+| ------------------------------------------ | ------------------------------- | --------------------------------------- | ------ |
+| TypeScript, Vite, Vitest, ESLint, Prettier | Apache-2.0 / MIT                | build a testy                           | M0     |
+| zxing-wasm (wrapper) + zxing-cpp           | MIT + Apache-2.0                | dekódování QR v prohlížeči              | M1     |
+| qrcode (node-qrcode)                       | MIT                             | testovací arch QR, později štítky       | M1     |
+| vite-plugin-pwa, Workbox                   | MIT                             | service worker, PWA                     | M1     |
+| Playwright, playwright-core                | Apache-2.0                      | e2e testy, render PDF protokolu         | M1, M7 |
+| Chromium (balíček Alpine v obrazu API)     | BSD-3-Clause a další permisivní | headless render PDF                     | M7     |
+| Fastify, @fastify/*                        | MIT                             | API                                     | M2     |
+| Drizzle ORM, drizzle-kit                   | Apache-2.0                      | ORM, migrace                            | M2     |
+| PostgreSQL                                 | PostgreSQL                      | databáze                                | M2     |
+| @node-rs/argon2                            | MIT                             | hash hesel                              | M2     |
+| React, TanStack, Mantine, Dexie            | MIT / Apache-2.0                | frontend                                | M3     |
+| dexie-react-hooks, fflate, fake-indexeddb  | Apache-2.0 / MIT                | offline fronta, ZIP, testy              | M6     |
+| exceljs, papaparse                         | MIT                             | import XLSX/CSV, export XLSX            | M4, M7 |
+| exiftool-vendored                          | MIT (ExifTool viz výjimky)      | EXIF/IPTC exportovaných fotek           | M7     |
+| pdf-lib, docx                              | MIT                             | PDF 2 strany na list, protokol ve Wordu | M7     |
+| PGlite (@electric-sql/pglite)              | Apache-2.0 / PostgreSQL         | ukázková verze v prohlížeči             | M5     |
+| @noble/hashes, buffer                      | MIT                             | náhrady Node modulů v ukázce            | M5     |
+| Caddy                                      | Apache-2.0                      | reverse proxy, HTTPS                    | M2     |
+| Noto Sans (fonty)                          | OFL-1.1                         | písmo PDF protokolu                     | M7     |
 
 ## Schválené výjimky
 

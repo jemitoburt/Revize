@@ -7,6 +7,10 @@ import type { ProtocolsService } from './service.js';
 const params = z.object({ id: idSchema });
 /** Optional: the protocol of one equipment type only (its text and its items). */
 const querystring = z.object({ equipmentTypeId: idSchema.optional() });
+const pdfQuery = querystring.extend({
+  /** `two-up`: two A4 pages on one landscape A4 sheet. */
+  layout: z.enum(['a4', 'two-up']).default('a4'),
+});
 
 export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsService }> = async (
   app,
@@ -34,7 +38,7 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
         tags,
         summary: 'Protokol kontroly v PDF (před uzavřením označený jako předběžný)',
         params,
-        querystring,
+        querystring: pdfQuery,
       },
     },
     async (req, reply) => {
@@ -42,9 +46,31 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
         authOf(req),
         req.params.id,
         req.query.equipmentTypeId,
+        req.query.layout === 'two-up',
       );
       return reply
         .header('content-type', 'application/pdf')
+        .header('content-disposition', `attachment; filename="${fileName}"`)
+        .send(Buffer.from(data.buffer, data.byteOffset, data.byteLength));
+    },
+  );
+  app.get(
+    '/inspections/:id/protocol.docx',
+    {
+      preHandler: read,
+      schema: { tags, summary: 'Protokol kontroly ve Wordu (DOCX)', params, querystring },
+    },
+    async (req, reply) => {
+      const { data, fileName } = await protocols.docx(
+        authOf(req),
+        req.params.id,
+        req.query.equipmentTypeId,
+      );
+      return reply
+        .header(
+          'content-type',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        )
         .header('content-disposition', `attachment; filename="${fileName}"`)
         .send(Buffer.from(data.buffer, data.byteOffset, data.byteLength));
     },

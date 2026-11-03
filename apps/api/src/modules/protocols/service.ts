@@ -23,6 +23,8 @@ import type { FileStorage } from '../../infra/file-storage.js';
 import type { PdfRenderer } from '../../infra/pdf-renderer.js';
 import type { InspectionsService } from '../inspections/service.js';
 import { organizationOf, settingsOf } from '../organization/service.js';
+import { renderProtocolDocx } from './docx.js';
+import { twoPagesPerSheet } from './two-up.js';
 
 /** Item details shown in the protocol table: the first few filled-in fields of the type. */
 const DETAIL_FIELDS = 3;
@@ -40,7 +42,7 @@ function printedResult(
   return { outcome: severity, defectDescription: result.defectDescription };
 }
 
-const czechDate = (iso: string | null) => formatDate(iso) || '–';
+const czechDate = (iso: string | null) => formatDate(iso);
 
 export function createProtocolsService(
   db: Db,
@@ -118,7 +120,7 @@ export function createProtocolsService(
           .map((i) => ({
             itemNumber: i.itemNumber,
             designation: i.designation,
-            location: i.locationPath.join(LOCATION_SEPARATOR) || 'Bez umístění',
+            location: i.locationPath.join(LOCATION_SEPARATOR),
             details: displayFields(type.fieldDefinitions, i.fieldValues)
               .slice(0, DETAIL_FIELDS)
               .map((f) => f.value)
@@ -169,10 +171,12 @@ export function createProtocolsService(
       return renderProtocolHtml(await build(auth, inspectionId, equipmentTypeId));
     },
 
+    /** `twoUp`: two A4 pages side by side on each landscape A4 sheet. */
     async pdf(
       auth: AuthContext,
       inspectionId: string,
       equipmentTypeId?: string,
+      twoUp = false,
     ): Promise<{ data: Uint8Array; fileName: string }> {
       if (!pdf) {
         throw new AppError(501, 'pdf_unavailable', 'PDF se zde nevytváří, použijte tisk náhledu.');
@@ -184,7 +188,23 @@ export function createProtocolsService(
         margin: PROTOCOL_PDF_MARGINS,
       });
       const slug = fileNamePart(data.site.name);
-      return { data: bytes, fileName: `protokol-${slug}-${data.inspectionDate}.pdf` };
+      return {
+        data: twoUp ? await twoPagesPerSheet(bytes) : bytes,
+        fileName: `protokol-${slug}-${data.inspectionDate}${twoUp ? '-2-na-list' : ''}.pdf`,
+      };
+    },
+
+    /** The protocol as an editable Word document (works in the browser demo too). */
+    async docx(
+      auth: AuthContext,
+      inspectionId: string,
+      equipmentTypeId?: string,
+    ): Promise<{ data: Uint8Array; fileName: string }> {
+      const data = await build(auth, inspectionId, equipmentTypeId);
+      return {
+        data: await renderProtocolDocx(data),
+        fileName: `protokol-${fileNamePart(data.site.name)}-${data.inspectionDate}.docx`,
+      };
     },
   };
 }

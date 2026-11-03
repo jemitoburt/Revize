@@ -1,5 +1,7 @@
 import { newId } from '@revize/shared';
 import { eq } from 'drizzle-orm';
+import { strFromU8, unzipSync } from 'fflate';
+import { PDFDocument } from 'pdf-lib';
 import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { auditLog, item } from '../src/db/schema.js';
@@ -203,6 +205,27 @@ describe('organization settings and protocol', () => {
     expect(pdf.headers['content-disposition']).toContain('protokol-Provozovna-Brno-2026-11-03.pdf');
     expect(pdf.rawPayload.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.rawPayload.length).toBeGreaterThan(20_000);
+
+    // Two A4 pages on one landscape A4 sheet.
+    const twoUp = await api('GET', `/api/inspections/${id}/protocol.pdf?layout=two-up`);
+    expect(twoUp.headers['content-disposition']).toContain('-2-na-list.pdf');
+    const sheets = await PDFDocument.load(twoUp.rawPayload);
+    const pages = await PDFDocument.load(pdf.rawPayload);
+    expect(sheets.getPageCount()).toBe(Math.ceil(pages.getPageCount() / 2));
+    const { width, height } = sheets.getPage(0).getSize();
+    expect(Math.round(width)).toBe(842);
+    expect(Math.round(height)).toBe(595);
+
+    // Word: a DOCX (ZIP) with the texts, the table and the photo.
+    const docx = await api('GET', `/api/inspections/${id}/protocol.docx`);
+    expect(docx.headers['content-type']).toContain('wordprocessingml');
+    const files = unzipSync(new Uint8Array(docx.rawPayload));
+    const xml = strFromU8(files['word/document.xml']!);
+    expect(xml).toContain('Protokol o kontrole technického vybavení');
+    expect(xml).toContain('Prasklá příčka');
+    expect(xml).toContain('Žebříky a schůdky');
+    expect(Object.keys(files).some((f) => f.startsWith('word/media/'))).toBe(true);
+    expect(strFromU8(files['word/header1.xml']!)).toContain('Datum vydání');
 
     await api('POST', `/api/inspections/${id}/close`, {});
     const final = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;

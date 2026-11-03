@@ -69,6 +69,18 @@ kopíruje formulář firmy:
   vozíky, rollkontejnery, ostatní vybavení), s jejich texty. Migrace `0008` nahradila staré
   návrhy textů u typů, kde zůstaly beze změny.
 
+## Upřesnění 2026-11-03: Word, dvě strany na list, prázdné údaje
+
+- **Chybějící údaje se vynechají.** Žádné náhradní texty typu „Bez umístění“ ani pomlčky.
+- **Word (DOCX):** `GET /inspections/:id/protocol.docx` má stejný obsah a rozvržení jako PDF.
+  Hlavička stránky s čísly stránek, tabulky, texty a fotky jsou skutečné prvky Wordu, takže jde
+  dál upravovat. Vytváří ho knihovna `docx` (MIT) a funguje i v ukázce v prohlížeči.
+- **Dvě strany na list:** `protocol.pdf?layout=two-up` vždy na A4 na šířku. Stránky A4 se
+  zmenší vedle sebe (`pdf-lib`, MIT, stránky se vkládají vektorově). Při tisku z prohlížeče
+  stejnou volbu nabízí tiskový dialog („Stránek na list: 2“).
+- **Fotky** jsou v protokolu, až se odešlou z iPadu. Náhled protokolu upozorní, když na
+  zařízení čekají neodeslané změny.
+
 ## Důsledky
 
 - Změny rozvržení podle vzoru od uživatele jsou úprava jedné funkce a jejího testu. Data

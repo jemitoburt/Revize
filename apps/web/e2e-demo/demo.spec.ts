@@ -71,14 +71,23 @@ test('demo field mode: a technician records results and photos in the browser', 
   await expect(page.getByText('Celkové fotky kontroly (1)')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Zobrazit fotku' }).locator('img')).toBeVisible();
 
-  // The protocol is rendered in the browser too (printed instead of a server PDF).
+  // The protocol is rendered in the browser too (printed instead of a server PDF). Photos are
+  // in it once they have left the device's outbox.
+  await expect(page.getByText('Vše odesláno')).toBeVisible({ timeout: 30_000 });
   await page.goto('kontroly');
   await page.getByRole('row', { name: /Provozovna Brno/ }).click();
   await page.getByRole('button', { name: 'Protokol' }).click();
   const preview = page.frameLocator('iframe[title="Náhled protokolu"]');
   await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tisk / uložit jako PDF' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Stáhnout PDF' })).toHaveCount(0);
+  // The photo of the inspection is in the protocol (thumbnail as a data URL).
+  await expect(preview.locator('.photos img')).toHaveCount(1);
+  // No server PDF in the demo, but Word is made in the browser.
+  await page.getByRole('button', { name: 'Stáhnout', exact: true }).click();
+  await expect(page.getByRole('menuitem', { name: 'PDF (A4)' })).toHaveCount(0);
+  const word = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: 'Word (DOCX)' }).click();
+  expect((await word).suggestedFilename()).toMatch(/\.docx$/);
   await page.keyboard.press('Escape');
 
   // Photos as a ZIP also in the browser (without EXIF/IPTC, no ExifTool there).

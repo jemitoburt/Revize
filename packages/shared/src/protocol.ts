@@ -118,16 +118,18 @@ const escape = (text: string) =>
   );
 const czechDate = (iso: string | null) => formatDate(iso);
 
+/** A block of a protocol text: heading, paragraph, or a list with sub-items. */
+export type ProtocolTextBlock =
+  | { kind: 'h'; text: string }
+  | { kind: 'p'; text: string }
+  | { kind: 'ul'; items: { text: string; sub: string[] }[] };
+
 /**
- * Protocol text of an equipment type as HTML: `# ` heading, `• ` (or `- `) item, indented item
+ * Protocol text of an equipment type: `# ` heading, `• ` (or `- `) item, indented item
  * = sub-item, a line without a mark continues the previous item, blank line = new paragraph.
  */
-export function protocolTextHtml(text: string): string {
-  type Block =
-    | { kind: 'h'; text: string }
-    | { kind: 'p'; text: string }
-    | { kind: 'ul'; items: { text: string; sub: string[] }[] };
-  const blocks: Block[] = [];
+export function parseProtocolText(text: string): ProtocolTextBlock[] {
+  const blocks: ProtocolTextBlock[] = [];
   let open = false;
   for (const raw of text.split('\n')) {
     const line = raw.trimEnd();
@@ -158,6 +160,12 @@ export function protocolTextHtml(text: string): string {
       open = true;
     }
   }
+  return blocks;
+}
+
+/** Protocol text as HTML (see `parseProtocolText`). */
+export function protocolTextHtml(text: string): string {
+  const blocks = parseProtocolText(text);
   return blocks
     .map((b) =>
       b.kind === 'h'
@@ -182,6 +190,54 @@ const isDefect = (o: ProtocolItem['outcome']): o is 'green' | 'amber' | 'red' =>
   o === 'green' || o === 'amber' || o === 'red';
 const SEVERITY_ORDER = { red: 0, amber: 1, green: 2 } as const;
 
+/**
+ * "Schopno bezpečného provozu": ok and green = ANO, yellow and red = NE, unchecked = none
+ * ("nehodící se škrtněte" strikes the other answer).
+ */
+export function safeToOperate(outcome: ProtocolItem['outcome']): boolean | null {
+  if (outcome === 'unchecked') return null;
+  return outcome === 'ok' || outcome === 'green';
+}
+
+export type ProtocolDefect = ProtocolItem & {
+  outcome: 'green' | 'amber' | 'red';
+  typeName: string;
+};
+
+/** Defects for the photo pages: serious (red) first, then the others. */
+export function protocolDefects(data: ProtocolData): {
+  serious: ProtocolDefect[];
+  other: ProtocolDefect[];
+} {
+  const defects = data.sections
+    .flatMap((s) =>
+      s.items
+        .filter((i) => isDefect(i.outcome))
+        .map((i) => ({
+          ...i,
+          outcome: i.outcome as ProtocolDefect['outcome'],
+          typeName: s.typeName,
+        })),
+    )
+    .sort((a, b) => SEVERITY_ORDER[a.outcome] - SEVERITY_ORDER[b.outcome]);
+  return {
+    serious: defects.filter((d) => d.outcome === 'red'),
+    other: defects.filter((d) => d.outcome !== 'red'),
+  };
+}
+
+/** The note column: the defect and its risk level, or "Nezkontrolováno". Plain text lines. */
+export function protocolNoteLines(i: ProtocolItem): string[] {
+  if (i.outcome === 'unchecked') return ['Nezkontrolováno'];
+  if (!isDefect(i.outcome)) return [];
+  return [i.defectDescription ?? '', SEVERITY_LABELS[i.outcome].protocol].filter(Boolean);
+}
+
+/** Texts of the types in the protocol, each once (all racks share one text). */
+export const protocolTexts = (data: ProtocolData) => [
+  ...new Set(data.sections.map((s) => s.text.trim()).filter(Boolean)),
+];
+
 /** Standard statements of the form, printed after the signatures. */
 export const PROTOCOL_STATEMENTS = [
   'Kontrola technického vybavení byla provedena v souladu s právními předpisy, normativními požadavky a dokumentací technického vybavení.',
@@ -202,7 +258,8 @@ const HEADER_STYLE = `
 .pf .web { font-weight: 700; font-size: 9pt; border: 0.75pt solid #000; background: #ffeb00; padding: 0.4mm 2mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 `;
 
-const companyLine = (c: ProtocolCompany) =>
+/** "Firma, adresa, IČ: …" – the first line of the page header. */
+export const companyLine = (c: ProtocolCompany) =>
   [c.name, c.address, c.companyId && `IČ: ${c.companyId}`].filter(Boolean).join(', ');
 
 /**
@@ -286,12 +343,7 @@ ${HEADER_STYLE}
 
 /** Note column: the defect, its risk level after ČSN EN 15635 and, if red, the removal. */
 function noteOf(i: ProtocolItem): string {
-  if (i.outcome === 'unchecked') return 'Nezkontrolováno';
-  if (!isDefect(i.outcome)) return '';
-  return [i.defectDescription ?? '', SEVERITY_LABELS[i.outcome].protocol]
-    .filter(Boolean)
-    .map(escape)
-    .join('<br>');
+  return protocolNoteLines(i).map(escape).join('<br>');
 }
 
 /**
@@ -303,19 +355,8 @@ function noteOf(i: ProtocolItem): string {
 export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOptions = {}): string {
   const frame = options.pageFrame ?? true;
   const c = data.company;
-  const defects = data.sections
-    .flatMap((s) =>
-      s.items
-        .filter((i) => isDefect(i.outcome))
-        .map((i) => ({
-          ...i,
-          outcome: i.outcome as 'green' | 'amber' | 'red',
-          typeName: s.typeName,
-        })),
-    )
-    .sort((a, b) => SEVERITY_ORDER[a.outcome] - SEVERITY_ORDER[b.outcome]);
-  const serious = defects.filter((d) => d.outcome === 'red');
-  const other = defects.filter((d) => d.outcome !== 'red');
+  const { serious, other } = protocolDefects(data);
+  const defects = [...serious, ...other];
 
   const row = (i: ProtocolItem) => {
     // "nehodící se škrtněte": the answer that does not apply is struck through.
@@ -345,7 +386,7 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     .join('');
 
   // The same text for several types (e.g. all racks) is printed once.
-  const texts = [...new Set(data.sections.map((s) => s.text.trim()).filter(Boolean))];
+  const texts = protocolTexts(data);
 
   const defectCard = (d: (typeof defects)[number]) => `
 <div class="defect">
