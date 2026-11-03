@@ -83,5 +83,7 @@ jobs:
       - run: docker compose build
       - run: docker compose up -d --wait --wait-timeout 180
       - run: scripts/smoke-test.sh https://localhost admin@revize.local ci-admin-heslo
+      # Backup → wipe → restore into a clean stack, then compare data and photo checksums.
+      - run: scripts/test-restore.sh https://localhost admin@revize.local ci-admin-heslo
       - if: failure()
         run: docker compose logs
