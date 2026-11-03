@@ -25,7 +25,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - Hromadné akce na zaškrtnutých artiklech: přesun, stav, datum příští kontroly, vyřazení
      z evidence.
 6. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace
-   uživatele okamžitě odhlásí ze všech zařízení.
+   uživatele okamžitě odhlásí ze všech zařízení. **Smazat uživatele** (v jeho úpravě, s
+   potvrzením) účet zruší: nepřihlásí se a zmizí ze seznamu. Jeho jméno zůstane u provedených
+   kontrol a v auditu a e-mail jde použít pro nový účet. Vlastní účet ani posledního
+   administrátora smazat nejde.
 7. **Import (XLSX/CSV):**
    - Zvolte zákazníka, provozovnu a typ vybavení. **Stáhnout šablonu** dá XLSX se správnými
      sloupci, číselníky jako rozbalovací seznam a listem _Nápověda_.

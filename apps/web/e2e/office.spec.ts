@@ -236,3 +236,21 @@ test('rack bay load is prefilled as level load × levels and can be overwritten'
   await drawer.getByRole('textbox', { name: 'Počet úrovní' }).fill('6');
   await expect(bayLoad).toHaveValue('7200');
 });
+
+test('admin deletes a user (with confirmation)', async ({ page }) => {
+  await login(page);
+  await page.request.post('/api/users', {
+    data: {
+      email: 'smazat@revize.local',
+      displayName: 'Karel Smazat',
+      role: 'inspector',
+      password: 'x',
+    },
+  });
+  await nav(page, 'Uživatelé');
+  await page.getByRole('cell', { name: 'Karel Smazat' }).click();
+  await dialog(page).getByRole('button', { name: 'Smazat uživatele' }).click();
+  await dialog(page).getByRole('button', { name: 'Smazat', exact: true }).click();
+  await expect(page.getByText('Uživatel smazán')).toBeVisible();
+  await expect(page.getByRole('cell', { name: 'Karel Smazat' })).toBeHidden();
+});

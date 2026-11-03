@@ -136,6 +136,8 @@ export const useUpdateUser = () =>
       api.patch<User>(`/users/${id}`, body),
     [['users']],
   );
+export const useDeleteUser = () =>
+  useApiMutation((id: string) => api.delete(`/users/${id}`), [['users']]);
 
 // ---------- customers & sites ----------
 

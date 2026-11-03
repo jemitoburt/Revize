@@ -1,4 +1,4 @@
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, isNull } from 'drizzle-orm';
 import type { DbOrTx } from '../../db/client.js';
 import { appUser } from '../../db/schema.js';
 
@@ -9,7 +9,7 @@ export const usersRepository = {
     return db
       .select()
       .from(appUser)
-      .where(eq(appUser.organizationId, organizationId))
+      .where(and(eq(appUser.organizationId, organizationId), isNull(appUser.deletedAt)))
       .orderBy(appUser.displayName);
   },
 
@@ -17,7 +17,13 @@ export const usersRepository = {
     const [row] = await db
       .select()
       .from(appUser)
-      .where(and(eq(appUser.organizationId, organizationId), eq(appUser.id, id)));
+      .where(
+        and(
+          eq(appUser.organizationId, organizationId),
+          eq(appUser.id, id),
+          isNull(appUser.deletedAt),
+        ),
+      );
     return row ?? null;
   },
 
@@ -63,6 +69,7 @@ export const usersRepository = {
           eq(appUser.organizationId, organizationId),
           eq(appUser.role, 'admin'),
           eq(appUser.active, true),
+          isNull(appUser.deletedAt),
         ),
       );
     return row?.value ?? 0;

@@ -55,4 +55,21 @@ export const usersRoutes: FastifyPluginAsyncZod<{ users: UsersService }> = async
     },
     (request) => users.update(authOf(request), request.params.id, request.body),
   );
+
+  app.delete(
+    '/users/:id',
+    {
+      preHandler: guard,
+      schema: {
+        tags,
+        summary: 'Smazat uživatele (historie kontrol a audit zůstávají)',
+        params: z.object({ id: idSchema }),
+        response: { 204: z.null(), 404: apiErrorSchema, 409: apiErrorSchema },
+      },
+    },
+    async (request, reply) => {
+      await users.remove(authOf(request), request.params.id);
+      return reply.code(204).send(null);
+    },
+  );
 };

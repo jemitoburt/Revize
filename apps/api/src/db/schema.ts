@@ -54,6 +54,11 @@ export const appUser = pgTable(
     role: text('role').notNull(),
     active: boolean('active').notNull().default(true),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    /**
+     * Deleted by an administrator: hidden, cannot sign in, the e-mail is freed. The row stays
+     * so that inspections, results and the audit keep the name (no hard delete).
+     */
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
     ...timestamps,
     ...version,
   },

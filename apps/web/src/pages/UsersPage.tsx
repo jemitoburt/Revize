@@ -8,6 +8,7 @@ import {
   Stack,
   Switch,
   Table,
+  Text,
   TextInput,
   Title,
 } from '@mantine/core';
@@ -15,7 +16,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { ROLES, ROLE_LABELS, type Role, type User } from '@revize/shared';
 import { useState, type FormEvent } from 'react';
 import type { ApiRequestError } from '../api/client.js';
-import { useCreateUser, useUpdateUser, useUsers } from '../api/hooks.js';
+import { useCreateUser, useDeleteUser, useMe, useUpdateUser, useUsers } from '../api/hooks.js';
 import { formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
@@ -24,6 +25,9 @@ const roleOptions = ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role]
 function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
   const create = useCreateUser();
   const update = useUpdateUser();
+  const remove = useDeleteUser();
+  const me = useMe();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [email, setEmail] = useState(user?.email ?? '');
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [role, setRole] = useState<Role>(user?.role ?? 'inspector');
@@ -95,7 +99,37 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           error={errors.password}
           onChange={(e) => setPassword(e.currentTarget.value)}
         />
+        {user && user.id !== me.data?.id && confirmDelete && (
+          <Stack gap="xs" p="sm" style={{ border: '1px solid var(--mantine-color-red-4)' }}>
+            <Text size="sm">
+              Smazat uživatele {user.displayName}? Nebude se moct přihlásit a zmizí ze seznamu. Jeho
+              jméno zůstane u provedených kontrol a v auditu. E-mail půjde použít znovu.
+            </Text>
+            <Group justify="flex-end">
+              <Button variant="default" onClick={() => setConfirmDelete(false)}>
+                Nemazat
+              </Button>
+              <Button
+                color="red"
+                loading={remove.isPending}
+                onClick={() =>
+                  remove.mutate(user.id, {
+                    onSuccess: () => (notifySaved('Uživatel smazán'), onDone()),
+                    onError,
+                  })
+                }
+              >
+                Smazat
+              </Button>
+            </Group>
+          </Stack>
+        )}
         <Group justify="flex-end">
+          {user && user.id !== me.data?.id && !confirmDelete && (
+            <Button variant="subtle" color="red" mr="auto" onClick={() => setConfirmDelete(true)}>
+              Smazat uživatele
+            </Button>
+          )}
           <Button type="submit" loading={create.isPending || update.isPending}>
             Uložit
           </Button>

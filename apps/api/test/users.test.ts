@@ -102,6 +102,30 @@ describe('users', () => {
     expect(errorCode(response)).toBe('last_admin');
   });
 
+  it('deletes a user: signed out, hidden, e-mail free again; not yourself', async () => {
+    const created = (await createUser()).json();
+    const { token } = await ctx.login(technik.email, technik.password);
+    const del = (id: string, as = adminToken) =>
+      ctx.app.inject({ method: 'DELETE', url: `/api/users/${id}`, headers: bearer(as) });
+
+    expect((await del(created.id, token)).statusCode).toBe(403);
+    expect((await del(created.id)).statusCode).toBe(204);
+    expect((await ctx.app.inject({ url: '/api/auth/me', headers: bearer(token) })).statusCode).toBe(
+      401,
+    );
+    await expect(ctx.login(technik.email, technik.password)).rejects.toThrow();
+    const list = (await ctx.app.inject({ url: '/api/users', headers: bearer(adminToken) })).json<
+      { id: string }[]
+    >();
+    expect(list.map((u) => u.id)).not.toContain(created.id);
+    expect((await del(created.id)).statusCode).toBe(404);
+    // The e-mail can be used for a new account.
+    expect((await createUser({ ...technik, id: undefined })).statusCode).toBe(201);
+
+    const me = (await ctx.app.inject({ url: '/api/auth/me', headers: bearer(adminToken) })).json();
+    expect(errorCode(await del(me.id))).toBe('delete_self');
+  });
+
   it('deactivation and password reset sign the user out', async () => {
     const user = (await createUser()).json();
     const { token } = await ctx.login(technik.email, technik.password);

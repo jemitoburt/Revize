@@ -109,6 +109,41 @@ export function createUsersService(db: Db) {
         return toUserDto(updated);
       });
     },
+
+    /**
+     * Deletes a user account: signed out, hidden, e-mail freed for a new account. Inspections,
+     * results and the audit keep the name. Not yourself and not the last active admin.
+     */
+    async remove(auth: AuthContext, id: string): Promise<void> {
+      await db.transaction(async (tx) => {
+        const current = await repo.findById(tx, auth.organizationId, id);
+        if (!current) throw notFound('Uživatel neexistuje.');
+        if (id === auth.userId) {
+          throw conflict('delete_self', 'Vlastní účet smazat nejde.');
+        }
+        if (
+          current.role === 'admin' &&
+          current.active &&
+          (await repo.countActiveAdmins(tx, auth.organizationId)) <= 1
+        ) {
+          throw conflict('last_admin', 'Musí zůstat aspoň jeden aktivní administrátor.');
+        }
+        await repo.update(tx, auth.organizationId, id, current.version, {
+          active: false,
+          deletedAt: new Date(),
+          email: `smazany-${id}@revize.invalid`,
+        });
+        await deleteUserSessions(tx, id);
+        await recordAudit(tx, {
+          organizationId: auth.organizationId,
+          actorUserId: auth.userId,
+          action: 'user.delete',
+          entityType: 'user',
+          entityId: id,
+          before: toUserDto(current),
+        });
+      });
+    },
   };
 }
 

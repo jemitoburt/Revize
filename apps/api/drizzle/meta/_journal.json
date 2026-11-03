@@ -64,6 +64,13 @@
       "when": 1793710538360,
       "tag": "0008_protocol_texts",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793713053495,
+      "tag": "0009_user_deleted_at",
+      "breakpoints": true
     }
   ]
 }
