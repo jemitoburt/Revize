@@ -4,6 +4,7 @@
  */
 import type { InspectionItem } from './api/inspections.js';
 import { LOCATION_SEPARATOR } from './api/master-data.js';
+import { formatDate, formatDateTime } from './dates.js';
 import type { FieldDefinition } from './equipment-fields.js';
 import { outcomeLabel, SEVERITY_LABELS, severityOf } from './inspection.js';
 
@@ -65,31 +66,8 @@ function fieldCell(field: FieldDefinition, value: unknown): ExportCell {
   if (typeof value === 'boolean') return value ? 'ano' : 'ne';
   if (Array.isArray(value)) return value.join(', ');
   if (typeof value === 'number') return value;
-  if (field.kind === 'date' && typeof value === 'string') return czechDate(value);
+  if (field.kind === 'date' && typeof value === 'string') return formatDate(value);
   return String(value);
-}
-
-/** `2026-11-03` → `03.11.2026`. */
-export function czechDate(iso: string | null): string {
-  if (!iso) return '';
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${d}.${m}.${y}`;
-}
-
-/** `2026-11-03T08:05:00Z` → `03.11.2026 09:05` in Czech time. */
-export function czechDateTime(iso: string | null): string {
-  if (!iso) return '';
-  const parts = new Intl.DateTimeFormat('cs-CZ', {
-    timeZone: 'Europe/Prague',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(new Date(iso));
-  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
-  return `${get('day')}.${get('month')}.${get('year')} ${get('hour')}:${get('minute')}`;
 }
 
 /** One row of the result table, matching `exportColumns(types)`. */
@@ -118,9 +96,9 @@ export function exportRow(
     result ? (result.takenOutOfService ? 'ano' : 'ne') : '',
     severity ? (result!.includeInProtocol ? 'ano' : 'ne') : '',
     result?.recordedByName ?? '',
-    czechDateTime(result?.recordedAt ?? null),
+    formatDateTime(result?.recordedAt ?? null),
     photoNames.join(', '),
-    czechDate(item.nextInspectionDate),
+    formatDate(item.nextInspectionDate),
   ];
 }
 

@@ -87,7 +87,7 @@ describe('displayFields', () => {
       { label: 'Výrobce', value: 'Mecalux' },
       { label: 'Výška', value: '4\u00a0500 mm' },
       { label: 'Kotveno', value: 'ano' },
-      { label: 'Revize', value: '5. 3. 2026' },
+      { label: 'Revize', value: '05/03/2026' },
     ]);
   });
 });

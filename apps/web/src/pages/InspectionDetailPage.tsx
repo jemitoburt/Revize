@@ -11,12 +11,12 @@ import {
   Stack,
   Table,
   Text,
-  TextInput,
   Textarea,
   Title,
 } from '@mantine/core';
 import {
   LOCATION_SEPARATOR,
+  addMonths,
   outcomeLabel,
   severityOf,
   type InspectionResult,
@@ -37,6 +37,7 @@ import { AnchorLink, ButtonLink } from '../components/links.js';
 import { ProtocolPreview } from '../components/ProtocolPreview.js';
 import { formatDate, formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
+import { DateField } from '../components/DateField.js';
 
 type Filter = 'all' | 'defects' | 'unchecked';
 
@@ -49,14 +50,17 @@ const color = (r: InspectionResult) => {
 function CloseForm({
   inspectionId,
   unchecked,
+  defaultNext,
   onDone,
 }: {
   inspectionId: string;
   unchecked: number;
+  /** Inspection date + the shortest interval of the types in the inspection. */
+  defaultNext: string;
   onDone: () => void;
 }) {
   const close = useCloseInspection();
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(defaultNext);
   const [note, setNote] = useState('');
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -83,12 +87,11 @@ function CloseForm({
         <Text size="sm">
           Po uzavření nejde výsledky měnit. Zkontrolované artikly dostanou datum příští kontroly.
         </Text>
-        <TextInput
-          type="date"
+        <DateField
           label="Příští kontrola"
-          description="Prázdné = datum kontroly + interval podle typu vybavení (obvykle 12 měsíců)"
+          description="Předvyplněno podle intervalu typů vybavení (datum kontroly + obvykle 12 měsíců). Vymazáním se použije interval každého typu zvlášť."
           value={date}
-          onChange={(e) => setDate(e.currentTarget.value)}
+          onChange={setDate}
         />
         <Textarea
           label="Poznámka do protokolu"
@@ -177,6 +180,11 @@ export function InspectionDetailPage() {
   );
   const p = data.progress;
   const open = data.status === 'open';
+  const usedTypes = new Set((items.data ?? []).map((i) => i.equipmentTypeId));
+  const interval = Math.min(
+    ...(types.data ?? []).filter((t) => usedTypes.has(t.id)).map((t) => t.defaultIntervalMonths),
+  );
+  const defaultNext = addMonths(data.inspectionDate, Number.isFinite(interval) ? interval : 12);
 
   return (
     <Stack>
@@ -319,6 +327,7 @@ export function InspectionDetailPage() {
         <CloseForm
           inspectionId={inspectionId}
           unchecked={p.total - p.checked}
+          defaultNext={defaultNext}
           onDone={() => setDialog(null)}
         />
       </Modal>

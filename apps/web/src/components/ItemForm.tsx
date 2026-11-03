@@ -32,6 +32,7 @@ import {
 } from '../api/hooks.js';
 import { DynamicFields, fieldValueErrors } from './DynamicFields.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
+import { DateField } from './DateField.js';
 
 export interface ItemFormProps {
   item: Item | null;
@@ -255,12 +256,11 @@ export function ItemForm({
             error={errors.qrCode}
             onChange={(e) => setQrCode(e.currentTarget.value)}
           />
-          <TextInput
+          <DateField
             label="Příští kontrola"
-            type="date"
             value={nextInspection ?? ''}
             error={errors.nextInspectionDate}
-            onChange={(e) => setNextInspection(e.currentTarget.value)}
+            onChange={setNextInspection}
           />
         </SimpleGrid>
 

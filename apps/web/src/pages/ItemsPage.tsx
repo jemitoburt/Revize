@@ -32,6 +32,7 @@ import { ItemForm } from '../components/ItemForm.js';
 import { formatDate, locationLabel } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { itemsRoute, type ItemsSearch } from '../router.js';
+import { DateField } from '../components/DateField.js';
 
 const PAGE_SIZE = 100;
 
@@ -123,12 +124,7 @@ function BulkDialog({
           </>
         )}
         {action === 'nextInspection' && (
-          <TextInput
-            label="Datum příští kontroly"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.currentTarget.value)}
-          />
+          <DateField label="Datum příští kontroly" value={date} onChange={setDate} />
         )}
         {action === 'retire' && (
           <Text size="sm">

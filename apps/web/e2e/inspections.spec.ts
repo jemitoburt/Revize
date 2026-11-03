@@ -70,7 +70,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(page.getByText('1 artiklů zůstalo nezkontrolovaných')).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Uzavřít kontrolu' }).click();
   await expect(page.getByText('Uzavřená', { exact: true })).toBeVisible();
-  await expect(page.getByText('3. 11. 2027')).toBeVisible();
+  await expect(page.getByText('03/11/2027')).toBeVisible();
   const item = await (await page.request.get(`/api/items/${byNumber['10001']}`)).json();
   expect(item.nextInspectionDate).toBe('2027-11-03');
 

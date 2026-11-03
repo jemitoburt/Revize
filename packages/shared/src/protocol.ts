@@ -6,6 +6,7 @@
  * depend on anything but its data.
  */
 
+import { formatDate } from './dates.js';
 import { SEVERITY_LABELS } from './inspection.js';
 
 export const PROTOCOL_PLACEHOLDERS = [
@@ -113,13 +114,7 @@ const escape = (text: string) =>
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
-const pad = (n: string | undefined) => String(Number(n)).padStart(2, '0');
-/** `2026-11-03` → `03.11.2026`, as on the form. */
-const czechDate = (iso: string | null) => {
-  if (!iso) return '';
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${pad(d)}.${pad(m)}.${y}`;
-};
+const czechDate = (iso: string | null) => formatDate(iso);
 
 /**
  * Protocol text of an equipment type as HTML: `# ` heading, `• ` (or `- `) item, indented item

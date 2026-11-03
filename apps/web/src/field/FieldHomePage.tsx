@@ -12,7 +12,6 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  TextInput,
   Textarea,
   Title,
 } from '@mantine/core';
@@ -30,6 +29,7 @@ import {
 import { ButtonLink } from '../components/links.js';
 import { formatDate } from '../lib/format.js';
 import { notifyError } from '../lib/notify.js';
+import { DateField } from '../components/DateField.js';
 
 const today = () => {
   const now = new Date();
@@ -140,14 +140,13 @@ function StartInspectionForm({ onClose }: { onClose: () => void }) {
           onChange={setTypeIds}
           placeholder={typeIds.length ? undefined : 'Všechny typy'}
         />
-        <TextInput
+        <DateField
           label="Datum kontroly"
-          type="date"
           size="md"
           required
           value={date}
           error={errors.inspectionDate}
-          onChange={(e) => setDate(e.currentTarget.value)}
+          onChange={setDate}
         />
         <Textarea
           label="Poznámka"

@@ -1,5 +1,8 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
+import '@mantine/dates/styles.css';
+import 'dayjs/locale/cs';
+import { DatesProvider } from '@mantine/dates';
 import { Button, MantineProvider, createTheme } from '@mantine/core';
 import { ModalsProvider } from '@mantine/modals';
 import { Notifications, notifications } from '@mantine/notifications';
@@ -41,9 +44,11 @@ createRoot(document.getElementById('root')!).render(
       {/* Bottom: at the top they would cover the header and the close button of side panels. */}
       <Notifications position="bottom-center" />
       <QueryClientProvider client={queryClient}>
-        <ModalsProvider labels={{ confirm: 'Potvrdit', cancel: 'Zrušit' }}>
-          <RouterProvider router={router} context={{ queryClient }} />
-        </ModalsProvider>
+        <DatesProvider settings={{ locale: 'cs', firstDayOfWeek: 1 }}>
+          <ModalsProvider labels={{ confirm: 'Potvrdit', cancel: 'Zrušit' }}>
+            <RouterProvider router={router} context={{ queryClient }} />
+          </ModalsProvider>
+        </DatesProvider>
       </QueryClientProvider>
     </MantineProvider>
   </StrictMode>,

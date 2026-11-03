@@ -1,7 +1,9 @@
 import {
   LOCATION_SEPARATOR,
   displayFields,
+  fileNamePart,
   fillProtocolTemplate,
+  formatDate,
   nextInspectionDateOf,
   PROTOCOL_PDF_MARGINS,
   protocolPageFooter,
@@ -38,11 +40,7 @@ function printedResult(
   return { outcome: severity, defectDescription: result.defectDescription };
 }
 
-const czechDate = (iso: string | null) => {
-  if (!iso) return '–';
-  const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${Number(d)}. ${Number(m)}. ${y}`;
-};
+const czechDate = (iso: string | null) => formatDate(iso) || '–';
 
 export function createProtocolsService(
   db: Db,
@@ -184,11 +182,7 @@ export function createProtocolsService(
         footer: protocolPageFooter(data),
         margin: PROTOCOL_PDF_MARGINS,
       });
-      const slug = data.site.name
-        .normalize('NFD')
-        .replace(/[̀-ͯ]/g, '')
-        .replace(/[^A-Za-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '');
+      const slug = fileNamePart(data.site.name);
       return { data: bytes, fileName: `protokol-${slug}-${data.inspectionDate}.pdf` };
     },
   };

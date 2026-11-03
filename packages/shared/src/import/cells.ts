@@ -71,7 +71,7 @@ export function parseDate(cell: RawCell): string | null {
   if (cell instanceof Date) return Number.isNaN(cell.getTime()) ? null : toIsoDate(cell);
   if (typeof cell === 'number') return fromExcelSerial(cell);
   const text = cellText(cell);
-  let m = /^(\d{1,2})\.\s*(\d{1,2})\.\s*(\d{4})$/.exec(text);
+  let m = /^(\d{1,2})\s*[./]\s*(\d{1,2})\s*[./]\s*(\d{4})$/.exec(text); // 3.11.2026, 03/11/2026
   if (m) return validDate(Number(m[3]), Number(m[2]), Number(m[1]));
   m = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
   if (m) return validDate(Number(m[1]), Number(m[2]), Number(m[3]));

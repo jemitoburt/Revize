@@ -10,6 +10,7 @@ import {
   TextInput,
 } from '@mantine/core';
 import { applyDefaultProducts, type FieldDefinition } from '@revize/shared';
+import { DateField } from './DateField.js';
 
 export interface DynamicFieldsProps {
   definitions: readonly FieldDefinition[];
@@ -136,12 +137,11 @@ export function DynamicFields({
             );
           case 'date':
             return (
-              <TextInput
+              <DateField
                 key={field.key}
                 {...common}
-                type="date"
                 value={(value as string) ?? ''}
-                onChange={(e) => set(field.key, e.currentTarget.value)}
+                onChange={(next) => set(field.key, next)}
               />
             );
         }

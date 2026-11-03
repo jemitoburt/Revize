@@ -1,7 +1,7 @@
 import {
   LOCATION_SEPARATOR,
-  czechDate,
-  czechDateTime,
+  formatDate,
+  formatDateTime,
   exportColumns,
   exportRow,
   fileNamePart,
@@ -114,7 +114,7 @@ export function createExportsService(
   const headerRows = (inspection: Inspection) => [
     ['Zákazník', inspection.customerName],
     ['Provozovna', inspection.siteName],
-    ['Datum kontroly', czechDate(inspection.inspectionDate)],
+    ['Datum kontroly', formatDate(inspection.inspectionDate)],
     ['Technici', inspection.inspectors.map((i) => i.displayName).join(', ')],
     ['Stav', inspection.status === 'closed' ? 'uzavřená' : 'otevřená'],
     ['Zkontrolováno', `${inspection.progress.checked} / ${inspection.progress.total}` as string],
@@ -196,7 +196,7 @@ export function createExportsService(
       const describe = (p: ExportPhoto) =>
         p.item
           ? photoCaption(p.item, typeName(p.item))
-          : `Kontrola ${inspection.siteName}, ${czechDate(inspection.inspectionDate)}`;
+          : `Kontrola ${inspection.siteName}, ${formatDate(inspection.inspectionDate)}`;
 
       const photoList = () =>
         toCsv([
@@ -219,7 +219,7 @@ export function createExportsService(
               p.item?.locationPath.join(LOCATION_SEPARATOR) ?? '',
               p.item ? outcomeLabel(p.item.result) : '',
               describe(p),
-              czechDateTime(p.takenAt?.toISOString() ?? null),
+              formatDateTime(p.takenAt?.toISOString() ?? null),
               p.author ?? '',
             ]),
         ]);

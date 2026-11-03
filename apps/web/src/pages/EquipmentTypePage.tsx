@@ -35,7 +35,7 @@ import { useMemo, useRef, useState } from 'react';
 import { AnchorLink } from '../components/links.js';
 import { useEquipmentType, useMe, useUpdateEquipmentType } from '../api/hooks.js';
 import { DynamicFields } from '../components/DynamicFields.js';
-import { slugKey } from '../lib/format.js';
+import { formatDate, slugKey } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
 interface DraftField extends FieldDefinition {
@@ -49,9 +49,9 @@ const SAMPLE = {
   firma: 'Revizní firma s.r.o.',
   zakaznik: 'Ukázkový sklad s.r.o.',
   provozovna: 'Provozovna Brno',
-  datum_kontroly: new Date().toLocaleDateString('cs-CZ'),
+  datum_kontroly: formatDate(new Date().toISOString()),
   technik: 'Jan Technik',
-  datum_pristi_kontroly: new Date(Date.now() + 365 * 864e5).toLocaleDateString('cs-CZ'),
+  datum_pristi_kontroly: formatDate(new Date(Date.now() + 365 * 864e5).toISOString()),
 };
 
 const kindOptions = FIELD_KINDS.map((k) => ({ value: k, label: FIELD_KIND_LABELS[k] }));

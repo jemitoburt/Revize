@@ -1,14 +1,17 @@
-import { LOCATION_SEPARATOR } from '@revize/shared';
+import {
+  LOCATION_SEPARATOR,
+  formatDate as sharedFormatDate,
+  formatDateTime as sharedFormatDateTime,
+} from '@revize/shared';
 
+/** DD/MM/YYYY (shared formatter), a dash when empty. */
 export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '–';
-  const date = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
-  return date.toLocaleDateString('cs-CZ');
+  return sharedFormatDate(iso) || '–';
 }
 
+/** DD/MM/YYYY HH:mm, a dash when empty. */
 export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return '–';
-  return new Date(iso).toLocaleString('cs-CZ');
+  return sharedFormatDateTime(iso) || '–';
 }
 
 export function locationLabel(path: readonly string[]): string {

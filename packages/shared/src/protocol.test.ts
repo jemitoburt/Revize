@@ -96,8 +96,8 @@ describe('renderProtocolHtml', () => {
     expect(html).toContain('Revize &lt;Novák&gt;, Hlavní 1, Brno, IČ: 12345678');
     expect(html).not.toContain('Revize <Novák>');
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
-    expect(html).toContain('<td class="grey">Kontrola provedena dne</td><td>03.11.2026</td>');
-    expect(html).toContain('Následnou kontrolu provést nejpozději do</td><td>03.11.2027</td>');
+    expect(html).toContain('<td class="grey">Kontrola provedena dne</td><td>03/11/2026</td>');
+    expect(html).toContain('Následnou kontrolu provést nejpozději do</td><td>03/11/2027</td>');
     // "nehodící se škrtněte": OK strikes NE, a defect strikes ANO, unchecked strikes nothing.
     expect(html).toContain('<td class="c-yn">ANO</td><td class="c-yn struck">NE</td><td></td>');
     expect(html).toContain('<td class="c-yn struck">ANO</td><td class="c-yn">NE</td><td>Prasklá');

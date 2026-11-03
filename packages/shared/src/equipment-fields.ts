@@ -1,3 +1,4 @@
+import { formatDate } from './dates.js';
 import { z } from 'zod';
 
 /**
@@ -222,10 +223,7 @@ export function buildFieldValuesSchema(definitions: readonly FieldDefinition[]) 
 function formatFieldValue(field: FieldDefinition, value: unknown): string {
   if (typeof value === 'boolean') return value ? 'ano' : 'ne';
   if (Array.isArray(value)) return value.join(', ');
-  if (field.kind === 'date' && typeof value === 'string') {
-    const [y, m, d] = value.slice(0, 10).split('-');
-    return `${Number(d)}. ${Number(m)}. ${y}`;
-  }
+  if (field.kind === 'date' && typeof value === 'string') return formatDate(value.slice(0, 10));
   const text = typeof value === 'number' ? value.toLocaleString('cs-CZ') : String(value);
   return field.unit ? `${text} ${field.unit}` : text;
 }

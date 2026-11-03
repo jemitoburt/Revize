@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { InspectionItem } from './api/inspections.js';
 import { fieldDefinitionsSchema } from './equipment-fields.js';
 import {
-  czechDateTime,
   exportColumns,
   exportRow,
   fileNamePart,
@@ -97,9 +96,9 @@ describe('export table', () => {
       'ne',
       'ano',
       'Jan Technik',
-      '03.11.2026 09:05',
+      '03/11/2026 09:05',
       '10001_01.jpg',
-      '03.11.2027',
+      '03/11/2027',
     ]);
     expect(exportRow([ladder], item(), [])).toContain('Nezkontrolováno');
   });
@@ -125,6 +124,6 @@ describe('file formats', () => {
     expect(sheetName('Žebřík', ['Žebřík'])).toBe('Žebřík (2)');
     expect(sheetName('x'.repeat(40), [])).toHaveLength(31);
     expect(fileNamePart('Sklad Brno – hala č. 2')).toBe('Sklad-Brno-hala-c-2');
-    expect(czechDateTime('2026-07-01T22:30:00Z')).toBe('02.07.2026 00:30');
+    expect(sheetName('a', [])).toBe('a');
   });
 });
