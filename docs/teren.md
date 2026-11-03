@@ -1,0 +1,68 @@
+# Terén – návod pro techniky (M5)
+
+Terénní režim je na adrese `https://<server>/teren` a v ukázkové verzi na
+`https://vitekdynka-debug.github.io/Revize/app/teren`. Technik (role Technik) se sem dostane
+rovnou po přihlášení, administrátor přes menu **Kontroly v terénu**.
+
+Na iPadu otevřete adresu v Safari a zvolte **Sdílet → Přidat na plochu**. Aplikace se pak spouští
+přes celou obrazovku jako běžná aplikace.
+
+## Zahájení kontroly
+
+1. Klepněte na **Zahájit kontrolu**.
+2. Vyberte zákazníka a provozovnu.
+3. Případně vyberte typy vybavení (nic nevybráno = všechny typy).
+4. Datum je dnešní. Klepněte na **Zahájit**.
+
+Rozpracované kontroly jsou na úvodní stránce i s postupem. Ke stejné kontrole se může připojit víc
+techniků současně. Stačí v ní zapsat první výsledek.
+
+## Práce v kontrole
+
+- **Seznam** je seřazený podle umístění (hala › řada › pozice) a čísla artiklu.
+  - Filtry: _Nezkontrolované_ / _Závady_ / _Vše_, hala, typ a hledání (číslo, QR kód, výrobce…).
+  - Nahoře je počet zkontrolovaných a počty v pořádku, závad a vyřazených.
+  - Klepnutím na řádek otevřete kartu artiklu. Po uložení výsledku se sama otevře další
+    nezkontrolovaná položka seznamu.
+- **Skenovat:** kamera zůstává zapnutá mezi artikly.
+  - Načte se jen kód pod křížem a teprve po třech shodných přečteních, takže sousední štítky na
+    archu nevadí.
+  - Po zavření karty se pokračuje dalším kódem.
+  - **Zavřít** skener ukončí. U podporovaných zařízení je k dispozici svítilna a zoom.
+- **Číslo:**
+  - Pětimístné číslo se otevře samo po páté číslici.
+  - Čtyřmístné číslo zadejte s nulou na začátku (`04001`).
+  - Jiné délky potvrďte **OK**.
+- **Bluetooth čtečka** v režimu klávesnice funguje kdykoli, když je otevřená kontrola.
+- **Neznámý kód:** aplikace nabídne **Založit artikl s tímto kódem**. QR kód se předvyplní.
+
+## Karta artiklu
+
+- Ukazuje číslo, typ, umístění, QR kód, hodnoty polí a případný dřívější výsledek v této kontrole.
+- **V pořádku** uloží výsledek jedním klepnutím.
+- **Závada:** napište popis, případně přidejte fotky závady a klepněte na **Uložit závadu**.
+- **Vyřadit:** závada s vyřazením z provozu. Artikl se hned označí jako vyřazený. Vrátit ho do
+  provozu může jen kancelář (s důvodem, zapíše se do auditu).
+- **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Zůstávají
+  u artiklu i pro další kontroly.
+- Fotku zobrazíte klepnutím na náhled. Tam ji jde i smazat.
+- **Zrušit výsledek** vrátí artikl mezi nezkontrolované. Nejdřív je potřeba smazat fotky
+  závady.
+
+Když dva technici zapíšou tentýž artikl, platí výsledek zapsaný později. Ten přepsaný zůstane
+v auditu.
+
+## Fotky kontroly a ukončení
+
+- **Fotky kontroly:** celkové fotky (hala, přístup, situace), které nepatří k žádnému artiklu.
+- **Ukončit práci** ukáže souhrn a vrátí vás na úvodní stránku.
+  - Výsledky se ukládají průběžně, takže nic dalšího ukládat nemusíte.
+  - Kontrola zůstává otevřená. Uzavření, protokol a exporty dělá kancelář (M7).
+
+## Omezení této verze
+
+- **Je potřeba připojení k serveru.** Výsledek je potvrzený teprve po odpovědi serveru. Při
+  výpadku se zobrazí chyba a výsledek ani fotky se neuloží. Ukládání bez signálu do zařízení
+  s pozdějším odesláním přinese M6.
+- **Ukázková verze na GitHub Pages:** data jsou jen v tom prohlížeči, ve kterém pracujete.
+  Nezadávejte skutečná data zákazníků. Obnovit ukázková data jde v uživatelském menu.

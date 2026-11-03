@@ -1,0 +1,17 @@
+{
+  "name": "Revize",
+  "short_name": "Revize",
+  "description": "Evidence a kontroly technického vybavení",
+  "lang": "cs",
+  "start_url": "./teren",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#ffffff",
+  "theme_color": "#1c7ed6",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

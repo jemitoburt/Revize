@@ -5,6 +5,7 @@ const base = '/Revize/app/';
 
 export default defineConfig({
   testDir: 'e2e-demo',
+  globalSetup: './e2e/field/global-setup.ts',
   timeout: 90_000,
   workers: 1,
   reporter: process.env.CI ? 'github' : 'list',

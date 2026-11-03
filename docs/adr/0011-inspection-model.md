@@ -17,6 +17,21 @@
 - Číslo artiklu je unikátní v rámci zákazníka. Zadá ho technik, nebo ho přidělí systém
   (ADR-0004, rezervované bloky).
 
+## Zápis výsledků (upřesnění 2026-11-03, M5)
+
+- **Zahájení:** kontrolu zahájí technik pod ID z klienta (`PUT /inspections/:id`, opakování nic
+  nezmění). Rozsah tvoří artikly provozovny zvolených typů, které nejsou vyřazené z evidence.
+  Artikl založený během kontroly do ní patří automaticky.
+- **Zápis výsledku** (`PUT /inspections/:id/results/:itemId`):
+  - Je idempotentní.
+  - Platí výsledek s **pozdějším časem zápisu na zařízení** (`recordedAt`), i když dorazí dřív.
+    Přepsaný výsledek se zapíše do auditu (`inspection.result_overruled`).
+  - Kdo zapíše první výsledek, stane se technikem kontroly.
+- **Vyřazení z provozu** nastaví artikl hned na `out_of_service`. Zpět ho vrací jen kancelář
+  úpravou artiklu s důvodem. Pozdější změna výsledku na „v pořádku“ artikl do provozu nevrátí.
+- **Zrušení výsledku** je možné, dokud je kontrola otevřená a výsledek nemá fotky.
+- Uzavření a znovuotevření kontroly a přepočet dat příští kontroly jsou součástí M7.
+
 ## Fotky (upřesnění 2026-10-26, podle testu v terénu)
 
 Fotka má právě jednoho vlastníka (`photo_owner_check`, migrace `0001`):

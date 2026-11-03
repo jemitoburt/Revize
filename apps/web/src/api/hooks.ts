@@ -6,10 +6,17 @@ import type {
   ImportMappingInput,
   ImportReport,
   ImportResult,
+  Inspection,
+  InspectionItem,
+  InspectionResult,
+  InspectionStatus,
   Item,
   ItemStatus,
   importSuggestionSchema,
   Location,
+  Photo,
+  PhotoOwner,
+  RecordResultInput,
   Site,
   User,
   createCustomerSchema,
@@ -22,6 +29,7 @@ import type {
   bulkUpdateItemsSchema,
   equipmentTypePresetSchema,
   listItemsQuerySchema,
+  startInspectionSchema,
   updateCustomerSchema,
   updateEquipmentTypeSchema,
   updateItemSchema,
@@ -31,7 +39,7 @@ import type {
 } from '@revize/shared';
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import type { z } from 'zod';
-import { ApiRequestError, api, queryString, uploadFile } from './client.js';
+import { ApiRequestError, api, fetchBlob, queryString, uploadFile } from './client.js';
 
 type In<T extends z.ZodType> = z.input<T>;
 
@@ -291,3 +299,134 @@ export const useCommitImport = () =>
     }) => api.post<ImportResult>(`/imports/${jobId}/commit`, { mapping, skipErrors }),
     [['items'], ['locations'], ['customers'], ['sites'], ['equipment-types']],
   );
+
+// ---------- inspections (field mode) ----------
+
+export const useInspections = (query: { status?: InspectionStatus; siteId?: string } = {}) =>
+  useQuery<Inspection[], ApiRequestError>({
+    queryKey: ['inspections', query],
+    queryFn: () => api.get(`/inspections${queryString(query)}`),
+  });
+export const useInspection = (id: string) =>
+  useQuery<Inspection, ApiRequestError>({
+    queryKey: ['inspections', id],
+    queryFn: () => api.get(`/inspections/${id}`),
+  });
+export const useInspectionItems = (id: string) =>
+  useQuery<InspectionItem[], ApiRequestError>({
+    queryKey: ['inspection-items', id],
+    queryFn: () => api.get(`/inspections/${id}/items`),
+  });
+export const useStartInspection = () =>
+  useApiMutation(
+    ({ id, ...body }: In<typeof startInspectionSchema> & { id: string }) =>
+      api.put<Inspection>(`/inspections/${id}`, body),
+    [['inspections']],
+  );
+
+/** Saves a result and puts it straight into the cached working list (no reload of the list). */
+export function useRecordResult(inspectionId: string) {
+  const client = useQueryClient();
+  return useMutation<
+    InspectionResult,
+    ApiRequestError,
+    { itemId: string; body: RecordResultInput }
+  >({
+    mutationFn: ({ itemId, body }) =>
+      api.put(`/inspections/${inspectionId}/results/${itemId}`, body),
+    onSuccess: (result, { itemId }) => {
+      setItemResult(client, inspectionId, itemId, result);
+      void client.invalidateQueries({ queryKey: ['inspections'] });
+      // Taking out of service changes the item in the office lists too.
+      if (result.takenOutOfService) void client.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+}
+
+export function useDeleteResult(inspectionId: string) {
+  const client = useQueryClient();
+  return useMutation<void, ApiRequestError, { itemId: string }>({
+    mutationFn: ({ itemId }) => api.delete(`/inspections/${inspectionId}/results/${itemId}`),
+    onSuccess: (_, { itemId }) => {
+      setItemResult(client, inspectionId, itemId, null);
+      void client.invalidateQueries({ queryKey: ['inspections'] });
+    },
+  });
+}
+
+function setItemResult(
+  client: ReturnType<typeof useQueryClient>,
+  inspectionId: string,
+  itemId: string,
+  result: InspectionResult | null,
+) {
+  client.setQueryData<InspectionItem[]>(['inspection-items', inspectionId], (items) =>
+    items?.map((i) =>
+      i.id === itemId
+        ? {
+            ...i,
+            result,
+            ...(result?.takenOutOfService ? { status: 'out_of_service' as const } : {}),
+          }
+        : i,
+    ),
+  );
+}
+
+export const usePhotos = (query: { itemId?: string; inspectionId?: string }) =>
+  useQuery<Photo[], ApiRequestError>({
+    queryKey: ['photos', query],
+    queryFn: () => api.get(`/photos${queryString(query)}`),
+    enabled: Boolean(query.itemId || query.inspectionId),
+  });
+
+export interface PhotoUpload {
+  id: string;
+  file: Blob;
+  owner: PhotoOwner;
+  itemId?: string;
+  inspectionId?: string;
+  takenAt?: string;
+}
+
+export function useUploadPhoto() {
+  const client = useQueryClient();
+  return useMutation<Photo, ApiRequestError, PhotoUpload>({
+    mutationFn: ({ id, file, ...fields }) =>
+      uploadFile<Photo>(
+        `/photos/${id}`,
+        file,
+        Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined)) as Record<
+          string,
+          string
+        >,
+        { method: 'PUT', fileName: `${id}.jpg` },
+      ),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['photos'] });
+      void client.invalidateQueries({ queryKey: ['inspection-items'] });
+    },
+  });
+}
+
+export function useDeletePhoto() {
+  const client = useQueryClient();
+  return useMutation<void, ApiRequestError, { id: string }>({
+    mutationFn: ({ id }) => api.delete(`/photos/${id}`),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['photos'] });
+      void client.invalidateQueries({ queryKey: ['inspection-items'] });
+    },
+  });
+}
+
+/** Object URL of a photo (or its thumbnail), fetched through the API transport. */
+export function usePhotoUrl(id: string, variant: 'thumbnail' | 'original') {
+  const query = useQuery<string, ApiRequestError>({
+    queryKey: ['photo-file', id, variant],
+    queryFn: async () => URL.createObjectURL(await fetchBlob(`/photos/${id}/${variant}`)),
+    staleTime: Infinity,
+    gcTime: 5 * 60_000,
+  });
+  return query.data;
+}

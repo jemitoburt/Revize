@@ -14,6 +14,7 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_SEPARATOR,
   buildFieldValuesSchema,
+  newId,
   type Item,
   type ItemStatus,
 } from '@revize/shared';
@@ -38,11 +39,23 @@ export interface ItemFormProps {
     siteId?: string;
     locationId?: string;
     equipmentTypeId?: string;
+    qrCode?: string;
   };
-  onDone: () => void;
+  /** Field mode: customer and site come from the inspection and cannot be changed. */
+  fixedSite?: boolean;
+  /** Field mode: only the equipment types of the inspection. */
+  allowedTypeIds?: readonly string[];
+  /** Called with the saved item. */
+  onDone: (saved?: Item) => void;
 }
 
-export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
+export function ItemForm({
+  item,
+  defaults = {},
+  fixedSite,
+  allowedTypeIds,
+  onDone,
+}: ItemFormProps) {
   const create = useCreateItem();
   const update = useUpdateItem();
   const customers = useCustomers();
@@ -60,7 +73,9 @@ export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
     item?.equipmentTypeId ?? defaults.equipmentTypeId ?? null,
   );
   const [itemNumber, setItemNumber] = useState(item?.itemNumber ?? '');
-  const [qrCode, setQrCode] = useState(item?.qrCode ?? '');
+  const [qrCode, setQrCode] = useState(item?.qrCode ?? defaults.qrCode ?? '');
+  // Client id of a new item: a repeated save (e.g. after a timeout) cannot create it twice.
+  const [createId] = useState(newId);
   const [nextInspection, setNextInspection] = useState(item?.nextInspectionDate ?? '');
   const [values, setValues] = useState<Record<string, unknown>>(item?.fieldValues ?? {});
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'in_service');
@@ -71,6 +86,7 @@ export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
   const type = types.data?.find((t) => t.id === typeId);
   const typeOptions = (types.data ?? [])
     .filter((t) => !t.archived || t.id === item?.equipmentTypeId)
+    .filter((t) => !allowedTypeIds?.length || allowedTypeIds.includes(t.id))
     .map((t) => ({ value: t.id, label: t.archived ? `${t.name} (archivován)` : t.name }));
   const locationOptions = useMemo(
     () =>
@@ -127,7 +143,7 @@ export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
     const handlers = {
       onSuccess: (saved: Item) => {
         notifySaved(item ? 'Artikl uložen' : `Artikl ${saved.itemNumber} založen`);
-        onDone();
+        onDone(saved);
       },
       onError: (error: ApiRequestError) => {
         setErrors(error.fieldErrors());
@@ -155,7 +171,10 @@ export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
         handlers,
       );
     } else {
-      create.mutate({ ...common, ...(itemNumber.trim() ? { itemNumber } : {}) }, handlers);
+      create.mutate(
+        { id: createId, ...common, ...(itemNumber.trim() ? { itemNumber } : {}) },
+        handlers,
+      );
     }
   };
 
@@ -168,7 +187,7 @@ export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
             label="Zákazník"
             required
             searchable
-            disabled={!!item}
+            disabled={!!item || fixedSite}
             data={(customers.data ?? []).map((c) => ({ value: c.id, label: c.name }))}
             value={customerId}
             onChange={(v) => {
@@ -180,6 +199,7 @@ export function ItemForm({ item, defaults = {}, onDone }: ItemFormProps) {
           <Select
             label="Provozovna"
             required
+            disabled={fixedSite}
             data={(sites.data ?? []).map((s) => ({ value: s.id, label: s.name }))}
             value={siteId}
             error={errors.siteId}

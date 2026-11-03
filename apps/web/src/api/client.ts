@@ -61,16 +61,17 @@ export async function request<T>(method: Method, path: string, body?: unknown): 
 /** Multipart upload of one file (plus text fields); same error handling as JSON requests. */
 export async function uploadFile<T>(
   path: string,
-  file: File,
+  file: Blob,
   fields: Record<string, string> = {},
+  options: { method?: 'POST' | 'PUT'; fileName?: string } = {},
 ): Promise<T> {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields)) form.append(key, value);
-  form.append('file', file, file.name);
+  form.append('file', file, options.fileName ?? (file instanceof File ? file.name : 'soubor'));
   let response: Response;
   try {
     response = await send(path, {
-      method: 'POST',
+      method: options.method ?? 'POST',
       credentials: 'same-origin',
       body: form,
     });
@@ -92,8 +93,8 @@ export async function uploadFile<T>(
   return data as T;
 }
 
-/** Downloads a file the API generates (e.g. an import template) under the given name. */
-export async function downloadFile(path: string, fileName: string): Promise<void> {
+/** A file from the API (photo, generated document) as a Blob. */
+export async function fetchBlob(path: string): Promise<Blob> {
   let response: Response;
   try {
     response = await send(path, { method: 'GET', credentials: 'same-origin' });
@@ -112,7 +113,13 @@ export async function downloadFile(path: string, fileName: string): Promise<void
         : { error: `http_${response.status}`, message: `Chyba serveru (${response.status}).` },
     );
   }
-  const url = URL.createObjectURL(await response.blob());
+  return response.blob();
+}
+
+/** Downloads a file the API generates (e.g. an import template) under the given name. */
+export async function downloadFile(path: string, fileName: string): Promise<void> {
+  const blob = await fetchBlob(path);
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = fileName;
@@ -124,6 +131,8 @@ export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body ?? {}),
   patch: <T>(path: string, body: unknown) => request<T>('PATCH', path, body),
+  put: <T>(path: string, body: unknown) => request<T>('PUT', path, body),
+  delete: (path: string) => request<void>('DELETE', path),
 };
 
 export function queryString(

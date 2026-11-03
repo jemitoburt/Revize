@@ -44,8 +44,9 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
     column references without the table, which inside a subquery binds to the inner table.
 - `apps/web` – office UI: React 19, Vite, Mantine 9, TanStack Query + Router (code-based routes in
   `src/router.tsx`, Czech URLs). `src/api/hooks.ts` wraps every endpoint; forms map API `issues`
-  to fields (`ApiRequestError.fieldErrors()`). Field mode (M5) will live here too; platform access
-  (camera, scanner, files, storage, feedback) only through `src/platform/` adapters.
+  to fields (`ApiRequestError.fieldErrors()`). Field mode lives in `src/field/` (routes `/teren…`,
+  own shell, iPad-sized); platform access (camera, scanner, photos, feedback) only through
+  `src/platform/` adapters.
   - Mantine components as router links via `components/links.tsx` (`AnchorLink`, `ButtonLink`).
   - Forms with custom validation use `noValidate`, so every error shows on its field in Czech.
   - Requests go through `src/api/transport.ts`; `vite build --mode demo` swaps it for
@@ -54,7 +55,7 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
     selects have the `combobox` role.
 - `deploy/` – Caddyfile and the web image (office app at `/`, QR spike at `/spike/`, proxies `/api`).
 - `docker-compose.yml` + `.env.example` – db, api, web; `scripts/smoke-test.sh` checks a running stack.
-- `docs/` – `architecture.md`, `kancelar.md` (office guide), `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
+- `docs/` – `architecture.md`, `kancelar.md` (office guide), `teren.md` (field guide), `adr/NNNN-*.md`, `licenses.md`, `provoz.md` (operations, Czech).
 
 ## Architecture rules
 
@@ -113,4 +114,9 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
 - M4 import – done: upload (XLSX via exceljs, CSV via papaparse with UTF-8/cp1250 and delimiter
   detection) → mapping (suggested from headers, remembered per type) → dry-run report per row →
   commit in one transaction (ADR-0014). Row conversion/validation lives in `packages/shared/src/import`.
-- Next: M5 field mode online (needs remote-access decision and spike round 2 results).
+- M5 field mode online – done: GitHub Pages demo with the API running in the browser on PGlite
+  (ADR-0015); inspections, idempotent results ("later recordedAt wins"), photos with thumbnails
+  (ADR-0007, ADR-0011); field UI (list by location, scanner, number pad, keyboard-wedge, item card,
+  photos, new item). Guide: `docs/teren.md`.
+- Next: M6 offline queue (Dexie cache + outbox). Server hosting still open (user's QNAP is 32-bit
+  ARM, not suitable; candidates: small x86/ARM64 box or VPS).

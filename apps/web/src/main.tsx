@@ -33,7 +33,8 @@ const theme = createTheme({
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MantineProvider theme={theme} defaultColorScheme="light">
-      <Notifications position="top-right" />
+      {/* Bottom: at the top they would cover the header and the close button of side panels. */}
+      <Notifications position="bottom-center" />
       <QueryClientProvider client={queryClient}>
         <ModalsProvider labels={{ confirm: 'Potvrdit', cancel: 'Zrušit' }}>
           <RouterProvider router={router} context={{ queryClient }} />

@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
   return {
     base: process.env.BASE_PATH ?? '/',
     plugins: [react()],
+    worker: { format: 'es' as const },
     server: { proxy },
     preview: { proxy },
     define: { 'import.meta.env.VITE_DEMO': JSON.stringify(demo ? 'true' : 'false') },
