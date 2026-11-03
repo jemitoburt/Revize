@@ -33,6 +33,8 @@ const envSchema = z.object({
   ORG_NAME: z.string().default('Revizní firma'),
   ADMIN_EMAIL: z.string().default('admin@revize.local'),
   ADMIN_PASSWORD: z.string().optional(),
+  /** Maximum storage allocated for uploaded files in GB (optional limit). */
+  STORAGE_MAX_GB: z.coerce.number().positive().optional(),
   /** Fill an empty database with demo data (customer, equipment types, items). */
   SEED_DEMO: bool.default(false),
 });

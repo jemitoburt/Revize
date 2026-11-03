@@ -16,6 +16,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: '${DB_CPU_LIMIT:-1.0}'
+          memory: '${DB_MEMORY_LIMIT:-512M}'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '${LOG_MAX_SIZE:-10m}'
+        max-file: '${LOG_MAX_FILE:-3}'
 
   api:
     build:
@@ -34,9 +44,20 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SEED_DEMO: ${SEED_DEMO:-false}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:-}
+      STORAGE_MAX_GB: ${STORAGE_MAX_GB:-10}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     volumes:
       - files:/data/files
+    deploy:
+      resources:
+        limits:
+          cpus: '${API_CPU_LIMIT:-2.0}'
+          memory: '${API_MEMORY_LIMIT:-1G}'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '${LOG_MAX_SIZE:-10m}'
+        max-file: '${LOG_MAX_FILE:-3}'
 
   web:
     build:
@@ -54,6 +75,16 @@ services:
     volumes:
       - caddy-data:/data
       - caddy-config:/config
+    deploy:
+      resources:
+        limits:
+          cpus: '${WEB_CPU_LIMIT:-1.0}'
+          memory: '${WEB_MEMORY_LIMIT:-256M}'
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '${LOG_MAX_SIZE:-10m}'
+        max-file: '${LOG_MAX_FILE:-3}'
 
 volumes:
   db-data:

@@ -18,6 +18,15 @@ empty, the API generates one on first startup and writes it once to the API
 logs. Optionally set `ADMIN_EMAIL`, `ORG_NAME`, `SEED_DEMO`, and `LOG_LEVEL`.
 Keep passwords private and do not commit them to the repository.
 
+Optional resource limits (CPU and RAM) can be tuned via environment variables:
+- `DB_CPU_LIMIT` (default: `1.0`), `DB_MEMORY_LIMIT` (default: `512M`)
+- `API_CPU_LIMIT` (default: `2.0`), `API_MEMORY_LIMIT` (default: `1G`)
+- `WEB_CPU_LIMIT` (default: `1.0`), `WEB_MEMORY_LIMIT` (default: `256M`)
+
+Storage usage is controlled through:
+- `STORAGE_MAX_GB`: maximum total storage in GB for uploaded files in `files` volume (default: `10`).
+- `LOG_MAX_SIZE` (default: `10m`) and `LOG_MAX_FILE` (default: `3`): Docker json-file log rotation per container.
+
 After deployment, create a Dokploy domain for service `web` on port `80`,
 enable HTTPS with Let's Encrypt, and use the same HTTPS origin in
 `TRUSTED_ORIGINS`. Dokploy/Traefik terminates TLS and forwards traffic to
