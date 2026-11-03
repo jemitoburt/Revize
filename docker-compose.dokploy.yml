@@ -31,7 +31,7 @@ services:
       COOKIE_SECURE: 'true'
       ORG_NAME: ${ORG_NAME:-Revizní firma}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@revize.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in Dokploy}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SEED_DEMO: ${SEED_DEMO:-false}
       TRUSTED_ORIGINS: ${TRUSTED_ORIGINS:?Set TRUSTED_ORIGINS to the HTTPS domain}
       LOG_LEVEL: ${LOG_LEVEL:-info}
