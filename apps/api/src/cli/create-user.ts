@@ -22,7 +22,8 @@ const input = createUserRequestSchema.parse({
   password: values.password,
 });
 
-const database = createDatabase(loadConfig().DATABASE_URL);
+const config = loadConfig();
+const database = createDatabase(config.DATABASE_URL, config.DATABASE_PASSWORD);
 const [org] = await database.db.select().from(organization).limit(1);
 if (!org) throw new Error('Databáze je prázdná – nejdřív spusťte server.');
 await database.db

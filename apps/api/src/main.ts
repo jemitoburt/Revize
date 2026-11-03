@@ -8,11 +8,13 @@ import { LocalDiskStorage } from './infra/local-disk-storage.js';
 import { SharpImageProcessor } from './infra/sharp-image-processor.js';
 
 const config = loadConfig();
-const database = createDatabase(config.DATABASE_URL);
+const database = createDatabase(config.DATABASE_URL, config.DATABASE_PASSWORD);
+const storageMaxBytes =
+  config.STORAGE_MAX_GB !== undefined ? config.STORAGE_MAX_GB * 1024 * 1024 * 1024 : undefined;
 const app = await buildApp({
   config,
   db: database.db,
-  files: new LocalDiskStorage(config.FILES_DIR),
+  files: new LocalDiskStorage(config.FILES_DIR, storageMaxBytes),
   images: new SharpImageProcessor(),
   pdf: new ChromiumPdfRenderer(config.CHROMIUM_PATH || undefined),
 });

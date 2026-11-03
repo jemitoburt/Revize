@@ -13,8 +13,26 @@ export interface Database {
   close(): Promise<void>;
 }
 
-export function createDatabase(url: string): Database {
-  const pool = new pg.Pool({ connectionString: url, max: 10 });
+export function parsePostgresConfig(url: string, password?: string): pg.PoolConfig {
+  const parsed = new URL(url);
+  const config: pg.PoolConfig = {
+    host: parsed.hostname || undefined,
+    port: parsed.port ? Number(parsed.port) : undefined,
+    user: parsed.username ? decodeURIComponent(parsed.username) : undefined,
+    password: password !== undefined ? password : (parsed.password ? decodeURIComponent(parsed.password) : undefined),
+    database: parsed.pathname ? parsed.pathname.replace(/^\//, '') : undefined,
+    max: 10,
+  };
+  if (parsed.searchParams.get('sslmode') === 'disable') {
+    config.ssl = false;
+  } else if (parsed.searchParams.get('sslmode') === 'require') {
+    config.ssl = true;
+  }
+  return config;
+}
+
+export function createDatabase(url: string, password?: string): Database {
+  const pool = new pg.Pool(parsePostgresConfig(url, password));
   const db = drizzle(pool, { schema, casing: 'snake_case' });
   return { db, pool, close: () => pool.end() };
 }

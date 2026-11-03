@@ -7,6 +7,8 @@ const bool = z
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
+  /** Optional raw database password, passed separately to avoid URL-encoding issues. */
+  DATABASE_PASSWORD: z.string().optional(),
   HOST: z.string().default('0.0.0.0'),
   PORT: z.coerce.number().int().default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
@@ -35,6 +37,8 @@ const envSchema = z.object({
   ORG_NAME: z.string().default('Revizní firma'),
   ADMIN_EMAIL: z.string().default('admin@revize.local'),
   ADMIN_PASSWORD: z.string().optional(),
+  /** Maximum storage allocated for uploaded files in GB (optional limit). */
+  STORAGE_MAX_GB: z.coerce.number().positive().optional(),
   /** Fill an empty database with demo data (customer, equipment types, items). */
   SEED_DEMO: bool.default(false),
 });

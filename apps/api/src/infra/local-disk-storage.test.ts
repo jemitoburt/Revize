@@ -35,4 +35,12 @@ describe('LocalDiskStorage', () => {
     await expect(storage.put('/etc/passwd', Buffer.from(''))).rejects.toThrow('Invalid key');
     await expect(storage.read('a/../../b')).rejects.toThrow('Invalid key');
   });
+
+  it('enforces maximum storage limit when configured', async () => {
+    const limitedStorage = new LocalDiskStorage(root, 20);
+    await limitedStorage.put('file1.bin', new Uint8Array(15));
+    await expect(limitedStorage.put('file2.bin', new Uint8Array(10))).rejects.toThrow(
+      'Limit úložiště pro soubory byl vyčerpán',
+    );
+  });
 });
