@@ -162,15 +162,15 @@ describe('locations', () => {
 describe('equipment types', () => {
   it('copies a library type and protects stored values when editing', async () => {
     const presets = (await api('GET', '/api/equipment-type-presets')).json();
-    expect(presets.map((p: { key: string }) => p.key)).toContain('pallet_rack');
+    expect(presets.map((p: { key: string }) => p.key)).toContain('rack');
 
-    const rack = (await api('POST', '/api/equipment-types', { presetKey: 'pallet_rack' })).json();
+    const rack = (await api('POST', '/api/equipment-types', { presetKey: 'rack' })).json();
     expect(rack).toMatchObject({
-      name: 'Regál paletový',
+      name: 'Regál',
       defaultIntervalMonths: 12,
       schemaVersion: 1,
     });
-    expect(errorCode(await api('POST', '/api/equipment-types', { presetKey: 'pallet_rack' }))).toBe(
+    expect(errorCode(await api('POST', '/api/equipment-types', { presetKey: 'rack' }))).toBe(
       'name_taken',
     );
 
@@ -490,7 +490,7 @@ describe('default products of fields', () => {
     const { site } = await setup();
     const rack = (
       await api('POST', '/api/equipment-types', {
-        presetKey: 'pallet_rack',
+        presetKey: 'rack',
         name: 'Regál (součin)',
       })
     ).json();
@@ -499,6 +499,7 @@ describe('default products of fields', () => {
       locationId: null,
       equipmentTypeId: rack.id,
       fieldValues: {
+        rack_type: 'Paletový',
         manufacturer: 'Mecalux',
         configuration: 'Jednostranný',
         levels: 4,

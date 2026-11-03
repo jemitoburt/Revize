@@ -50,9 +50,9 @@ export function UserMenu({ user }: { user: CurrentUser }) {
     <Menu position="bottom-end" withinPortal>
       <Menu.Target>
         <UnstyledButton aria-label="Uživatelské menu">
-          <Group gap={6}>
+          <Group gap={6} wrap="nowrap">
             <IconUser size={18} />
-            <Text size="sm">
+            <Text size="sm" visibleFrom="sm">
               {user.displayName} · {ROLE_LABELS[user.role]}
             </Text>
             <IconChevronDown size={14} />
@@ -60,6 +60,9 @@ export function UserMenu({ user }: { user: CurrentUser }) {
         </UnstyledButton>
       </Menu.Target>
       <Menu.Dropdown>
+        <Menu.Label hiddenFrom="sm">
+          {user.displayName} · {ROLE_LABELS[user.role]}
+        </Menu.Label>
         <Menu.Item
           leftSection={<IconUser size={16} />}
           onClick={() => void navigate({ to: '/ucet' })}

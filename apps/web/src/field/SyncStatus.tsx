@@ -106,8 +106,14 @@ export function SyncStatus({ userId }: { userId: string }) {
   return (
     <>
       <UnstyledButton onClick={() => setOpen(true)} aria-label="Stav odesílání">
-        <Badge size="lg" color={color} variant="light" leftSection={icon} data-testid="sync-status">
-          {label}
+        <Badge size="lg" color={color} variant="light" leftSection={icon}>
+          {/* Phone: just the icon and the number of unsent changes. */}
+          <Text span inherit visibleFrom="sm" data-testid="sync-status">
+            {label}
+          </Text>
+          <Text span inherit hiddenFrom="sm">
+            {attention || mine.length || ''}
+          </Text>
         </Badge>
       </UnstyledButton>
       <Drawer

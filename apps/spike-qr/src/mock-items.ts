@@ -5,7 +5,7 @@ export type TypeName = (typeof TYPE_NAMES)[number];
 
 /** The spike uses two types from the shared library (same fields as the server). */
 export const EQUIPMENT_TYPES: Record<TypeName, FieldDefinition[]> = {
-  Regál: equipmentTypePreset('pallet_rack')!.fieldDefinitions,
+  Regál: equipmentTypePreset('rack')!.fieldDefinitions,
   Žebřík: equipmentTypePreset('portable_ladder')!.fieldDefinitions,
 };
 

@@ -177,7 +177,7 @@ describe('organization settings and protocol', () => {
 
     const racks = (await api('GET', '/api/equipment-types'))
       .json()
-      .find((t: { name: string }) => t.name === 'Regál paletový');
+      .find((t: { name: string }) => t.name === 'Regál');
     const onlyRacks = (
       await api('GET', `/api/inspections/${id}/protocol.html?equipmentTypeId=${racks.id}`)
     ).body;

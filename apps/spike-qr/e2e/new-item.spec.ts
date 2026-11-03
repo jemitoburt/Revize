@@ -56,6 +56,7 @@ test('an unknown scanned code can become a new item with that QR code', async ({
 
   await expect(page.getByLabel('QR kód')).toHaveValue('NOVY-7');
   await page.locator('.field', { hasText: 'Výrobce' }).locator('input').fill('Stow');
+  await page.getByRole('button', { name: 'Paletový' }).tap();
   await page.getByRole('button', { name: 'Oboustranný' }).tap();
   await page.getByRole('button', { name: 'Uložit a založit další' }).tap();
   // Next item: same location, next position, next free number.

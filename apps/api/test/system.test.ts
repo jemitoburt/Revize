@@ -49,7 +49,7 @@ describe('bootstrap and demo data', () => {
     );
     const byName = new Map(types.map((t) => [t.name, t]));
     expect(byName.get('Žebřík')!.fieldDefinitions.map((f) => f.key)).toContain('ladder_type');
-    expect(byName.get('Regál paletový')!.protocolTemplate).toContain('ČSN EN 15635');
+    expect(byName.get('Regál')!.protocolTemplate).toContain('ČSN EN 15635');
 
     const items = await db
       .select({ number: item.itemNumber, qr: item.qrCode, sortPath: location.sortPath })

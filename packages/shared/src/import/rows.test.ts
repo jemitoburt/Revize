@@ -86,7 +86,7 @@ describe('buildRowCandidate for updates', () => {
 
 describe('buildRowCandidate with a default product', () => {
   it('fills an empty bay load as level load × levels, keeps a given one', () => {
-    const rack = equipmentTypePreset('pallet_rack')!.fieldDefinitions;
+    const rack = equipmentTypePreset('rack')!.fieldDefinitions;
     const rackMapping = importMappingSchema.parse({
       siteId: '0195f1a2-0000-7000-8000-000000000001',
       equipmentTypeId: '0195f1a2-0000-7000-8000-000000000002',

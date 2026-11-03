@@ -25,6 +25,7 @@ const ladderValues = (i: number) => ({
 });
 
 const rackValues = (i: number) => ({
+  rack_type: i % 4 === 1 ? 'Policový' : 'Paletový',
   manufacturer: ['Mecalux', 'Stow', 'Jungheinrich'][i % 3]!,
   configuration: ['Jednostranný', 'Oboustranný', 'Double deep'][i % 3]!,
   height_mm: [4500, 6000, 7500][i % 3]!,
@@ -81,7 +82,7 @@ export async function seedDemo(db: Db, organizationId: string): Promise<boolean>
       });
     }
     const ladder = EQUIPMENT_TYPE_PRESETS.find((p) => p.key === 'portable_ladder')!;
-    const rack = EQUIPMENT_TYPE_PRESETS.find((p) => p.key === 'pallet_rack')!;
+    const rack = EQUIPMENT_TYPE_PRESETS.find((p) => p.key === 'rack')!;
 
     const customerId = newId();
     await tx.insert(customer).values({

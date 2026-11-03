@@ -20,21 +20,28 @@ function FieldShell({ user }: { user: CurrentUser }) {
     <AppShell header={{ height: 60 }} padding="md">
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
-          <Group gap="sm">
-            <Text fw={700} size="lg">
+          <Group gap="sm" wrap="nowrap">
+            <Text fw={700} size="lg" visibleFrom="sm">
               Revize · terén
+            </Text>
+            <Text fw={700} size="lg" hiddenFrom="sm">
+              Terén
             </Text>
             {DEMO && <DemoBadge />}
           </Group>
-          <Group gap="md">
+          <Group gap="xs" wrap="nowrap">
             <SyncStatus userId={user.id} />
             {user.permissions.includes('customer.read') && (
               <ButtonLink
                 to="/zakaznici"
                 variant="subtle"
+                px="xs"
+                aria-label="Kancelář"
                 leftSection={<IconBuildingWarehouse size={18} />}
               >
-                Kancelář
+                <Text span inherit visibleFrom="sm">
+                  Kancelář
+                </Text>
               </ButtonLink>
             )}
             <UserMenu user={user} />

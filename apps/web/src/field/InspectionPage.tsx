@@ -43,6 +43,7 @@ import {
   IconQrcode,
   IconSearch,
 } from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -227,6 +228,8 @@ export function InspectionPage() {
   const outbox = useOutbox();
   const pendingItems = useMemo(() => new Set(outbox.map((c) => c.itemId)), [outbox]);
   const createItem = useCreateFieldItem(inspectionId);
+  // Phones: smaller buttons so the labels fit (the layout is made for the iPad).
+  const phone = useMediaQuery('(max-width: 48em)') ?? false;
   const createLocation = useCreateFieldLocation(inspection.data?.siteId ?? '', inspectionId);
   const readOnly = inspection.data?.status === 'closed';
   const progress = progressOf(items);
@@ -338,7 +341,7 @@ export function InspectionPage() {
 
       <SimpleGrid cols={{ base: 2, sm: 4 }}>
         <Button
-          size="xl"
+          size={phone ? 'md' : 'xl'}
           leftSection={<IconQrcode />}
           onClick={() => {
             scanFeedback.unlock();
@@ -348,7 +351,7 @@ export function InspectionPage() {
           Skenovat
         </Button>
         <Button
-          size="xl"
+          size={phone ? 'md' : 'xl'}
           variant="light"
           leftSection={<IconDialpad />}
           onClick={() => {
@@ -359,7 +362,7 @@ export function InspectionPage() {
           Číslo
         </Button>
         <Button
-          size="xl"
+          size={phone ? 'md' : 'xl'}
           variant="light"
           leftSection={<IconPlus />}
           disabled={readOnly}
@@ -368,22 +371,27 @@ export function InspectionPage() {
           Nový artikl
         </Button>
         <Button
-          size="xl"
+          size={phone ? 'md' : 'xl'}
           variant="light"
           leftSection={<IconCamera />}
           onClick={() => setPhotosOpen(true)}
+          aria-label="Fotky kontroly"
         >
-          Fotky kontroly
+          {phone ? 'Fotky' : 'Fotky kontroly'}
         </Button>
       </SimpleGrid>
 
       <Group gap="sm" align="flex-end">
         <SegmentedControl
-          size="md"
+          size={phone ? 'xs' : 'md'}
+          fullWidth={phone}
           value={filter}
           onChange={(v) => setFilter(v as Filter)}
           data={[
-            { value: 'unchecked', label: `Nezkontrolované (${progress.total - progress.checked})` },
+            {
+              value: 'unchecked',
+              label: `${phone ? 'Zbývá' : 'Nezkontrolované'} (${progress.total - progress.checked})`,
+            },
             { value: 'defects', label: `Závady (${progress.defect})` },
             { value: 'all', label: `Vše (${progress.total})` },
           ]}

@@ -26,6 +26,7 @@ import {
 } from '@revize/shared';
 import { IconAlertTriangle, IconBan, IconCheck } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   useDeletePhoto,
   useDeleteResult,
@@ -95,6 +96,7 @@ function SheetBody({
   onClose,
   onSaved,
 }: ItemSheetProps & { item: InspectionItem }) {
+  const phone = useMediaQuery('(max-width: 48em)') ?? false;
   const record = useRecordResult(inspectionId);
   const removeResult = useDeleteResult(inspectionId);
   const upload = useUploadPhoto();
@@ -249,9 +251,9 @@ function SheetBody({
       )}
 
       <Divider label="Výsledek kontroly" labelPosition="left" />
-      <SimpleGrid cols={4} spacing="sm">
+      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
         <Button
-          size="xl"
+          size={phone ? 'lg' : 'xl'}
           color="green"
           variant={current?.outcome === 'ok' ? 'filled' : 'light'}
           leftSection={<IconCheck />}
@@ -267,7 +269,7 @@ function SheetBody({
         {SEVERITY_BUTTONS.map(({ severity, color, icon: Icon }) => (
           <Button
             key={severity}
-            size="xl"
+            size={phone ? 'lg' : 'xl'}
             color={color}
             variant={
               choice?.outcome === 'defect' && choice.severity === severity ? 'filled' : 'light'

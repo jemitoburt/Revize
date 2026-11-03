@@ -1,0 +1,8 @@
+/* Phones: wide tables scroll on their own instead of widening the page (Safari would zoom out). */
+@media (max-width: 47.99em) {
+  .mantine-AppShell-main .mantine-Table-table {
+    display: block;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+}

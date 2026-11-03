@@ -84,7 +84,7 @@ beforeEach(async () => {
   >()[0]!.id;
   const types = (await api('GET', '/api/equipment-types')).json<{ id: string; name: string }[]>();
   ladderTypeId = types.find((t) => t.name === 'Žebřík')!.id;
-  rackTypeId = types.find((t) => t.name === 'Regál paletový')!.id;
+  rackTypeId = types.find((t) => t.name === 'Regál')!.id;
 });
 
 describe('inspections', () => {

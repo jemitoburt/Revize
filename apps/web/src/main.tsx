@@ -1,6 +1,7 @@
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
 import '@mantine/dates/styles.css';
+import './app.css';
 import 'dayjs/locale/cs';
 import { DatesProvider } from '@mantine/dates';
 import { Button, MantineProvider, createTheme } from '@mantine/core';
