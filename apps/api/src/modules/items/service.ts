@@ -1,4 +1,5 @@
 import {
+  applyDefaultProducts,
   buildFieldValuesSchema,
   canonicalItemNumber,
   newId,
@@ -146,7 +147,10 @@ export function createItemsService(db: Db) {
     definitions: (typeof equipmentType.$inferSelect)['fieldDefinitions'],
     values: Record<string, unknown>,
   ) {
-    const parsed = buildFieldValuesSchema(definitions).safeParse(values);
+    // Empty fields with a default product (bay load) are filled like in the form and import.
+    const parsed = buildFieldValuesSchema(definitions).safeParse(
+      applyDefaultProducts(definitions, values),
+    );
     if (parsed.success) return parsed.data;
     const issues: Issue[] = parsed.error.issues.map((i) => ({
       path: ['fieldValues', ...i.path.map((p) => (typeof p === 'symbol' ? String(p) : p))],

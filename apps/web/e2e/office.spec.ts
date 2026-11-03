@@ -210,3 +210,29 @@ test('changing the type of a new item drops values of the previous type', async 
   await drawer.getByRole('button', { name: 'Založit artikl' }).click();
   await expect(page.getByText(/Artikl \d+ založen/)).toBeVisible();
 });
+
+test('rack bay load is prefilled as level load × levels and can be overwritten', async ({
+  page,
+}) => {
+  await login(page);
+  await page.request.post('/api/equipment-types', {
+    data: { presetKey: 'pallet_rack', name: 'Regál paletový (nosnost)' },
+  });
+  await nav(page, 'Artikly');
+  await choose(page, 'Zákazník', 'Sklad Brno s.r.o.');
+  await choose(page, 'Provozovna', 'Hlavní sklad');
+  await page.getByRole('button', { name: 'Nový artikl' }).click();
+  const drawer = page.getByRole('dialog', { name: 'Nový artikl' });
+  await drawer.getByRole('combobox', { name: 'Typ vybavení' }).click();
+  await page.getByRole('option', { name: 'Regál paletový (nosnost)', exact: true }).click();
+  const bayLoad = drawer.getByRole('textbox', { name: 'Nosnost pole' });
+  await drawer.getByRole('textbox', { name: 'Počet úrovní' }).fill('4');
+  await drawer.getByRole('textbox', { name: 'Nosnost úrovně' }).fill('2000');
+  await expect(bayLoad).toHaveValue('8000');
+  await drawer.getByRole('textbox', { name: 'Počet úrovní' }).fill('5');
+  await expect(bayLoad).toHaveValue('10000');
+  // A lower value from the load sign stays when the inputs change again.
+  await bayLoad.fill('7200');
+  await drawer.getByRole('textbox', { name: 'Počet úrovní' }).fill('6');
+  await expect(bayLoad).toHaveValue('7200');
+});

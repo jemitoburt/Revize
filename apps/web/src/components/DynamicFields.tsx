@@ -9,7 +9,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
-import type { FieldDefinition } from '@revize/shared';
+import { applyDefaultProducts, type FieldDefinition } from '@revize/shared';
 
 export interface DynamicFieldsProps {
   definitions: readonly FieldDefinition[];
@@ -29,7 +29,10 @@ export function DynamicFields({
   disabled,
 }: DynamicFieldsProps) {
   const fields = definitions.filter((f) => !f.archived).sort((a, b) => a.order - b.order);
-  const set = (key: string, value: unknown) => onChange({ ...values, [key]: value });
+  // Fields with a default product (bay load = level load × levels) follow their inputs until
+  // somebody overwrites them.
+  const set = (key: string, value: unknown) =>
+    onChange(applyDefaultProducts(definitions, { ...values, [key]: value }, values));
 
   return (
     <SimpleGrid cols={{ base: 1, sm: 2 }}>

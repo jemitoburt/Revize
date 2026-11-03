@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildFieldValuesSchema,
+  applyDefaultProducts,
   displayFields,
   fieldDefinitionsSchema,
   type FieldDefinition,
@@ -87,6 +88,60 @@ describe('displayFields', () => {
       { label: 'Výška', value: '4\u00a0500 mm' },
       { label: 'Kotveno', value: 'ano' },
       { label: 'Revize', value: '5. 3. 2026' },
+    ]);
+  });
+});
+
+describe('applyDefaultProducts', () => {
+  const definitions = fieldDefinitionsSchema.parse([
+    { key: 'levels', label: 'Počet úrovní', kind: 'integer', order: 1 },
+    { key: 'level_load_kg', label: 'Nosnost úrovně', kind: 'integer', order: 2 },
+    {
+      key: 'bay_load_kg',
+      label: 'Nosnost pole',
+      kind: 'integer',
+      order: 3,
+      defaultProduct: ['level_load_kg', 'levels'],
+    },
+  ]);
+
+  it('prefills the product once all inputs are numbers', () => {
+    expect(applyDefaultProducts(definitions, { levels: 4 })).toEqual({ levels: 4 });
+    expect(applyDefaultProducts(definitions, { levels: 4, level_load_kg: 2000 })).toEqual({
+      levels: 4,
+      level_load_kg: 2000,
+      bay_load_kg: 8000,
+    });
+  });
+
+  it('follows changed inputs while the prefill is untouched, keeps a value typed by hand', () => {
+    const before = { levels: 4, level_load_kg: 2000, bay_load_kg: 8000 };
+    expect(applyDefaultProducts(definitions, { ...before, levels: 5 }, before).bay_load_kg).toBe(
+      10_000,
+    );
+    const fromSign = { ...before, bay_load_kg: 7200 };
+    expect(
+      applyDefaultProducts(definitions, { ...fromSign, levels: 5 }, fromSign).bay_load_kg,
+    ).toBe(7200);
+    // Import / API (no previous values): only empty fields are filled.
+    expect(applyDefaultProducts(definitions, fromSign).bay_load_kg).toBe(7200);
+  });
+
+  it('rejects products of non-numeric or missing fields', () => {
+    const invalid = fieldDefinitionsSchema.safeParse([
+      { key: 'maker', label: 'Výrobce', kind: 'text', order: 1 },
+      {
+        key: 'total',
+        label: 'Celkem',
+        kind: 'integer',
+        order: 2,
+        defaultProduct: ['maker', 'nope'],
+      },
+    ]);
+    expect(invalid.success).toBe(false);
+    expect(invalid.error?.issues.map((i) => i.path.join('.'))).toEqual([
+      '1.defaultProduct',
+      '1.defaultProduct',
     ]);
   });
 });

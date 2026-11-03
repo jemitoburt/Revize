@@ -47,6 +47,11 @@ export const fieldDefinitionSchema = z
     order: z.number().int().min(0),
     /** Archived fields are hidden in forms but their stored values are kept. */
     archived: z.boolean().default(false),
+    /**
+     * Numeric field prefilled with the product of other numeric fields (e.g. bay load = level
+     * load × levels). Only a prefill: the value can be overwritten (`applyDefaultProducts`).
+     */
+    defaultProduct: z.array(fieldKeySchema).min(2).max(4).optional(),
   })
   .superRefine((field, ctx) => {
     const needsOptions = field.kind === 'select' || field.kind === 'multiselect';
@@ -79,7 +84,65 @@ export const fieldDefinitionsSchema = z
       }
       seen.add(field.key);
     });
+    const numeric = new Map(
+      fields.map((f) => [f.key, f.kind === 'number' || f.kind === 'integer'] as const),
+    );
+    fields.forEach((field, index) => {
+      if (!field.defaultProduct) return;
+      const path = [index, 'defaultProduct'];
+      if (!numeric.get(field.key)) {
+        ctx.addIssue({
+          code: 'custom',
+          path,
+          message: 'Součin lze předvyplnit jen do číselného pole',
+        });
+      }
+      for (const key of field.defaultProduct) {
+        if (key === field.key || !numeric.get(key)) {
+          ctx.addIssue({
+            code: 'custom',
+            path,
+            message: `Pole „${key}“ není jiné číselné pole typu`,
+          });
+        }
+      }
+    });
   });
+
+function productOf(field: FieldDefinition, values: Record<string, unknown>): number | null {
+  if (!field.defaultProduct) return null;
+  let product = 1;
+  for (const key of field.defaultProduct) {
+    const value = values[key];
+    if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+    product *= value;
+  }
+  return field.kind === 'integer' ? Math.round(product) : product;
+}
+
+/**
+ * Prefills fields with `defaultProduct` (bay load = level load × levels). A field is filled when
+ * it is empty, or when it still holds the product of the `previous` values – i.e. nobody has
+ * overwritten the prefill yet. A value typed in by hand (e.g. a lower load from the sign) stays.
+ */
+export function applyDefaultProducts(
+  definitions: readonly FieldDefinition[],
+  values: Record<string, unknown>,
+  previous?: Record<string, unknown>,
+): Record<string, unknown> {
+  let next = values;
+  for (const field of definitions) {
+    if (!field.defaultProduct || field.archived) continue;
+    const product = productOf(field, next);
+    if (product === null) continue;
+    const current = next[field.key];
+    const wasPrefill = previous !== undefined && current === productOf(field, previous);
+    if ((isEmpty(current) || wasPrefill) && current !== product) {
+      next = { ...next, [field.key]: product };
+    }
+  }
+  return next;
+}
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 

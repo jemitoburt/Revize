@@ -174,7 +174,9 @@ describe('equipment types', () => {
       'name_taken',
     );
 
-    const withoutField = rack.fieldDefinitions.filter((f: { key: string }) => f.key !== 'levels');
+    const withoutField = rack.fieldDefinitions.filter(
+      (f: { key: string }) => f.key !== 'height_mm',
+    );
     const removed = await api('PATCH', `/api/equipment-types/${rack.id}`, {
       fieldDefinitions: withoutField,
       version: 1,
@@ -183,7 +185,7 @@ describe('equipment types', () => {
     expect(removed.json().message).toContain('Archivujte');
 
     const kindChanged = rack.fieldDefinitions.map((f: { key: string }) =>
-      f.key === 'levels' ? { ...f, kind: 'text' } : f,
+      f.key === 'height_mm' ? { ...f, kind: 'text' } : f,
     );
     expect(
       (
@@ -195,7 +197,7 @@ describe('equipment types', () => {
     ).toBe(400);
 
     const archivedField = rack.fieldDefinitions.map((f: { key: string }) =>
-      f.key === 'levels' ? { ...f, archived: true } : f,
+      f.key === 'height_mm' ? { ...f, archived: true } : f,
     );
     const ok = await api('PATCH', `/api/equipment-types/${rack.id}`, {
       fieldDefinitions: archivedField,
@@ -409,5 +411,35 @@ describe('counts', () => {
     });
     const locations = (await api('GET', `/api/sites/${site.id}/locations`)).json();
     expect(locations[0]).toMatchObject({ name: 'Hala A', itemCount: 1 });
+  });
+});
+
+describe('default products of fields', () => {
+  it('fills an empty rack bay load as level load × levels, keeps a given one', async () => {
+    const { site } = await setup();
+    const rack = (
+      await api('POST', '/api/equipment-types', {
+        presetKey: 'pallet_rack',
+        name: 'Regál (součin)',
+      })
+    ).json();
+    const base = {
+      siteId: site.id,
+      locationId: null,
+      equipmentTypeId: rack.id,
+      fieldValues: {
+        manufacturer: 'Mecalux',
+        configuration: 'Jednostranný',
+        levels: 4,
+        level_load_kg: 2000,
+      },
+    };
+    const filled = await api('POST', '/api/items', base);
+    expect(filled.json().fieldValues.bay_load_kg).toBe(8000);
+    const given = await api('POST', '/api/items', {
+      ...base,
+      fieldValues: { ...base.fieldValues, bay_load_kg: 7200 },
+    });
+    expect(given.json().fieldValues.bay_load_kg).toBe(7200);
   });
 });

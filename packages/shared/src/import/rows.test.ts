@@ -75,3 +75,24 @@ describe('buildRowCandidate for updates', () => {
     expect(candidate.fieldValues).toEqual({ ...base, rungs: 12 });
   });
 });
+
+describe('buildRowCandidate with a default product', () => {
+  it('fills an empty bay load as level load × levels, keeps a given one', () => {
+    const rack = equipmentTypePreset('pallet_rack')!.fieldDefinitions;
+    const rackMapping = importMappingSchema.parse({
+      siteId: '0195f1a2-0000-7000-8000-000000000001',
+      equipmentTypeId: '0195f1a2-0000-7000-8000-000000000002',
+      itemNumber: 0,
+      fields: { manufacturer: 1, configuration: 2, levels: 3, level_load_kg: 4, bay_load_kg: 5 },
+    });
+    const row = (bayLoad: string) =>
+      buildRowCandidate(
+        ['1', 'Mecalux', 'Jednostranný', 4, '2 000', bayLoad],
+        2,
+        rackMapping,
+        rack,
+      );
+    expect(row('').fieldValues.bay_load_kg).toBe(8000);
+    expect(row('7200').fieldValues.bay_load_kg).toBe(7200);
+  });
+});

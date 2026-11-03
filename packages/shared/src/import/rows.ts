@@ -1,4 +1,8 @@
-import { buildFieldValuesSchema, type FieldDefinition } from '../equipment-fields.js';
+import {
+  applyDefaultProducts,
+  buildFieldValuesSchema,
+  type FieldDefinition,
+} from '../equipment-fields.js';
 import { canonicalItemNumber } from '../item-number.js';
 import { cellText, convertCell, isEmptyCell, parseDate, type RawCell } from './cells.js';
 import type { ImportMapping } from './mapping.js';
@@ -101,7 +105,9 @@ export function buildRowCandidate(
     // empty cells do not overwrite values of an existing item.
     Object.entries(values).filter(([k, v]) => !failedKeys.has(columnOf.get(k) ?? -1) && v !== null),
   );
-  const parsed = buildFieldValuesSchema(definitions).safeParse({ ...base, ...filled });
+  const parsed = buildFieldValuesSchema(definitions).safeParse(
+    applyDefaultProducts(definitions, { ...base, ...filled }),
+  );
   let fieldValues: Record<string, unknown> = {};
   if (parsed.success) fieldValues = parsed.data;
   else {

@@ -16,6 +16,17 @@ Nabídka výrobců: žebříky Alve, Krause, Hailo, Zarges, Hymer, Günzburger S
 Facal, Werner a Drabest. Regály Mecalux, Jungheinrich, Stow, Dexion, Kasten, Nedcon, META,
 AR Racking, SSI Schäfer a Proma. Jiný výrobce jde vždy napsat ručně.
 
+## Předvyplněná nosnost pole
+
+Nosnost pole se u paletového regálu předvyplní jako **nosnost úrovně × počet úrovní** a u
+policového jako **nosnost police × počet polic**.
+
+- Předvyplnění se uplatní ve formuláři artiklu, v importu i v API.
+- Dokud hodnotu nikdo nepřepíše, mění se se zadanými údaji.
+- Pokud štítek nosnosti uvádí nižší nosnost pole (omezení rámů podle ČSN EN 15635), stačí ji
+  přepsat a hodnota zůstane.
+- U typů vytvořených z knihovny dřív se předvyplnění doplnilo migrací `0005`.
+
 ## Co z norem vyplývá (rešerše 2026-10-26)
 
 - **EN 131** od roku 2018 rozlišuje _Professional_ a _Non-Professional_. Minimální nosnost je

@@ -300,7 +300,15 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { key: 'bays', label: 'Počet polí', kind: 'integer', order: 6 },
       { key: 'levels', label: 'Počet úrovní', kind: 'integer', order: 7 },
       { key: 'level_load_kg', label: 'Nosnost úrovně', kind: 'integer', unit: 'kg', order: 8 },
-      { key: 'bay_load_kg', label: 'Nosnost pole', kind: 'integer', unit: 'kg', order: 9 },
+      {
+        key: 'bay_load_kg',
+        label: 'Nosnost pole',
+        kind: 'integer',
+        unit: 'kg',
+        order: 9,
+        defaultProduct: ['level_load_kg', 'levels'],
+        help: 'Předvyplní se jako nosnost úrovně × počet úrovní; je-li na štítku nižší, přepište ji.',
+      },
       ...rackCommon(10),
     ]),
     protocolTemplate: RACK_PROTOCOL(
@@ -329,7 +337,15 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { key: 'width_mm', label: 'Šířka pole', kind: 'integer', unit: 'mm', order: 4 },
       { key: 'shelves', label: 'Počet polic', kind: 'integer', order: 5 },
       { key: 'shelf_load_kg', label: 'Nosnost police', kind: 'integer', unit: 'kg', order: 6 },
-      { key: 'bay_load_kg', label: 'Nosnost pole', kind: 'integer', unit: 'kg', order: 7 },
+      {
+        key: 'bay_load_kg',
+        label: 'Nosnost pole',
+        kind: 'integer',
+        unit: 'kg',
+        order: 7,
+        defaultProduct: ['shelf_load_kg', 'shelves'],
+        help: 'Předvyplní se jako nosnost police × počet polic; je-li na štítku nižší, přepište ji.',
+      },
       ...rackCommon(8),
     ]),
     protocolTemplate: RACK_PROTOCOL(

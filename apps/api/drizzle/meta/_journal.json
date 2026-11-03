@@ -36,6 +36,13 @@
       "when": 1793696700726,
       "tag": "0004_organization_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793700254866,
+      "tag": "0005_rack_bay_load_prefill",
+      "breakpoints": true
     }
   ]
 }
