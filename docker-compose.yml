@@ -26,7 +26,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://revize:${POSTGRES_PASSWORD}@db:5432/revize
+      DATABASE_URL: postgres://revize@db:5432/revize
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?Nastavte POSTGRES_PASSWORD v souboru .env}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       ORG_NAME: ${ORG_NAME:-Revizní firma}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@revize.local}

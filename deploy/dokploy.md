@@ -8,7 +8,8 @@ variant leaves them unpublished and connects only the web service to
 
 In the Dokploy Compose environment, set:
 
-- `POSTGRES_PASSWORD`: a long random database password.
+- `POSTGRES_PASSWORD`: a long random database password. It is passed to the API
+  separately from the database URL, so URL-reserved characters are supported.
 - `TRUSTED_ORIGINS`: the exact HTTPS origin, for example
   `https://revize.example.com` (no trailing slash).
 

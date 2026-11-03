@@ -4,7 +4,7 @@ import { organization } from '../db/schema.js';
 import { DEMO_INSPECTOR, seedDemo } from '../seed/demo.js';
 
 const config = loadConfig();
-const database = createDatabase(config.DATABASE_URL);
+const database = createDatabase(config.DATABASE_URL, config.DATABASE_PASSWORD);
 const [org] = await database.db.select().from(organization).limit(1);
 if (!org) {
   console.error(

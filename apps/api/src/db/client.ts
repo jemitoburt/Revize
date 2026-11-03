@@ -13,8 +13,8 @@ export interface Database {
   close(): Promise<void>;
 }
 
-export function createDatabase(url: string): Database {
-  const pool = new pg.Pool({ connectionString: url, max: 10 });
+export function createDatabase(url: string, password?: string): Database {
+  const pool = new pg.Pool({ connectionString: url, password, max: 10 });
   const db = drizzle(pool, { schema, casing: 'snake_case' });
   return { db, pool, close: () => pool.end() };
 }

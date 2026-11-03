@@ -7,6 +7,8 @@ const bool = z
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
+  /** Optional raw database password, passed separately to avoid URL-encoding issues. */
+  DATABASE_PASSWORD: z.string().optional(),
   HOST: z.string().default('0.0.0.0'),
   PORT: z.coerce.number().int().default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
