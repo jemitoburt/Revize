@@ -50,6 +50,7 @@ import {
   useEquipmentTypes,
   useInspection,
   useCreateFieldItem,
+  useCreateFieldLocation,
   useInspectionItems,
   useOutbox,
   usePendingPhotos,
@@ -226,6 +227,7 @@ export function InspectionPage() {
   const outbox = useOutbox();
   const pendingItems = useMemo(() => new Set(outbox.map((c) => c.itemId)), [outbox]);
   const createItem = useCreateFieldItem(inspectionId);
+  const createLocation = useCreateFieldLocation(inspection.data?.siteId ?? '', inspectionId);
   const readOnly = inspection.data?.status === 'closed';
   const progress = progressOf(items);
   const openItem = items.find((i) => i.id === open?.id) ?? null;
@@ -533,6 +535,7 @@ export function InspectionPage() {
                 : {}),
               ...(newItem.qrCode ? { qrCode: newItem.qrCode } : {}),
             }}
+            onCreateLocation={(parent, name) => createLocation.mutateAsync({ parent, name })}
             onCreate={async (body, locationPath) => {
               const number = body.itemNumber ? canonicalItemNumber(body.itemNumber) : null;
               const taken = number && items.find((i) => i.itemNumber === number);

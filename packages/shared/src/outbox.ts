@@ -12,11 +12,17 @@ export interface OutboxCommandState {
   group: string;
   status: OutboxStatus;
   nextAttemptAt: number;
+  /**
+   * Groups this command needs first: it waits while an earlier command of any of them is
+   * still on the device (e.g. a new item in a location created in the field).
+   */
+  dependsOn?: readonly string[];
 }
 
 /**
  * Commands that may be sent now, in order: the earliest command of each group, unless that
- * group is waiting for attention or for its retry time.
+ * group is waiting for attention or for its retry time, or an earlier command of a group it
+ * depends on is still waiting.
  */
 export function runnableCommands<T extends OutboxCommandState>(
   commands: readonly T[],
@@ -27,6 +33,7 @@ export function runnableCommands<T extends OutboxCommandState>(
   for (const command of [...commands].sort((a, b) => a.seq - b.seq)) {
     if (blocked.has(command.group)) continue;
     blocked.add(command.group);
+    if (command.dependsOn?.some((group) => blocked.has(group))) continue;
     if (command.status === 'pending' && command.nextAttemptAt <= now) runnable.push(command);
   }
   return runnable;

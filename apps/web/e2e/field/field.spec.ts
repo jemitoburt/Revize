@@ -90,6 +90,16 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   // Číslo TZ typed (the automatic one depends on items of the other tests).
   await form.getByLabel('Číslo TZ').fill('10003');
   await form.getByLabel('Označení', { exact: true }).fill('Ž-03');
+  // A row that is not in the records yet: added right here (through the device's outbox).
+  await form.getByRole('button', { name: 'Nové umístění' }).click();
+  const newLocation = form.getByTestId('new-location');
+  await newLocation.getByRole('combobox', { name: 'Nadřazené umístění' }).click();
+  await page.getByRole('option', { name: 'Hala A', exact: true }).click();
+  await newLocation.getByLabel('Název umístění').fill('Řada 9');
+  await newLocation.getByRole('button', { name: 'Přidat umístění' }).click();
+  await expect(form.getByRole('combobox', { name: 'Umístění', exact: true })).toHaveValue(
+    'Hala A › Řada 9',
+  );
   await form.getByLabel('Výrobce').fill('Krause');
   await form.getByRole('combobox', { name: 'Typ žebříku' }).click();
   await page.getByRole('option', { name: 'Opěrný', exact: true }).click();
@@ -99,6 +109,10 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page).getByRole('heading', { name: '10003', exact: true })).toBeVisible();
   await sheet(page).getByRole('button', { name: 'V pořádku' }).click();
   await expect(page.getByTestId('progress')).toHaveText('3 / 4 zkontrolováno');
+  // Location and item reached the server (the item waited for its location).
+  await expect(page.getByText('Vše odesláno')).toBeVisible();
+  const created = await (await page.request.get('/api/items?q=10003')).json();
+  expect(created.items[0].locationPath).toEqual(['Hala A', 'Řada 9']);
 
   // Leaving keeps the inspection open with its progress.
   await page.getByRole('button', { name: 'Ukončit práci' }).click();

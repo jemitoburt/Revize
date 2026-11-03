@@ -7,6 +7,8 @@ export const PERMISSIONS = [
   'audit.read',
   'customer.read',
   'customer.write',
+  /** Add a location (also technicians in the field); changing the tree needs customer.write. */
+  'location.create',
   'equipmentType.read',
   'equipmentType.write',
   'item.read',
@@ -34,6 +36,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   admin: PERMISSIONS,
   inspector: [
     'customer.read',
+    'location.create',
     'equipmentType.read',
     'item.read',
     'item.write',

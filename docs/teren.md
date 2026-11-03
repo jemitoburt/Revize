@@ -38,6 +38,10 @@ techniků současně. Stačí v ní zapsat první výsledek.
 - **Bluetooth čtečka** v režimu klávesnice funguje kdykoli, když je otevřená kontrola. Najde
   artikl podle QR kódu, čísla TZ i označení.
 - **Neznámý kód:** aplikace nabídne **Založit artikl s tímto kódem**. QR kód se předvyplní.
+- **Nové umístění:** ve formuláři nového artiklu je pod polem Umístění tlačítko **Nové
+  umístění**. Vyberete nadřazené umístění (např. Hala A) a napíšete název (např. Řada 9).
+  Umístění se uloží do iPadu a odešle se před artiklem, takže funguje i bez signálu. Upravit nebo
+  přesunout umístění jde jen v kanceláři.
 
 ## Karta artiklu
 

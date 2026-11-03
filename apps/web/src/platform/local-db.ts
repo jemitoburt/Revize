@@ -15,13 +15,15 @@ export interface OutboxRow {
   id: string;
   /** Who recorded it; other users' commands are never sent under a new login. */
   userId: string;
-  kind: 'result' | 'result-delete' | 'photo' | 'item';
+  kind: 'result' | 'result-delete' | 'photo' | 'item' | 'location';
   method: 'PUT' | 'POST' | 'DELETE';
   path: string;
   /** JSON body, or the text fields of a photo upload. */
   body: unknown;
   /** Commands of one group are sent strictly in order (see `runnableCommands`). */
   group: string;
+  /** Groups that must be sent first (a new item in a new location). */
+  dependsOn?: string[];
   /** How the change looks in the UI until the server's answer replaces it (result, item). */
   preview: unknown;
   /** Czech description for the list of unsent data. */

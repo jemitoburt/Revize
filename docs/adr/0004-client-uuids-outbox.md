@@ -57,3 +57,12 @@ lastError}`, fotky jako Bloby. Zápis do outboxu proběhne před potvrzením v U
 
 - Plná offline-first synchronizace (CRDT, obousměrné konflikty) se nedělá. Pokud bude potřeba,
   outbox zůstane a doplní se stahování změn.
+
+## Doplnění 2026-11-03: závislosti mezi skupinami, umístění z terénu
+
+- Technik může v terénu založit nové umístění (oprávnění `location.create`, jen přidání, ne úpravy
+  stromu). Zápis jde přes frontu jako ostatní terénní zápisy (`kind: 'location'`, skupina
+  `location:<id>`, `POST /sites/:id/locations` s ID z klienta je idempotentní).
+- Příkaz může mít `dependsOn` se skupinami, které musí odejít dřív (`runnableCommands`).
+  Nový artikl v novém umístění čeká na umístění a nové umístění pod jiným novým umístěním na
+  své nadřazené. Do odeslání se nová umístění ukazují v seznamech (`useFieldLocations`).

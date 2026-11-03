@@ -20,6 +20,7 @@ export const locationsRoutes: FastifyPluginAsyncZod<{ locations: LocationsServic
 ) => {
   const read = requirePermission('customer.read');
   const write = requirePermission('customer.write');
+  const add = requirePermission('location.create');
   const tags = ['Umístění'];
 
   app.get(
@@ -44,7 +45,7 @@ export const locationsRoutes: FastifyPluginAsyncZod<{ locations: LocationsServic
   app.post(
     '/sites/:id/locations',
     {
-      preHandler: write,
+      preHandler: add,
       schema: {
         tags,
         summary: 'Založit umístění',

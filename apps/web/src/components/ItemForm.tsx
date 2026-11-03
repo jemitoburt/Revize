@@ -17,8 +17,10 @@ import {
   newId,
   type Item,
   type ItemStatus,
+  type Location,
   type createItemSchema,
 } from '@revize/shared';
+import { IconPlus } from '@tabler/icons-react';
 import { useMemo, useState, type FormEvent } from 'react';
 import type { z } from 'zod';
 import type { ApiRequestError } from '../api/client.js';
@@ -26,13 +28,14 @@ import {
   useCreateItem,
   useCustomers,
   useEquipmentTypes,
-  useLocations,
+  useFieldLocations,
   useSites,
   useUpdateItem,
 } from '../api/hooks.js';
 import { DynamicFields, fieldValueErrors } from './DynamicFields.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { DateField } from './DateField.js';
+import { NewLocationForm } from './NewLocationForm.js';
 
 export interface ItemFormProps {
   item: Item | null;
@@ -56,6 +59,8 @@ export interface ItemFormProps {
     body: z.input<typeof createItemSchema> & { id: string },
     locationPath: string[],
   ) => Promise<void>;
+  /** Field mode: adds a location on the device (outbox); offered next to the location select. */
+  onCreateLocation?: (parent: Location | null, name: string) => Promise<Location>;
   /** Called with the saved item (not with field-mode items created through `onCreate`). */
   onDone: (saved?: Item) => void;
 }
@@ -66,8 +71,10 @@ export function ItemForm({
   fixedSite,
   allowedTypeIds,
   onCreate,
+  onCreateLocation,
   onDone,
 }: ItemFormProps) {
+  const [addingLocation, setAddingLocation] = useState(false);
   const create = useCreateItem();
   const update = useUpdateItem();
   const customers = useCustomers();
@@ -77,7 +84,8 @@ export function ItemForm({
   );
   const sites = useSites(customerId);
   const [siteId, setSiteId] = useState<string | null>(item?.siteId ?? defaults.siteId ?? null);
-  const locations = useLocations(siteId);
+  // Includes locations added in the field that are still on the device.
+  const locations = useFieldLocations(siteId);
   const [locationId, setLocationId] = useState<string | null>(
     item?.locationId ?? defaults.locationId ?? null,
   );
@@ -226,16 +234,43 @@ export function ItemForm({
               setLocationId(null);
             }}
           />
-          <Select
-            label="Umístění"
-            searchable
-            clearable
-            placeholder="Bez umístění"
-            data={locationOptions}
-            value={locationId}
-            error={errors.locationId}
-            onChange={setLocationId}
-          />
+          <Stack gap={4}>
+            <Select
+              label="Umístění"
+              searchable
+              clearable
+              placeholder="Bez umístění"
+              data={locationOptions}
+              value={locationId}
+              error={errors.locationId}
+              onChange={setLocationId}
+            />
+            {onCreateLocation && siteId && !addingLocation && (
+              <Button
+                variant="subtle"
+                size="compact-sm"
+                leftSection={<IconPlus size={14} />}
+                onClick={() => setAddingLocation(true)}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                Nové umístění
+              </Button>
+            )}
+          </Stack>
+          {onCreateLocation && addingLocation && (
+            <NewLocationForm
+              locations={locations.data ?? []}
+              parentId={
+                locations.data?.find((l) => l.id === locationId)?.parentId ?? locationId ?? null
+              }
+              onCreate={onCreateLocation}
+              onCreated={(created) => {
+                setLocationId(created.id);
+                setAddingLocation(false);
+              }}
+              onCancel={() => setAddingLocation(false)}
+            />
+          )}
           <Select
             label="Typ vybavení"
             required

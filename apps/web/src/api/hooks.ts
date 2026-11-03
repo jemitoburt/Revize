@@ -1,4 +1,4 @@
-import { newId, outcomeLabel, recordResultSchema } from '@revize/shared';
+import { LOCATION_SEPARATOR, newId, outcomeLabel, recordResultSchema } from '@revize/shared';
 import type {
   CurrentUser,
   Customer,
@@ -446,6 +446,14 @@ export function useCreateFieldItem(inspectionId: string) {
     { body: In<typeof createItemSchema> & { id: string }; preview: InspectionItem }
   >({
     mutationFn: async ({ body, preview }) => {
+      // A location created in the field (still on the device) has to reach the server first.
+      const newLocation = body.locationId
+        ? await localDb.outbox
+            .filter(
+              (c) => c.kind === 'location' && (c.body as { id: string }).id === body.locationId,
+            )
+            .first()
+        : undefined;
       await enqueue({
         id: newId(),
         kind: 'item',
@@ -453,6 +461,7 @@ export function useCreateFieldItem(inspectionId: string) {
         path: '/items',
         body,
         group: `item:${body.id}`,
+        ...(newLocation ? { dependsOn: [newLocation.group] } : {}),
         preview,
         label: `Nový artikl ${preview.itemNumber}`,
         inspectionId,
@@ -571,6 +580,62 @@ export function usePhotoUrl(id: string, variant: 'thumbnail' | 'original') {
 /** Number of field writes on this device not yet accepted by the server. */
 export function useOutbox(): OutboxRow[] {
   return useLiveQuery(() => localDb.outbox.orderBy('seq').toArray(), []) ?? [];
+}
+
+/** Locations of a site including the ones created in the field and not sent yet. */
+export function useFieldLocations(siteId: string | null | undefined) {
+  const query = useLocations(siteId);
+  const outbox = useOutbox();
+  const pending = outbox
+    .filter((c) => c.kind === 'location' && (c.preview as Location).siteId === siteId)
+    .map((c) => c.preview as Location)
+    .filter((l) => !query.data?.some((existing) => existing.id === l.id));
+  return { ...query, data: query.data ? [...query.data, ...pending] : pending };
+}
+
+/**
+ * A new location from the field (e.g. a rack found in another row): stored on the device first
+ * and sent through the outbox like every field write (ADR-0004).
+ */
+export function useCreateFieldLocation(siteId: string, inspectionId: string) {
+  const client = useQueryClient();
+  return useMutation<Location, Error, { parent: Location | null; name: string }>({
+    mutationFn: async ({ parent, name }) => {
+      const id = newId();
+      const preview: Location = {
+        id,
+        siteId,
+        parentId: parent?.id ?? null,
+        name,
+        sortOrder: 9999,
+        pathNames: [...(parent?.pathNames ?? []), name],
+        depth: parent ? parent.depth + 1 : 0,
+        archived: false,
+        itemCount: 0,
+        version: 1,
+      };
+      const parentCommand = parent
+        ? await localDb.outbox
+            .filter((c) => c.kind === 'location' && (c.body as { id: string }).id === parent.id)
+            .first()
+        : undefined;
+      await enqueue({
+        id: newId(),
+        kind: 'location',
+        method: 'POST',
+        path: `/sites/${siteId}/locations`,
+        body: { id, parentId: preview.parentId, name },
+        group: `location:${id}`,
+        ...(parentCommand ? { dependsOn: [parentCommand.group] } : {}),
+        preview,
+        label: `Nové umístění ${preview.pathNames.join(LOCATION_SEPARATOR)}`,
+        inspectionId,
+        itemId: null,
+      });
+      return preview;
+    },
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['locations', siteId] }),
+  });
 }
 
 // ---------- office: closing inspections, protocol, settings (M7) ----------

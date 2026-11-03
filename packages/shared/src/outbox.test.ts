@@ -4,7 +4,11 @@ import { classifyFailure, retryDelayMs, runnableCommands } from './outbox.js';
 const command = (
   seq: number,
   group: string,
-  extra: Partial<{ status: 'pending' | 'attention'; nextAttemptAt: number }> = {},
+  extra: Partial<{
+    status: 'pending' | 'attention';
+    nextAttemptAt: number;
+    dependsOn: string[];
+  }> = {},
 ) => ({
   seq,
   group,
@@ -28,6 +32,19 @@ describe('runnableCommands', () => {
     ];
     expect(runnableCommands(commands, 10).map((c) => c.seq)).toEqual([5]);
     expect(runnableCommands(commands, 100).map((c) => c.seq)).toEqual([3, 5]);
+  });
+});
+
+describe('runnableCommands with dependencies', () => {
+  it('holds a command until earlier commands of the groups it depends on are sent', () => {
+    const commands = [
+      command(1, 'location:a'),
+      command(2, 'item:x', { dependsOn: ['location:a'] }),
+      command(3, 'item:y', { dependsOn: ['location:b'] }),
+    ];
+    expect(runnableCommands(commands, 10).map((c) => c.seq)).toEqual([1, 3]);
+    // Once the location is sent, the item follows.
+    expect(runnableCommands(commands.slice(1), 10).map((c) => c.seq)).toEqual([2, 3]);
   });
 });
 
