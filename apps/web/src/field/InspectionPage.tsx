@@ -69,7 +69,7 @@ import { ScannerOverlay } from './ScannerOverlay.js';
 type Filter = 'unchecked' | 'defects' | 'all';
 type Source = 'list' | 'scan';
 
-const SEVERITY_COLORS = { green: 'teal', amber: 'orange', red: 'red' } as const;
+const SEVERITY_COLORS = { green: 'teal', amber: 'yellow', red: 'red' } as const;
 
 function resultColor(result: InspectionResult) {
   const severity = severityOf(result);

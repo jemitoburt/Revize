@@ -19,19 +19,23 @@
 
 ## Semafor závad (upřesnění 2026-11-03, podle vzoru protokolu)
 
-Hodnocení „závada“ má závažnost podle semaforu ČSN EN 15635 (sloupec `severity`):
+Hodnocení „závada“ má úroveň rizika podle ČSN EN 15635, kap. 9.5 (sloupec `severity`). České
+vydání normy používá zelenou, **žlutou** a červenou. Klíč `amber` v datech zůstává.
 
-| Stupeň   | Význam                                             | V protokolu              |
-| -------- | -------------------------------------------------- | ------------------------ |
-| zelená   | sledovat, bez omezení provozu                      | volitelně (zaškrtávátko) |
-| oranžová | opravit co nejdřív (do 4 týdnů), místo nezatěžovat | volitelně (zaškrtávátko) |
-| červená  | ihned odlehčit a vyřadit z provozu do opravy       | vždy                     |
+| Úroveň  | Význam podle ČSN EN 15635                                                                                 | Schopno bezpečného provozu | V protokolu              |
+| ------- | --------------------------------------------------------------------------------------------------------- | -------------------------- | ------------------------ |
+| zelená  | poškození v mezích tolerance, lze dále používat, zaznamenat a sledovat                                    | ANO                        | volitelně (zaškrtávátko) |
+| žlutá   | nebezpečné poškození, vyprázdnit a do opravy nezaplňovat; neopraví-li se do 4 týdnů, platí červené riziko | NE                         | volitelně (zaškrtávátko) |
+| červená | velmi vážné poškození, okamžitě vyprázdnit a vyřadit z užívání až do opravy                               | NE                         | vždy                     |
+
+Mezní hodnoty poškození (měření pravítkem 1 m) a přesné znění je třeba ověřit v textu normy.
+Texty jsou v `SEVERITY_LABELS` (`packages/shared/src/inspection.ts`).
 
 - Červená znamená vždy `taken_out_of_service`. Hlídá to omezení v databázi.
-- Zelená a oranžová mají `include_in_protocol` (výchozí ano). Nezahrnutá závada se v protokolu
+- Zelená a žlutá mají `include_in_protocol` (výchozí ano). Nezahrnutá závada se v protokolu
   vytiskne jako „vyhovuje“ bez poznámky a bez fotek.
-- Migrace `0006` převedla dosavadní závady takto: vyřazené na červenou, ostatní na oranžovou.
-- Starší klienti posílající jen `takenOutOfService` dál fungují (červená, jinak oranžová).
+- Migrace `0006` převedla dosavadní závady takto: vyřazené na červenou, ostatní na žlutou.
+- Starší klienti posílající jen `takenOutOfService` dál fungují (červená, jinak žlutá).
 
 ## Zápis výsledků (upřesnění 2026-11-03, M5)
 

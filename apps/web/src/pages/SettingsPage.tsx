@@ -35,7 +35,18 @@ const FIELDS: { key: keyof OrganizationSettings; label: string; description?: st
   {
     key: 'certification',
     label: 'Oprávnění technika',
-    description: 'Tiskne se pod podpisem, např. „Osvědčení č. 42/2025“',
+    description: 'Tiskne se u podpisu, např. „Osvědčení č. 42/2025“',
+  },
+  {
+    key: 'protocolIssueDate',
+    label: 'Datum vydání formuláře',
+    description: 'V hlavičce každé stránky, např. „01.10.2026“',
+  },
+  { key: 'protocolVersion', label: 'Verze formuláře', description: 'V hlavičce, např. „1“' },
+  {
+    key: 'pageFooter',
+    label: 'Text v zápatí stránek',
+    description: 'Vlevo dole, např. „BOZP • PO • REVIZE“ (vpravo se tiskne web)',
   },
 ];
 
@@ -145,8 +156,8 @@ function SettingsForm({ organization }: { organization: Organization }) {
           ))}
         </SimpleGrid>
         <Textarea
-          label="Zápatí protokolu"
-          description="Drobný text na konci každého protokolu (např. platnost, upozornění, kontakt)"
+          label="Doplňující text protokolu"
+          description="Vytiskne se za standardními body na konci protokolu (např. platnost, upozornění)"
           autosize
           minRows={3}
           value={settings.protocolFooter}

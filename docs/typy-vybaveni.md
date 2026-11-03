@@ -36,7 +36,7 @@ policového jako **nosnost police × počet polic**.
   Přednost má ochranný koš, alternativou je zachycovač pádu na pevném vedení.
 - **ČSN EN 15635** upravuje používání a údržbu regálů a zavádí roli PRSES. Rozlišuje pravidelné
   vizuální kontroly (týdenní nebo podle posouzení rizik) a odbornou inspekci nejméně jednou za
-  12 měsíců. Poškození se hodnotí semaforem: zelená v toleranci, žlutá/oranžová do dvojnásobku
+  12 měsíců. Poškození se hodnotí semaforem: zelená v toleranci, žlutá do dvojnásobku
   tolerance, červená nad ním. Měří se pravítkem 1 m na konkávní straně dílu. Poškozené díly se
   nahrazují, nerovnají.
 - **EN 15620** stanoví tolerance, deformace a vůle (paletové, vjezdové a konzolové regály)

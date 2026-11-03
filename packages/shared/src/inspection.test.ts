@@ -53,7 +53,7 @@ describe('progressOf and outcomeLabel', () => {
     expect(outcomeLabel({ outcome: 'defect', takenOutOfService: false, severity: 'green' })).toBe(
       'Závada – zelená',
     );
-    expect(outcomeLabel(result('defect'))).toBe('Závada – oranžová');
+    expect(outcomeLabel(result('defect'))).toBe('Závada – žlutá');
   });
 });
 

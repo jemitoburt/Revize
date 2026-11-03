@@ -14,7 +14,7 @@ describe('equipment type presets', () => {
       expect(preset.fieldDefinitions.length).toBeGreaterThan(3);
       const orders = preset.fieldDefinitions.map((f) => f.order);
       expect(new Set(orders).size).toBe(orders.length);
-      expect(preset.protocolTemplate).toContain('{{datum_kontroly}}');
+      expect(preset.protocolTemplate).toMatch(/^# /);
     }
   });
 

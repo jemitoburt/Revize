@@ -40,13 +40,16 @@ techniků současně. Stačí v ní zapsat první výsledek.
 
 - Ukazuje číslo, typ, umístění, QR kód, hodnoty polí a případný dřívější výsledek v této kontrole.
 - **V pořádku** uloží výsledek jedním klepnutím.
-- **Závada** má semafor podle ČSN EN 15635. Napište popis, případně přidejte fotky závady
+- **Závada** má úroveň rizika podle ČSN EN 15635. Napište popis, případně přidejte fotky závady
   a klepněte na **Uložit závadu**.
-  - **Zelená:** sledovat, bez omezení provozu.
-  - **Oranžová:** opravit co nejdřív, poškozené místo nezatěžovat.
-  - **Červená:** ihned odlehčit a vyřadit z provozu. Artikl se hned označí jako vyřazený. Vrátit
-    ho do provozu může jen kancelář (s důvodem, zapíše se do auditu).
-- U zelené a oranžové je zaškrtávátko **Zahrnout do protokolu** (výchozí zapnuté). Červená
+  - **Zelená:** poškození v mezích tolerance. Lze dále používat, poškození se zaznamená
+    a sleduje při dalších kontrolách. V protokolu je „schopno bezpečného provozu: ANO“.
+  - **Žlutá:** nebezpečné poškození. Poškozenou část vyprázdnit a do opravy nezaplňovat.
+    Neopraví-li se do 4 týdnů, platí červené riziko. V protokolu je „NE“.
+  - **Červená:** velmi vážné poškození. Okamžitě vyprázdnit a vyřadit z užívání až do opravy.
+    Artikl se hned označí jako vyřazený. Vrátit ho do provozu může jen kancelář (s důvodem,
+    zapíše se do auditu).
+- U zelené a žluté je zaškrtávátko **Zahrnout do protokolu** (výchozí zapnuté). Červená
   závada je v protokolu vždy.
 - **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Zůstávají
   u artiklu i pro další kontroly.

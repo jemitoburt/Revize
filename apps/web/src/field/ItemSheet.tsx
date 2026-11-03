@@ -54,7 +54,7 @@ type Choice = { outcome: 'ok' } | { outcome: 'defect'; severity: Severity };
 
 const SEVERITY_BUTTONS: { severity: Severity; color: string; icon: typeof IconCheck }[] = [
   { severity: 'green', color: 'teal', icon: IconAlertTriangle },
-  { severity: 'amber', color: 'orange', icon: IconAlertTriangle },
+  { severity: 'amber', color: 'yellow', icon: IconAlertTriangle },
   { severity: 'red', color: 'red', icon: IconBan },
 ];
 
@@ -316,7 +316,7 @@ function SheetBody({
           <Button
             size="lg"
             color={
-              choice.severity === 'red' ? 'red' : choice.severity === 'amber' ? 'orange' : 'teal'
+              choice.severity === 'red' ? 'red' : choice.severity === 'amber' ? 'yellow' : 'teal'
             }
             loading={saving}
             disabled={readOnly}

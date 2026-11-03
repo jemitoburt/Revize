@@ -56,7 +56,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      v auditu.
 8. **Nastavení** (administrátor):
    - Název firmy, IČO, adresa, kontakty a oprávnění technika (tiskne se pod podpisem).
-   - Logo (PNG/JPEG) a zápatí protokolu.
+   - Logo (PNG/JPEG), datum vydání a verze formuláře (hlavička stránek), text v zápatí stránek
+     a doplňující text na konec protokolu.
    - Text o rozsahu kontroly je u každého typu vybavení v **Typy vybavení → Text protokolu**.
      Používá zástupné údaje (Naše firma, Zákazník, Provozovna, Datum kontroly…).
 9. **Kontroly:**

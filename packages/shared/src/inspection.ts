@@ -49,14 +49,30 @@ export const OUTCOME_LABELS = {
   unchecked: 'Nezkontrolováno',
 } as const;
 
-export const SEVERITY_LABELS: Record<Severity, { short: string; hint: string }> = {
-  green: { short: 'Zelená', hint: 'Sledovat, bez omezení provozu' },
-  amber: {
-    short: 'Oranžová',
-    hint: 'Opravit co nejdřív (do 4 týdnů), poškozené místo nezatěžovat',
-  },
-  red: { short: 'Červená', hint: 'Ihned odlehčit a vyřadit z provozu do opravy' },
-};
+/**
+ * Risk levels of a defect after ČSN EN 15635 (kap. 9.5, zelené / žluté / červené riziko). The
+ * key `amber` stays for stored data; the Czech edition of the standard calls the level "žlutá".
+ * `hint` is shown in the field, `protocol` next to the defect in the protocol.
+ */
+export const SEVERITY_LABELS: Record<Severity, { short: string; hint: string; protocol: string }> =
+  {
+    green: {
+      short: 'Zelená',
+      hint: 'Poškození v mezích tolerance. Lze dále používat, poškození se zaznamená a sleduje při dalších kontrolách.',
+      protocol: 'Zelené riziko – poškození v mezích tolerance, sledovat při dalších kontrolách.',
+    },
+    amber: {
+      short: 'Žlutá',
+      hint: 'Nebezpečné poškození vyžadující opravu. Poškozenou část vyprázdnit a do opravy znovu nezaplňovat; není-li opravena do 4 týdnů, přechází do červeného rizika.',
+      protocol:
+        'Žluté riziko – vyprázdnit a do opravy nezaplňovat; nebude-li opraveno do 4 týdnů, platí červené riziko.',
+    },
+    red: {
+      short: 'Červená',
+      hint: 'Velmi vážné poškození vyžadující okamžitý zásah. Ihned vyprázdnit a vyřadit z užívání až do opravy.',
+      protocol: 'Červené riziko – okamžitě vyprázdnit a vyřadit z užívání až do opravy.',
+    },
+  };
 
 type LabelledResult = {
   outcome: 'ok' | 'defect';

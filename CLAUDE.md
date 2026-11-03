@@ -131,7 +131,9 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
 - M7 (part 1) – done: close (next dates per checked item) / reopen (reason, audit), organization
   settings + logo (`settings.manage`), protocol HTML in shared (`renderProtocolHtml`, ADR-0016),
   PDF via `PdfRenderer` (Chromium/playwright-core; `CHROMIUM_PATH`), office pages Kontroly and
-  Nastavení. The layout waits for the user's sample protocol.
+  Nastavení. Layout follows the user's protocol form (`docs/vzory/`, ADR-0016): PDF page
+  header/footer as Chromium templates, ANO/NE table, the form's texts per type; risk levels after
+  ČSN EN 15635 (zelená/žlutá/červená, `SEVERITY_LABELS`).
 - Dokploy variant merged (PR vitekdynka-debug/Revize#1): `docker-compose.dokploy.yml`, DB password
   apart from the URL (`DATABASE_PASSWORD`), CPU/RAM/log limits and `STORAGE_MAX_GB` for files.
 - Next: M7 part 2 exports (XLSX/CSV results, photo ZIP with EXIF/IPTC), M8 history and filters.

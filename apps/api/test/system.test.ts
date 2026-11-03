@@ -1,7 +1,7 @@
 import { asc, count, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { bootstrap } from '../src/bootstrap.js';
-import { newId } from '@revize/shared';
+import { EQUIPMENT_TYPE_PRESETS, newId } from '@revize/shared';
 import { appUser, equipmentType, item, location, organization, photo } from '../src/db/schema.js';
 import { DEMO_INSPECTOR } from '../src/seed/demo.js';
 import { createTestContext, type TestContext } from './helpers.js';
@@ -40,19 +40,12 @@ describe('bootstrap and demo data', () => {
     expect(admins?.value).toBe(1);
   });
 
-  it('seeds the demo customer, both equipment types and items in location order', async () => {
+  it('seeds the demo customer, the library equipment types and items in location order', async () => {
     await ctx.reset({ seedDemo: true });
     const db = ctx.database.db;
     const types = await db.select().from(equipmentType).orderBy(asc(equipmentType.name));
     expect(types.map((t) => t.name).sort()).toEqual(
-      [
-        'Pevný žebřík',
-        'Regál konzolový',
-        'Regál paletový',
-        'Regál policový',
-        'Regál vjezdový',
-        'Žebřík',
-      ].sort(),
+      EQUIPMENT_TYPE_PRESETS.map((p) => p.name).sort(),
     );
     const byName = new Map(types.map((t) => [t.name, t]));
     expect(byName.get('Žebřík')!.fieldDefinitions.map((f) => f.key)).toContain('ladder_type');

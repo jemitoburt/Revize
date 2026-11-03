@@ -12,7 +12,12 @@ export const organizationSettingsSchema = z.object({
   web: text(200),
   /** Printed under the technician's signature line, e.g. "Osvědčení č. 123/2024". */
   certification: text(300),
-  /** Small print at the end of every protocol. */
+  /** Document control of the protocol form, printed in the page header ("Datum vydání", "Verze"). */
+  protocolIssueDate: text(30),
+  protocolVersion: text(30),
+  /** Bottom left of every page, e.g. "BOZP • PO • REVIZE" (the web address is bottom right). */
+  pageFooter: text(200),
+  /** Additional text after the standard statements at the end of the protocol. */
   protocolFooter: text(3000),
 });
 export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>;

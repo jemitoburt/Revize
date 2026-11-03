@@ -129,6 +129,9 @@ describe('organization settings and protocol', () => {
         email: 'kancelar@revize-novak.cz',
         web: '',
         certification: 'Osvědčení č. 42/2025',
+        protocolIssueDate: '01.10.2026',
+        protocolVersion: '1',
+        pageFooter: 'BOZP • PO • REVIZE',
         protocolFooter: 'Protokol byl vyhotoven elektronicky.',
       },
     };
@@ -177,7 +180,7 @@ describe('organization settings and protocol', () => {
       await api('GET', `/api/inspections/${id}/protocol.html?equipmentTypeId=${racks.id}`)
     ).body;
     expect(onlyRacks).not.toContain('Prasklá příčka');
-    expect(onlyRacks).not.toContain('<h2>Žebřík</h2>');
+    expect(onlyRacks).not.toContain('<h3>Žebříky a schůdky</h3>');
   });
 
   it('renders the protocol as HTML and PDF, draft until closed', async () => {
@@ -187,10 +190,11 @@ describe('organization settings and protocol', () => {
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
     expect(html).toContain('Ukázkový sklad s.r.o.');
     expect(html).toContain('Prasklá příčka');
-    expect(html).toContain('Červená – ihned vyřadit z provozu');
+    expect(html).toContain('Červené riziko – okamžitě vyprázdnit a vyřadit z užívání');
     expect(html).toContain('data:image/jpeg;base64,');
-    // The type's protocol text with its placeholders filled in.
-    expect(html).toContain('provozovna Provozovna Brno');
+    // Only the protocol text of the type in the protocol.
+    expect(html).toContain('<h3>Žebříky a schůdky</h3>');
+    expect(html).not.toContain('<h3>Regály</h3>');
     expect(html).not.toContain('{{');
 
     const pdf = await api('GET', `/api/inspections/${id}/protocol.pdf`);

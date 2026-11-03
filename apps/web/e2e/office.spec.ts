@@ -80,7 +80,7 @@ test('admin adds "Žebřík" from the library and builds a custom "Regál" type'
   await expect(page.getByTestId('field-row')).toHaveCount(13);
   await expect(
     page
-      .getByText('Kontrola přenosných žebříků a schůdků byla provedena dne', { exact: false })
+      .getByText('Kontrola žebříků a schůdků je provedena dle nařízení vlády', { exact: false })
       .last(),
   ).toBeVisible();
 

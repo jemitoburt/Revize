@@ -39,7 +39,7 @@ import { notifyError, notifySaved } from '../lib/notify.js';
 
 type Filter = 'all' | 'defects' | 'unchecked';
 
-const SEVERITY_COLOR = { green: 'teal', amber: 'orange', red: 'red' } as const;
+const SEVERITY_COLOR = { green: 'teal', amber: 'yellow', red: 'red' } as const;
 const color = (r: InspectionResult) => {
   const severity = severityOf(r);
   return severity ? SEVERITY_COLOR[severity] : 'green';

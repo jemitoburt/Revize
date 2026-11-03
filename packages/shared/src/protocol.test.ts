@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { EQUIPMENT_TYPE_PRESETS } from './equipment-presets.js';
 import {
   addMonths,
   nextInspectionDateOf,
+  protocolPageHeader,
+  protocolTextHtml,
   renderProtocolHtml,
   type ProtocolData,
 } from './protocol.js';
@@ -33,6 +36,9 @@ describe('renderProtocolHtml', () => {
       logo: null,
       footer: 'Protokol je platný bez razítka.',
       certification: 'Osvědčení č. 12/2025',
+      issueDate: '01.10.2026',
+      version: '1',
+      pageFooter: 'BOZP • PO • REVIZE',
     },
     customer: { name: 'Sklad s.r.o.', companyId: null, address: null },
     site: { name: 'Hala Brno', address: null },
@@ -44,7 +50,7 @@ describe('renderProtocolHtml', () => {
     sections: [
       {
         typeName: 'Žebřík',
-        text: 'Kontrola u Sklad s.r.o.\n\nDruhý odstavec.',
+        text: '# Žebříky\n• Kontrola zahrnuje:\n  • vizuální kontrolu,\n  • zkoušku stability.',
         items: [
           {
             itemNumber: '10001',
@@ -85,23 +91,54 @@ describe('renderProtocolHtml', () => {
     generatedAt: '2026-11-03T10:00:00Z',
   };
 
-  it('renders the header, summary, items, defects and signatures; escapes text', () => {
+  it('renders the form: details, ANO/NE table, signatures, texts, defects; escapes text', () => {
     const html = renderProtocolHtml(data);
-    expect(html).toContain('Revize &lt;Novák&gt;');
+    expect(html).toContain('Revize &lt;Novák&gt;, Hlavní 1, Brno, IČ: 12345678');
     expect(html).not.toContain('Revize <Novák>');
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
-    expect(html).toContain('<b>3 / 4</b>zkontrolováno');
-    expect(html).toContain('<p>Druhý odstavec.</p>');
+    expect(html).toContain('<td class="grey">Kontrola provedena dne</td><td>03.11.2026</td>');
+    expect(html).toContain('Následnou kontrolu provést nejpozději do</td><td>03.11.2027</td>');
+    // "nehodící se škrtněte": OK strikes NE, a defect strikes ANO, unchecked strikes nothing.
+    expect(html).toContain('<td class="c-yn">ANO</td><td class="c-yn struck">NE</td><td></td>');
+    expect(html).toContain('<td class="c-yn struck">ANO</td><td class="c-yn">NE</td><td>Prasklá');
+    expect(html).toContain(
+      '<td class="c-yn">ANO</td><td class="c-yn">NE</td><td>Nezkontrolováno</td>',
+    );
+    expect(html).toContain('Žluté riziko');
+    expect(html).toContain('Pokyny k provádění kontrol</h2><h3>Žebříky</h3>');
+    expect(html).toContain('<li>Kontrola zahrnuje:<ul><li>vizuální kontrolu,</li>');
+    expect(html).toContain('Za odstranění případných závad odpovídá provozovatel.');
+    expect(html).toContain('Osvědčení č. 12/2025');
+    expect(html).toContain('BOZP • PO • REVIZE');
     // Defects on their own pages: serious (red) first, then the others.
     expect(html.indexOf('Závažné závady (1)')).toBeGreaterThan(html.indexOf('photo-pages'));
     expect(html.indexOf('Závažné závady (1)')).toBeLessThan(html.indexOf('Závady (1)'));
-    expect(html).toContain('<th class="c-ok">Vyhovuje</th>');
     expect(html).toContain('<img src="data:image/jpeg;base64,AAAA"');
-    expect(html).toContain('Nezkontrolováno');
-    expect(html).toContain('Osvědčení č. 12/2025');
-    expect(html).toContain('3. 11. 2026');
   });
-  it('omits the draft banner once the inspection is closed', () => {
+  it('omits the draft banner once closed and the page frame for the PDF renderer', () => {
     expect(renderProtocolHtml({ ...data, final: true })).not.toContain('PŘEDBĚŽNÝ PROTOKOL');
+    expect(renderProtocolHtml(data, { pageFrame: false })).not.toContain('class="ph"');
+    expect(protocolPageHeader(data)).toContain('<span class="pageNumber"></span> z');
+  });
+  it('prints a text shared by several types once', () => {
+    const twice = {
+      ...data,
+      sections: [data.sections[0]!, { ...data.sections[0]!, typeName: 'Jiný' }],
+    };
+    expect(renderProtocolHtml(twice).split('<h3>Žebříky</h3>')).toHaveLength(2);
+  });
+});
+
+describe('protocolTextHtml', () => {
+  it('renders headings, items, sub-items, continued lines and paragraphs', () => {
+    expect(protocolTextHtml('# Regály\n• první\n  pokračuje\n  - pod\n\nOdstavec\nřádek')).toBe(
+      '<h3>Regály</h3><ul><li>první pokračuje<ul><li>pod</li></ul></li></ul><p>Odstavec<br>řádek</p>',
+    );
+  });
+  it('renders every preset text with its heading and list', () => {
+    for (const preset of EQUIPMENT_TYPE_PRESETS) {
+      const html = protocolTextHtml(preset.protocolTemplate);
+      expect(html, preset.key).toMatch(/^<h3>.+<\/h3><ul><li>.+<ul><li>/);
+    }
   });
 });

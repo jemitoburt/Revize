@@ -1,8 +1,5 @@
 import { chromium, type Browser } from 'playwright-core';
-import type { PdfRenderer } from './pdf-renderer.js';
-
-const escape = (text: string) =>
-  text.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+import type { PdfPageOptions, PdfRenderer } from './pdf-renderer.js';
 
 /**
  * Prints HTML with headless Chromium (playwright-core, no bundled browser). The browser is
@@ -32,7 +29,7 @@ export class ChromiumPdfRenderer implements PdfRenderer {
     return this.browser;
   }
 
-  async render(html: string, footer: string): Promise<Uint8Array> {
+  async render(html: string, options: PdfPageOptions): Promise<Uint8Array> {
     const browser = await this.launch();
     const page = await browser.newPage();
     try {
@@ -45,11 +42,11 @@ export class ChromiumPdfRenderer implements PdfRenderer {
         format: 'A4',
         printBackground: true,
         displayHeaderFooter: true,
-        headerTemplate: '<span></span>',
-        footerTemplate: `<div style="width:100%;margin:0 14mm;font-size:7pt;color:#555;font-family:'Noto Sans','DejaVu Sans',sans-serif;display:flex;justify-content:space-between"><span>${escape(
-          footer,
-        )}</span><span>Strana <span class="pageNumber"></span> z <span class="totalPages"></span></span></div>`,
-        margin: { top: '16mm', bottom: '18mm', left: '14mm', right: '14mm' },
+        headerTemplate: options.header,
+        footerTemplate: options.footer,
+        margin: options.margin,
+        // The page's own @page margins would override the ones the header and footer need.
+        preferCSSPageSize: false,
       });
     } finally {
       await page.close();

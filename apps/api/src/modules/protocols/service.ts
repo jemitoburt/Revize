@@ -3,6 +3,9 @@ import {
   displayFields,
   fillProtocolTemplate,
   nextInspectionDateOf,
+  PROTOCOL_PDF_MARGINS,
+  protocolPageFooter,
+  protocolPageHeader,
   renderProtocolHtml,
   severityOf,
   type InspectionItem,
@@ -140,6 +143,9 @@ export function createProtocolsService(
         logo: await dataUrl(org.logoKey, org.logoMimeType ?? 'image/png'),
         footer: settings.protocolFooter,
         certification: settings.certification,
+        issueDate: settings.protocolIssueDate,
+        version: settings.protocolVersion,
+        pageFooter: settings.pageFooter,
       },
       customer: {
         name: inspection.customerName,
@@ -173,10 +179,11 @@ export function createProtocolsService(
         throw new AppError(501, 'pdf_unavailable', 'PDF se zde nevytváří, použijte tisk náhledu.');
       }
       const data = await build(auth, inspectionId, equipmentTypeId);
-      const bytes = await pdf.render(
-        renderProtocolHtml(data),
-        `${data.company.name} · protokol ${data.number}`,
-      );
+      const bytes = await pdf.render(renderProtocolHtml(data, { pageFrame: false }), {
+        header: protocolPageHeader(data),
+        footer: protocolPageFooter(data),
+        margin: PROTOCOL_PDF_MARGINS,
+      });
       const slug = data.site.name
         .normalize('NFD')
         .replace(/[̀-ͯ]/g, '')

@@ -3,11 +3,12 @@ import { fieldDefinitionsSchema, type FieldDefinition } from './equipment-fields
 /**
  * Library of equipment types derived from the relevant standards and common manufacturers.
  * Used for demo data and offered in the administration ("Přidat z knihovny"); every type can be
- * edited afterwards. Protocol texts are drafts – the inspection company should check them
- * against the current wording of the standards and its own practice.
+ * edited afterwards. Protocol texts ("Pokyny k provádění kontrol") are the inspection company's
+ * own texts from its protocol form (docs/vzory); `fixed_ladder` has none there and is a draft.
  *
- * Placeholders in protocol texts: {{zakaznik}}, {{provozovna}}, {{datum_kontroly}},
- * {{technik}}, {{datum_pristi_kontroly}}.
+ * Format of protocol texts (see `protocolTextHtml`): `# ` heading, `• ` item, indented `• `
+ * sub-item. Placeholders: {{zakaznik}}, {{provozovna}}, {{datum_kontroly}}, {{technik}},
+ * {{datum_pristi_kontroly}}.
  */
 export interface EquipmentTypePreset {
   key: string;
@@ -93,17 +94,112 @@ const rackCommon = (from: number) => [
   { ...common.note(from + 4) },
 ];
 
-const RACK_PROTOCOL = (kind: string, extra: string) =>
-  `Kontrola ${kind} byla provedena dne {{datum_kontroly}} u zákazníka {{zakaznik}}, provozovna {{provozovna}}, ` +
-  `v rozsahu odborné inspekce podle ČSN EN 15635 (Skladovací systémy z oceli – Používání a údržba skladovacího zařízení) ` +
-  `a návodu výrobce.\n\n` +
-  `Posuzován byl zejména stav stojin a rámů (deformace, praskliny, koroze), nosníků a jejich pojistek proti vysazení, ` +
-  `spojů a kotvení, svislost a přímost konstrukce, ochrana stojin, čitelnost štítků nosnosti a dodržování uvedeného zatížení. ${extra}\n\n` +
-  `Zjištěné závady jsou uvedeny v protokolu u jednotlivých artiklů. Artikly označené jako vyřazené z provozu je nutné ` +
-  `neprodleně odlehčit a nepoužívat až do opravy originálními díly výrobce (nebo rovnocennými) a nové kontroly. ` +
-  `Poškozené díly se nesmějí rovnat. Ostatní závady je třeba odstranit v termínu stanoveném osobou odpovědnou ` +
-  `za bezpečnost skladovacího zařízení (PRSES).\n\n` +
-  `Kontrolu provedl: {{technik}}. Příští odborná kontrola: {{datum_pristi_kontroly}} (nejpozději do 12 měsíců).`;
+const RACK_PROTOCOL = `# Regály
+• Kontrola regálů je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací regálu (návodem výrobce) a ČSN 26 9030, ČSN EN 15629 a ČSN EN 15635.
+• Kontrola regálů zahrnuje:
+  • kontrolu mechanického poškození (zejména u sloupků a nosníků),
+  • kontrolu svislosti, vodorovnosti a stability (vychýlení sloupků),
+  • vizuální kontrolu (trhliny svárů, komponent, zejména patky sloupků a připojení nosníků ke sloupkům),
+  • kontrolu stavu podlahy,
+  • kontrolu reálného stavu regálu v souladu s provozní dokumentací,
+  • kontrola způsobu používání (způsob uložení předmětů – rozměry, stabilita, přetěžování, opírání předmětů o regál, označení).`;
+
+const LADDER_PROTOCOL = `# Žebříky a schůdky
+• Kontrola žebříků a schůdků je provedena dle nařízení vlády č. 362/2005 Sb. a nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací žebříku a schůdků (návodem výrobce) a ČSN EN 131-X.
+• Kontrola žebříků a schůdků zahrnuje:
+  • vizuální kontrolu (kompletnost, celistvost, označení, praskliny, deformace, opotřebení, nátěry, uvolněné části nebo jiná viditelná poškození),
+  • zkouška pojistných prvků a kloubových závěsů funkčnosti bezpečnostních prvků (vymezovač rozevření – dvojité žebříky, blokovací zařízení – výsuvné žebříky),
+  • zkouška pevnosti, zkouška průhybu a bočního průhybu, zkouška dolních konců, vertikální zatížení příčlí, stupadel a plošin, zkouška patek, zkouška plošiny, zkouška madla/zábradlí, zkouška vysunutí,
+  • zkouška stability (žebřík se postaví dolními konci postranic na rovnou podložku a horními konci se opře o kolmou stěnu, a přitom musí dolní i horní konce postranic přiléhat k opěrným plochám – jednoduchý žebřík, při úplném rozevření žebříku se musí dosáhnout dokonalého styku všech postranic s opěrnou rovnou podložkou – dvojitý žebřík nebo schůdky, boční výkyv).`;
+
+/** Draft in the style of the form (the form has no text for fixed ladders). */
+const FIXED_LADDER_PROTOCOL = `# Pevné žebříky
+• Kontrola pevných žebříků je provedena dle nařízení vlády č. 362/2005 Sb. a nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací žebříku (návodem výrobce) a ČSN 74 3282, popř. ČSN EN ISO 14122-4.
+• Kontrola pevných žebříků zahrnuje:
+  • vizuální kontrolu (kompletnost, celistvost, deformace, praskliny, koroze, poškození povrchové ochrany),
+  • kontrolu kotvení ke stavební konstrukci,
+  • kontrolu ochranného koše nebo zachycovače pádu na pevném vedení,
+  • kontrolu odpočívadel, madel a zábradlí na výstupu,
+  • kontrolu zabezpečení proti výstupu nepovolaných osob,
+  • kontrolu identifikačního štítku (označení).`;
+
+const SECTIONAL_DOOR_PROTOCOL = `# Sekční vrata
+• Kontrola sekčních vrat je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací sekčních vrat (návodem výrobce).
+• Kontrola sekčních vrat zahrnuje:
+  • kontrolu mechanického poškození (sekční panely, vodicí a těsnící lišty),
+  • kontrola vodících kolejnic (stav spojů šroubových a popř. nýtových, stav kotvení, stav koncových dorazů),
+  • kontrola pružin (stav napnutí, stav lankového navíjení – lanka, kladky, navíječe; kontrola pojistek),
+  • kontrola pohonu (stav napnutí řetězu nebo řemenu, stav ovládacích a bezpečnostních prvků),
+  • kontrola integrovaných dveří (poškození, kontrola pohybu v pantech a zavírání, dveřní mechanismy),
+  • funkční zkouška a zhodnocení celkového stavu (např. znečištění).`;
+
+const SCAFFOLD_PROTOCOL = `# Pojízdné lešení
+• Kontrola pojízdného lešení je provedena dle nařízení vlády č. 362/2005 Sb., a to v souladu s průvodní dokumentací pojízdného lešení (návod výrobce).
+• Kontrola pojízdného lešení zahrnuje:
+  • vizuální kontrolu (deformace, opotřebení, poškození, trhliny a nalomení, kompletnost),
+  • kontrolu funkčnosti bezpečnostních prvků (zábradlí, rychlouzávěry, brzdy, kolečka),
+  • kontrolu identifikačního štítku (označení),
+  • kontrola stavu provozní dokumentace.`;
+
+const PPE_PROTOCOL = `# Osobní ochranné pracovní prostředky
+• Kontrola osobních ochranných pracovních prostředků (OOPP) je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací osobních ochranných pracovních prostředků (návod výrobce) a ČSN EN 378-3.
+• Kontrola osobních ochranných pracovních prostředků zahrnuje:
+  • vizuální kontrolu (opotřebení, poškození, kompletnost),
+  • kontrolu funkčnosti a ochranných vlastností,
+  • kontrola stavu provozní dokumentace.`;
+
+const PALLET_TRUCK_PROTOCOL = `# Paletové vozíky
+• Kontrola paletových vozíků je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací paletových vozíků (návod výrobce).
+• Kontrola paletových vozíků zahrnuje:
+  • kontrola opotřebení všech dílů (opotřebení, poškození, kompletnost, únik oleje),
+  • kontrolu funkčnosti (regulace, řízení),
+  • kontrola stavu pojezdových kol a náprav,
+  • kontrola identifikačního štítku (označení),
+  • kontrola stavu provozní dokumentace.`;
+
+const HAND_TRUCK_PROTOCOL = `# Ruční vozíky a rudly
+• Kontrola ručních vozíků a rudlů je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací ručních vozíků a rudlů (návod výrobce).
+• Kontrola ručních vozíků a rudlů zahrnuje:
+  • kontrola opotřebení všech dílů (opotřebení, poškození, dotažení šroubových spojů, kompletnost),
+  • kontrolu funkčnosti (řízení, brzda – pokud je jí ruční vozík nebo rudl vybaven),
+  • kontrola stavu kol,
+  • kontrola identifikačního štítku (označení),
+  • kontrola označení nosnosti,
+  • kontrola stavu provozní dokumentace.`;
+
+const RAIL_TROLLEY_PROTOCOL = `# Kolejové vozíky
+• Kontrola kolejových vozíků je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací kolejových vozíků (návod výrobce).
+• Kontrola kolejových vozíků zahrnuje:
+  • kontrola opotřebení všech dílů (opotřebení, poškození, kompletnost, únik oleje),
+  • kontrolu funkčnosti (dorazy, brzdy, připojovací čepy, úchopy pro ruční tlačení, úchopy pro fixaci převáženého materiálu),
+  • kontrola stavu pojezdových kol a náprav,
+  • kontrola identifikačního štítku (označení),
+  • kontrola stavu provozní dokumentace.`;
+
+const ROLL_CONTAINER_PROTOCOL = `# Rollkontejnery s pojízdným rámem a mřížovými stěnami ze stabilních pravoúhlých trubek
+• Kontrola rollkontejnerů dle aktuálního seznamu je provedena dle nařízení vlády č. 378/2001 Sb.
+• Kontrola rollkontejnerů zahrnuje:
+  • kontrola opotřebení všech dílů (opotřebení, poškození, dotažení šroubových spojů, kompletnost),
+  • kontrolu funkčnosti (řízení, brzda – pokud je jí rollkontejner vybaven),
+  • kontrola stavu koleček,
+  • kontrola identifikačního štítku (označení),
+  • kontrola stavu provozní dokumentace.`;
+
+const OTHER_PROTOCOL = `# Technické vybavení – ostatní
+• Kontrola technického vybavení dle aktuálního seznamu provozovatele (zahrnuje ruční nářadí, nábytek – stoly, židle, skříně, police a další vybavení) je provedena dle nařízení vlády č. 101/2005 Sb.
+• Kontrola technického vybavení zahrnuje:
+  • vizuální kontrolu rozhodujících vlastností k zajištění bezpečnosti, tj. úroveň bezpečnosti a spolehlivosti zařízení a vybavení bez zjevného poškození tak, aby technické vybavení pracovišť bylo nadále bezpečné a provozuschopné (opotřebení, viditelná poškození, funkčnost a úplnost ovládacích nebo úchopových prvků).`;
+
+/** Fields of the simpler equipment types: manufacturer, model, optional capacity, serial, year. */
+const basicFields = (capacity?: { key: string; label: string; unit: string }) =>
+  fields([
+    { key: 'manufacturer', label: 'Výrobce', kind: 'text', order: 0 },
+    { key: 'model', label: 'Model / typové označení', kind: 'text', order: 1 },
+    ...(capacity ? [{ ...capacity, kind: 'integer', order: 2 }] : []),
+    { ...common.serial(3) },
+    { ...common.year(4) },
+    { ...common.note(5) },
+  ]);
 
 export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
   {
@@ -184,16 +280,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { ...common.year(11) },
       { ...common.note(12) },
     ]),
-    protocolTemplate:
-      'Kontrola přenosných žebříků a schůdků byla provedena dne {{datum_kontroly}} u zákazníka {{zakaznik}}, ' +
-      'provozovna {{provozovna}}, vizuálně a funkčně podle návodu výrobce a s ohledem na požadavky řady ČSN EN 131 ' +
-      '(u schůdků ČSN EN 14183).\n\n' +
-      'Posuzován byl zejména stav štěřin (deformace, praskliny, koroze), příček a stupňů a jejich spojení se štěřinami, ' +
-      'kloubů, závěsů a západek, pojistek proti rozevření, protiskluzových patek a koncovek, příčného stabilizátoru, ' +
-      'u pojízdných žebříků kol a brzd, a čitelnost označení a návodu (ČSN EN 131-3).\n\n' +
-      'Zjištěné závady jsou uvedeny v protokolu u jednotlivých artiklů. Žebříky označené jako vyřazené z provozu ' +
-      'nesmí být až do opravy a nové kontroly používány a je nutné je viditelně označit nebo odstranit z pracoviště.\n\n' +
-      'Kontrolu provedl: {{technik}}. Příští kontrola: {{datum_pristi_kontroly}}.',
+    protocolTemplate: LADDER_PROTOCOL,
   },
   {
     key: 'fixed_ladder',
@@ -252,16 +339,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { ...common.year(8) },
       { ...common.note(9) },
     ]),
-    protocolTemplate:
-      'Kontrola pevných žebříků byla provedena dne {{datum_kontroly}} u zákazníka {{zakaznik}}, provozovna ' +
-      '{{provozovna}}, vizuálně a funkčně s ohledem na ČSN 74 3282 (pevné kovové žebříky pro stavby), ' +
-      'resp. ČSN EN ISO 14122-4 (pevné žebříky ke strojním zařízením) a návod výrobce.\n\n' +
-      'Posuzován byl zejména stav štěřin a příček, kotvení ke konstrukci, koroze a poškození povrchové ochrany, ' +
-      'ochranného koše nebo zachycovače pádu na pevném vedení, odpočívadel, madel a zábradlí na výstupu ' +
-      'a zabezpečení proti výstupu nepovolaných osob.\n\n' +
-      'Zjištěné závady jsou uvedeny v protokolu u jednotlivých artiklů. Žebříky označené jako vyřazené z provozu ' +
-      'nesmí být až do opravy a nové kontroly používány a přístup k nim je nutné zamezit.\n\n' +
-      'Kontrolu provedl: {{technik}}. Příští kontrola: {{datum_pristi_kontroly}}.',
+    protocolTemplate: FIXED_LADDER_PROTOCOL,
   },
   {
     key: 'pallet_rack',
@@ -311,10 +389,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       },
       ...rackCommon(10),
     ]),
-    protocolTemplate: RACK_PROTOCOL(
-      'paletových regálů',
-      'U regálů obsluhovaných vozíky byla posouzena i poškození nárazem a dodržení tolerancí a vůlí (ČSN EN 15620).',
-    ),
+    protocolTemplate: RACK_PROTOCOL,
   },
   {
     key: 'shelving_rack',
@@ -348,10 +423,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       },
       ...rackCommon(8),
     ]),
-    protocolTemplate: RACK_PROTOCOL(
-      'policových regálů',
-      'Posouzeno bylo i zajištění polic a stabilita proti převržení.',
-    ),
+    protocolTemplate: RACK_PROTOCOL,
   },
   {
     key: 'cantilever_rack',
@@ -384,10 +456,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { key: 'column_load_kg', label: 'Nosnost sloupu', kind: 'integer', unit: 'kg', order: 7 },
       ...rackCommon(8),
     ]),
-    protocolTemplate: RACK_PROTOCOL(
-      'konzolových regálů',
-      'Posouzeno bylo i upevnění a pojistky ramen, koncové zarážky ramen a dodržení tolerancí (ČSN EN 15620).',
-    ),
+    protocolTemplate: RACK_PROTOCOL,
   },
   {
     key: 'drive_in_rack',
@@ -420,10 +489,79 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { key: 'guide_rails', label: 'Vodicí lišty pro vozík', kind: 'boolean', order: 7 },
       ...rackCommon(8),
     ]),
-    protocolTemplate: RACK_PROTOCOL(
-      'vjezdových regálů',
-      'Posouzeny byly i zakládací lišty, vodicí profily, horní spojovací prvky a dodržení tolerancí (ČSN EN 15620).',
-    ),
+    protocolTemplate: RACK_PROTOCOL,
+  },
+  {
+    key: 'sectional_door',
+    name: 'Sekční vrata',
+    description: 'Sekční vrata s ručním nebo elektrickým pohonem, včetně integrovaných dveří.',
+    standards: ['ČSN EN 13241', 'ČSN EN 12604', 'ČSN EN 12453'],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields(),
+    protocolTemplate: SECTIONAL_DOOR_PROTOCOL,
+  },
+  {
+    key: 'mobile_scaffold',
+    name: 'Pojízdné lešení',
+    description: 'Pojízdná lešení (věže) z prefabrikovaných dílů.',
+    standards: ['ČSN EN 1004-1'],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields({ key: 'working_height_m', label: 'Pracovní výška', unit: 'm' }),
+    protocolTemplate: SCAFFOLD_PROTOCOL,
+  },
+  {
+    key: 'ppe',
+    name: 'OOPP',
+    description: 'Osobní ochranné pracovní prostředky (např. proti pádu z výšky).',
+    standards: [],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields(),
+    protocolTemplate: PPE_PROTOCOL,
+  },
+  {
+    key: 'pallet_truck',
+    name: 'Paletový vozík',
+    description: 'Ruční paletové vozíky (nízkozdvižné, vysokozdvižné, s váhou).',
+    standards: ['ČSN EN ISO 3691-5'],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields({ key: 'capacity_kg', label: 'Nosnost', unit: 'kg' }),
+    protocolTemplate: PALLET_TRUCK_PROTOCOL,
+  },
+  {
+    key: 'hand_truck',
+    name: 'Ruční vozík / rudl',
+    description: 'Plošinové a policové ruční vozíky, rudly.',
+    standards: [],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields({ key: 'capacity_kg', label: 'Nosnost', unit: 'kg' }),
+    protocolTemplate: HAND_TRUCK_PROTOCOL,
+  },
+  {
+    key: 'rail_trolley',
+    name: 'Kolejový vozík',
+    description: 'Vozíky pojíždějící po kolejnicích.',
+    standards: [],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields({ key: 'capacity_kg', label: 'Nosnost', unit: 'kg' }),
+    protocolTemplate: RAIL_TROLLEY_PROTOCOL,
+  },
+  {
+    key: 'roll_container',
+    name: 'Rollkontejner',
+    description: 'Rollkontejnery s pojízdným rámem a mřížovými stěnami.',
+    standards: [],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields({ key: 'capacity_kg', label: 'Nosnost', unit: 'kg' }),
+    protocolTemplate: ROLL_CONTAINER_PROTOCOL,
+  },
+  {
+    key: 'other_equipment',
+    name: 'Technické vybavení – ostatní',
+    description: 'Ruční nářadí, nábytek (stoly, židle, skříně, police) a další vybavení pracovišť.',
+    standards: [],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: basicFields(),
+    protocolTemplate: OTHER_PROTOCOL,
   },
 ];
 

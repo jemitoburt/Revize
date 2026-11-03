@@ -1,8 +1,12 @@
 /**
  * Inspection protocol (M7): placeholders of the per-type protocol text, next inspection dates,
- * and the HTML of the protocol. The same HTML is printed to PDF by the server (Chromium) and by
- * the browser in the demo, so it must not depend on anything but its data.
+ * and the HTML of the protocol. The layout follows the inspection company's protocol form
+ * (docs/vzory, ADR-0016). The same HTML is printed to PDF by the server (Chromium, with the page
+ * header and footer as Chromium templates) and by the browser in the demo, so it must not
+ * depend on anything but its data.
  */
+
+import { SEVERITY_LABELS } from './inspection.js';
 
 export const PROTOCOL_PLACEHOLDERS = [
   ['firma', 'Naše firma'],
@@ -46,9 +50,15 @@ export interface ProtocolCompany {
   web: string;
   /** data: URL of the logo, or null. */
   logo: string | null;
+  /** Additional text after the standard statements at the end of the protocol. */
   footer: string;
-  /** E.g. "Osvědčení č. 123/2024" – printed under the technician's signature line. */
+  /** E.g. "Osvědčení č. 123/2024" – printed with the technician's name. */
   certification: string;
+  /** Document control of the form ("Datum vydání", "Verze") in the page header. */
+  issueDate: string;
+  version: string;
+  /** Bottom left of every page, e.g. "BOZP • PO • REVIZE". */
+  pageFooter: string;
 }
 
 export interface ProtocolItem {
@@ -68,7 +78,7 @@ export interface ProtocolItem {
 
 export interface ProtocolSection {
   typeName: string;
-  /** Protocol text of the type with placeholders filled in. */
+  /** Protocol text of the type with placeholders filled in ("Pokyny k provádění kontrol"). */
   text: string;
   items: ProtocolItem[];
 }
@@ -90,97 +100,212 @@ export interface ProtocolData {
   generatedAt: string;
 }
 
-const SEVERITY_TEXT: Record<'green' | 'amber' | 'red', string> = {
-  red: 'Červená – ihned vyřadit z provozu',
-  amber: 'Oranžová – opravit co nejdřív',
-  green: 'Zelená – sledovat',
-};
+export interface ProtocolHtmlOptions {
+  /**
+   * Print the page header and footer in the document itself (browser print, preview). The PDF
+   * renderer passes false and prints `protocolPageHeader`/`protocolPageFooter` on every page.
+   */
+  pageFrame?: boolean;
+}
 
 const escape = (text: string) =>
   text.replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
+const pad = (n: string | undefined) => String(Number(n)).padStart(2, '0');
+/** `2026-11-03` → `03.11.2026`, as on the form. */
 const czechDate = (iso: string | null) => {
-  if (!iso) return '–';
+  if (!iso) return '';
   const [y, m, d] = iso.slice(0, 10).split('-');
-  return `${Number(d)}. ${Number(m)}. ${y}`;
+  return `${pad(d)}.${pad(m)}.${y}`;
 };
-const paragraphs = (text: string) =>
-  text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter(Boolean)
-    .map((p) => `<p>${escape(p).replace(/\n/g, '<br>')}</p>`)
+
+/**
+ * Protocol text of an equipment type as HTML: `# ` heading, `• ` (or `- `) item, indented item
+ * = sub-item, a line without a mark continues the previous item, blank line = new paragraph.
+ */
+export function protocolTextHtml(text: string): string {
+  type Block =
+    | { kind: 'h'; text: string }
+    | { kind: 'p'; text: string }
+    | { kind: 'ul'; items: { text: string; sub: string[] }[] };
+  const blocks: Block[] = [];
+  let open = false;
+  for (const raw of text.split('\n')) {
+    const line = raw.trimEnd();
+    if (!line.trim()) {
+      open = false;
+      continue;
+    }
+    const bullet = /^(\s*)[•\-*]\s+(.*)$/.exec(line);
+    const last = blocks.at(-1);
+    if (line.startsWith('# ')) {
+      blocks.push({ kind: 'h', text: line.slice(2).trim() });
+      open = false;
+    } else if (bullet) {
+      const [, indent = '', content = ''] = bullet;
+      const list = last?.kind === 'ul' ? last : null;
+      if (indent.length >= 2 && list?.items.length) list.items.at(-1)!.sub.push(content);
+      else if (list) list.items.push({ text: content, sub: [] });
+      else blocks.push({ kind: 'ul', items: [{ text: content, sub: [] }] });
+      open = true;
+    } else if (open && last?.kind === 'ul') {
+      const item = last.items.at(-1)!;
+      if (item.sub.length) item.sub[item.sub.length - 1] += ` ${line.trim()}`;
+      else item.text += ` ${line.trim()}`;
+    } else if (open && last?.kind === 'p') {
+      last.text += `\n${line.trim()}`;
+    } else {
+      blocks.push({ kind: 'p', text: line.trim() });
+      open = true;
+    }
+  }
+  return blocks
+    .map((b) =>
+      b.kind === 'h'
+        ? `<h3>${escape(b.text)}</h3>`
+        : b.kind === 'p'
+          ? `<p>${escape(b.text).replace(/\n/g, '<br>')}</p>`
+          : `<ul>${b.items
+              .map(
+                (i) =>
+                  `<li>${escape(i.text)}${
+                    i.sub.length
+                      ? `<ul>${i.sub.map((t) => `<li>${escape(t)}</li>`).join('')}</ul>`
+                      : ''
+                  }</li>`,
+              )
+              .join('')}</ul>`,
+    )
     .join('');
-const box = (checked: boolean) => `<span class="box">${checked ? '&#10003;' : ''}</span>`;
+}
 
 const isDefect = (o: ProtocolItem['outcome']): o is 'green' | 'amber' | 'red' =>
   o === 'green' || o === 'amber' || o === 'red';
 const SEVERITY_ORDER = { red: 0, amber: 1, green: 2 } as const;
 
-function counts(sections: ProtocolSection[]) {
-  const all = sections.flatMap((s) => s.items);
-  const by = (o: ProtocolItem['outcome']) => all.filter((i) => i.outcome === o).length;
-  return {
-    total: all.length,
-    ok: by('ok'),
-    green: by('green'),
-    amber: by('amber'),
-    red: by('red'),
-    unchecked: by('unchecked'),
-  };
-}
+/** Standard statements of the form, printed after the signatures. */
+export const PROTOCOL_STATEMENTS = [
+  'Kontrola technického vybavení byla provedena v souladu s právními předpisy, normativními požadavky a dokumentací technického vybavení.',
+  'Za odstranění případných závad odpovídá provozovatel.',
+];
 
-const STYLE = `
-@page { size: A4; margin: 16mm 14mm 18mm 14mm; }
-* { box-sizing: border-box; }
-body { font-family: 'Noto Sans', 'DejaVu Sans', Arial, sans-serif; font-size: 9.5pt; color: #1a1a1a; margin: 0; }
-h1 { font-size: 16pt; margin: 0 0 2mm; }
-h2 { font-size: 12pt; margin: 7mm 0 2mm; padding-bottom: 1mm; border-bottom: 1.5px solid #1c4e80; color: #1c4e80; }
-h3 { font-size: 10.5pt; margin: 4mm 0 2mm; }
-p { margin: 0 0 2mm; text-align: justify; }
-.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; padding-bottom: 3mm; border-bottom: 2.5px solid #1c4e80; margin-bottom: 5mm; }
-.head img { max-height: 22mm; max-width: 60mm; object-fit: contain; }
-.company { text-align: right; font-size: 8.5pt; line-height: 1.45; }
-.company strong { font-size: 10.5pt; }
-.draft { border: 2px solid #c2410c; color: #c2410c; padding: 2mm 3mm; margin-bottom: 4mm; font-weight: 700; }
-table { width: 100%; border-collapse: collapse; }
-.info td { padding: 1.2mm 2mm; vertical-align: top; border-bottom: 1px solid #e3e6ea; }
-.info td:first-child { width: 34mm; color: #555; }
-.summary { display: flex; gap: 3mm; margin: 2mm 0; }
-.summary div { flex: 1; border: 1px solid #d4d9df; border-radius: 2mm; padding: 2mm; text-align: center; font-size: 8.5pt; }
-.summary b { display: block; font-size: 13pt; }
-.items { table-layout: fixed; }
-.items th { text-align: left; background: #eef2f6; padding: 1.5mm 2mm; font-size: 8.5pt; border: 1px solid #c9d1da; }
-.items td { padding: 1.3mm 2mm; border: 1px solid #d4d9df; vertical-align: top; overflow-wrap: anywhere; }
-.items tr { page-break-inside: avoid; }
-.items .c-num { width: 17mm; } .items .c-ok { width: 25mm; text-align: center; white-space: nowrap; }
-.items .c-note { width: 62mm; }
-.where { color: #555; font-size: 8pt; }
-.box { display: inline-block; width: 3.4mm; height: 3.4mm; border: 1px solid #1a1a1a; line-height: 3.2mm; text-align: center; font-size: 8pt; vertical-align: -0.6mm; margin: 0 0.8mm 0 1.8mm; }
-.num { font-family: 'Noto Sans Mono', 'DejaVu Sans Mono', monospace; font-weight: 700; white-space: nowrap; }
-.dot { display: inline-block; width: 2.6mm; height: 2.6mm; border-radius: 50%; margin-right: 1.2mm; vertical-align: -0.3mm; }
-.s-red { background: #b91c1c; } .s-amber { background: #ea8c00; } .s-green { background: #15803d; }
-.t-red { color: #b91c1c; } .t-amber { color: #b45309; } .t-green { color: #15803d; } .t-unchecked { color: #6b7280; }
-.photo-pages { page-break-before: always; }
-.defect { page-break-inside: avoid; border: 1px solid #e3e6ea; border-left: 3px solid #b45309; padding: 2mm 3mm; margin-bottom: 3mm; }
-.defect.red { border-left-color: #b91c1c; } .defect.green { border-left-color: #15803d; }
-.photos { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
-.photos img { width: 42mm; height: 32mm; object-fit: cover; border: 1px solid #d4d9df; }
-.signatures { display: flex; gap: 12mm; margin-top: 14mm; page-break-inside: avoid; }
-.signatures div { flex: 1; border-top: 1px solid #1a1a1a; padding-top: 1.5mm; font-size: 8.5pt; }
-.footer { margin-top: 8mm; font-size: 8pt; color: #555; }
+const FONT = "Arial, 'Liberation Sans', 'Noto Sans', 'DejaVu Sans', sans-serif";
+
+const HEADER_STYLE = `
+.ph { width: 100%; border-collapse: collapse; font-family: ${FONT}; font-size: 7pt; color: #000; }
+.ph td { border: 0.75pt solid #000; padding: 0.6mm 1.5mm; vertical-align: middle; }
+.ph .logo { width: 28mm; text-align: center; }
+.ph .logo img { max-width: 26mm; max-height: 11mm; object-fit: contain; }
+.ph .center { text-align: center; }
+.ph .label { font-weight: 700; white-space: nowrap; }
+.pf { width: 100%; font-family: ${FONT}; font-size: 7pt; color: #000; display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.5pt solid #000; padding-top: 1mm; }
+.pf .tag { font-weight: 700; }
+.pf .web { font-weight: 700; font-size: 9pt; border: 0.75pt solid #000; background: #ffeb00; padding: 0.4mm 2mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 `;
 
+const companyLine = (c: ProtocolCompany) =>
+  [c.name, c.address, c.companyId && `IČ: ${c.companyId}`].filter(Boolean).join(', ');
+
 /**
- * The protocol as a complete HTML document (A4, print styles). Per equipment type: its own
- * protocol text and a table "number | name and description | complies yes/no | note/defect".
- * Defects with reduced photos follow on separate pages, the serious (red) ones first.
+ * Page header of the form: logo, company line, title, document control and "Stránka X z Y".
+ * `page` is HTML (Chromium's `<span class="pageNumber">` in the PDF); null leaves it empty.
  */
-export function renderProtocolHtml(data: ProtocolData): string {
+function pageHeader(c: ProtocolCompany, page: { page: string; pages: string } | null): string {
+  return `<table class="ph"><tr>
+<td class="logo" rowspan="3">${c.logo ? `<img src="${c.logo}" alt="">` : ''}</td>
+<td class="center" colspan="6">${escape(companyLine(c))}</td></tr>
+<tr><td class="center label" colspan="6">Protokol o kontrole technického vybavení</td></tr>
+<tr><td class="label">Datum vydání:<br>Date of publication:</td><td class="center">${escape(c.issueDate)}</td>
+<td class="label">Verze:<br>Version:</td><td class="center">${escape(c.version)}</td>
+<td class="label">Počet stránek:<br>Number of pages:</td><td class="center">${page ? `Stránka<br>${page.page} z ${page.pages}` : ''}</td></tr></table>`;
+}
+
+function pageFooter(c: ProtocolCompany): string {
+  return `<div class="pf"><span class="tag">${escape(c.pageFooter)}</span>${
+    c.web ? `<span class="web">${escape(c.web)}</span>` : '<span></span>'
+  }</div>`;
+}
+
+/** Chromium header template (every PDF page); its content starts unstyled at font-size 0. */
+export function protocolPageHeader(data: ProtocolData): string {
+  return `<div style="width:100%;margin:0 14mm;font-size:7pt"><style>${HEADER_STYLE}</style>${pageHeader(
+    data.company,
+    { page: '<span class="pageNumber"></span>', pages: '<span class="totalPages"></span>' },
+  )}</div>`;
+}
+
+/** Chromium footer template (every PDF page). */
+export function protocolPageFooter(data: ProtocolData): string {
+  return `<div style="width:100%;margin:0 14mm;font-size:7pt"><style>${HEADER_STYLE}</style>${pageFooter(
+    data.company,
+  )}</div>`;
+}
+
+/** Margins of the PDF pages: the header and footer templates live in them. */
+export const PROTOCOL_PDF_MARGINS = { top: '29mm', bottom: '20mm', left: '14mm', right: '14mm' };
+
+const STYLE = `
+* { box-sizing: border-box; }
+body { font-family: ${FONT}; font-size: 9pt; color: #000; margin: 0; }
+h1 { font-size: 15pt; text-align: center; color: #e00000; margin: 4mm 0 5mm; }
+h2 { font-size: 15pt; text-align: center; color: #e00000; margin: 6mm 0 3mm; }
+h3 { font-size: 9pt; margin: 2.5mm 0 1mm; }
+p { margin: 0 0 1.5mm; }
+ul { margin: 0 0 1mm; padding-left: 5mm; }
+ul ul { padding-left: 7mm; }
+li { margin: 0; text-align: justify; }
+table { width: 100%; border-collapse: collapse; }
+td, th { border: 0.75pt solid #000; padding: 1.2mm 1.5mm; vertical-align: middle; text-align: left; }
+.grey { background: #f2f2f2; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.info td { height: 10mm; }
+.info td.grey { width: 47mm; }
+.items { table-layout: fixed; margin-top: 4mm; }
+.items th { font-weight: 700; }
+.items tr { page-break-inside: avoid; }
+.items .c-num { width: 19mm; } .items .c-yn { width: 11mm; text-align: center; font-weight: 700; }
+.items .c-note { width: 70mm; }
+.items td { height: 9mm; overflow-wrap: anywhere; }
+.items .struck { text-decoration: line-through; text-decoration-thickness: 1.2pt; }
+.where { font-size: 8pt; }
+.small { font-size: 8pt; margin: 1mm 0 0; }
+.draft { border: 1.5pt solid #000; padding: 2mm 3mm; margin: 3mm 0; font-weight: 700; text-align: center; }
+.warning { page-break-before: always; }
+.warning h2 { margin-top: 2mm; text-transform: uppercase; font-size: 13pt; }
+.signatures { margin: 4mm 0 2mm; page-break-inside: avoid; }
+.signatures td { height: 20mm; vertical-align: middle; }
+.signatures td.grey { width: 47mm; }
+.statements { margin: 1mm 0 4mm; }
+.photo-pages { page-break-before: always; }
+.photo-pages h2 { text-transform: none; }
+.defect { page-break-inside: avoid; border: 0.75pt solid #000; padding: 2mm; margin-bottom: 3mm; }
+.photos { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
+.photos img { width: 42mm; height: 32mm; object-fit: cover; border: 0.5pt solid #000; }
+.frame-head { margin-bottom: 2mm; }
+.frame-foot { margin-top: 6mm; }
+${HEADER_STYLE}
+`;
+
+/** Note column: the defect, its risk level after ČSN EN 15635 and, if red, the removal. */
+function noteOf(i: ProtocolItem): string {
+  if (i.outcome === 'unchecked') return 'Nezkontrolováno';
+  if (!isDefect(i.outcome)) return '';
+  return [i.defectDescription ?? '', SEVERITY_LABELS[i.outcome].protocol]
+    .filter(Boolean)
+    .map(escape)
+    .join('<br>');
+}
+
+/**
+ * The protocol as a complete HTML document (A4) after the company's form: details, the table
+ * "Kontrolní číslo | Popis | Schopno bezpečného provozu ANO/NE | Poznámka" per equipment type,
+ * signatures, the statements and "Pokyny k provádění kontrol" with the texts of the types in the
+ * protocol only. Defects with reduced photos follow on separate pages, serious (red) first.
+ */
+export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOptions = {}): string {
+  const frame = options.pageFrame ?? true;
   const c = data.company;
-  const sum = counts(data.sections);
   const defects = data.sections
     .flatMap((s) =>
       s.items
@@ -194,45 +319,42 @@ export function renderProtocolHtml(data: ProtocolData): string {
     .sort((a, b) => SEVERITY_ORDER[a.outcome] - SEVERITY_ORDER[b.outcome]);
   const serious = defects.filter((d) => d.outcome === 'red');
   const other = defects.filter((d) => d.outcome !== 'red');
-  const companyLines = [
-    c.address,
-    c.companyId && `IČO: ${c.companyId}`,
-    [c.phone, c.email].filter(Boolean).join(' · '),
-    c.web,
-  ].filter(Boolean) as string[];
 
   const row = (i: ProtocolItem) => {
-    const complies = i.outcome === 'ok' ? true : isDefect(i.outcome) ? false : null;
-    const note = isDefect(i.outcome)
-      ? `<span class="dot s-${i.outcome}"></span><span class="t-${i.outcome}">${escape(
-          i.defectDescription ?? '',
-        )}</span>`
-      : i.outcome === 'unchecked'
-        ? '<span class="t-unchecked">Nezkontrolováno</span>'
-        : '';
-    return `<tr><td class="num">${escape(i.itemNumber)}</td><td>${escape(i.details)}<div class="where">${escape(
-      i.location,
-    )}</div></td><td class="c-ok">ano${box(complies === true)} ne${box(complies === false)}</td><td>${note}</td></tr>`;
+    // "nehodící se škrtněte": the answer that does not apply is struck through.
+    const yes = i.outcome === 'ok' || i.outcome === 'green';
+    const answered = i.outcome !== 'unchecked';
+    return `<tr><td>${escape(i.itemNumber)}</td><td>${escape(i.details)}${
+      i.location ? `<div class="where">${escape(i.location)}</div>` : ''
+    }</td><td class="c-yn${answered && !yes ? ' struck' : ''}">ANO</td><td class="c-yn${
+      answered && yes ? ' struck' : ''
+    }">NE</td><td>${noteOf(i)}</td></tr>`;
   };
 
-  const sections = data.sections
+  const tables = data.sections
     .map(
       (s) => `
-<h2>${escape(s.typeName)}</h2>
-${paragraphs(s.text)}
 <table class="items">
-  <colgroup><col class="c-num"><col><col class="c-ok"><col class="c-note"></colgroup>
-  <thead><tr><th>Číslo</th><th>Název a popis</th><th class="c-ok">Vyhovuje</th><th>Poznámka / závada</th></tr></thead>
+  <colgroup><col class="c-num"><col><col class="c-yn"><col class="c-yn"><col class="c-note"></colgroup>
+  <thead>
+    <tr><th class="grey" colspan="5">Kontrolované technické vybavení – ${escape(s.typeName)}</th></tr>
+    <tr><th class="grey">Kontrolní číslo</th><th class="grey">Popis</th><th class="grey" colspan="2">Schopno bezpečného provozu*</th><th class="grey">Poznámka<br>(popis zjištění, závady, doporučení atd.)</th></tr>
+  </thead>
   <tbody>${s.items.map(row).join('')}</tbody>
 </table>`,
     )
     .join('');
 
+  // The same text for several types (e.g. all racks) is printed once.
+  const texts = [...new Set(data.sections.map((s) => s.text.trim()).filter(Boolean))];
+
   const defectCard = (d: (typeof defects)[number]) => `
-<div class="defect ${d.outcome}">
-  <strong class="num">${escape(d.itemNumber)}</strong> · ${escape(d.typeName)} · ${escape(d.location)}
-  · <span class="t-${d.outcome}"><span class="dot s-${d.outcome}"></span>${SEVERITY_TEXT[d.outcome]}</span>
+<div class="defect">
+  <strong>Kontrolní číslo ${escape(d.itemNumber)}</strong> – ${escape(d.typeName)}${
+    d.location ? `, ${escape(d.location)}` : ''
+  }
   <div>${escape(d.defectDescription ?? '')}</div>
+  <div class="small">${escape(SEVERITY_LABELS[d.outcome].protocol)}</div>
   ${d.photos.length ? `<div class="photos">${d.photos.map((p) => `<img src="${p}" alt="">`).join('')}</div>` : ''}
 </div>`;
 
@@ -243,44 +365,55 @@ ${serious.length ? `<h2>Závažné závady (${serious.length})</h2>${serious.map
 ${other.length ? `<h2>Závady (${other.length})</h2>${other.map(defectCard).join('')}` : ''}
 ${
   data.overviewPhotos.length
-    ? `<h2>Fotodokumentace kontroly</h2><div class="photos">${data.overviewPhotos.map((p) => `<img src="${p}" alt="">`).join('')}</div>`
+    ? `<h2>Fotodokumentace</h2><div class="photos">${data.overviewPhotos.map((p) => `<img src="${p}" alt="">`).join('')}</div>`
     : ''
 }
 </div>`
       : '';
 
+  const customer = [
+    data.customer.name,
+    data.customer.companyId && `IČ: ${data.customer.companyId}`,
+    data.customer.address,
+  ]
+    .filter(Boolean)
+    .map((t) => escape(t as string))
+    .join(', ');
+  const site = [data.site.name, data.site.address].filter(Boolean).map((t) => escape(t as string));
+  const inspectors = escape(data.inspectors.join(', ') || data.leadInspector);
+
   return `<!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><title>Protokol ${escape(data.number)}</title>
-<style>${STYLE}</style></head><body>
-<div class="head">
-  <div>${c.logo ? `<img src="${c.logo}" alt="">` : `<strong style="font-size:14pt">${escape(c.name)}</strong>`}</div>
-  <div class="company"><strong>${escape(c.name)}</strong><br>${companyLines.map(escape).join('<br>')}</div>
-</div>
+<style>${STYLE}${
+    // Browser print sets its own margins; the PDF renderer passes them with the header/footer.
+    frame ? '@page { size: A4; margin: 12mm 14mm 14mm 14mm; }' : '@page { size: A4; }'
+  }</style></head><body>
+${frame ? `<div class="frame-head">${pageHeader(c, null)}</div>` : ''}
 ${data.final ? '' : '<div class="draft">PŘEDBĚŽNÝ PROTOKOL – kontrola ještě není uzavřena, údaje se mohou změnit.</div>'}
 <h1>Protokol o kontrole technického vybavení</h1>
 <table class="info">
-  <tr><td>Číslo protokolu</td><td>${escape(data.number)}</td></tr>
-  <tr><td>Zákazník</td><td><strong>${escape(data.customer.name)}</strong>${
-    data.customer.companyId ? `, IČO ${escape(data.customer.companyId)}` : ''
-  }${data.customer.address ? `<br>${escape(data.customer.address)}` : ''}</td></tr>
-  <tr><td>Provozovna</td><td>${escape(data.site.name)}${data.site.address ? `<br>${escape(data.site.address)}` : ''}</td></tr>
-  <tr><td>Datum kontroly</td><td>${czechDate(data.inspectionDate)}</td></tr>
-  <tr><td>Příští kontrola</td><td>${czechDate(data.nextInspectionDate)}</td></tr>
-  <tr><td>Kontrolu provedli</td><td>${escape(data.inspectors.join(', '))}</td></tr>
-  ${data.note ? `<tr><td>Poznámka</td><td>${escape(data.note)}</td></tr>` : ''}
+  <tr><td class="grey">Provozovatel</td><td>${customer}</td></tr>
+  <tr><td class="grey">Pracoviště/objekt/umístění</td><td>${site.join(', ')}</td></tr>
+  <tr><td class="grey">Kontrolu provedl</td><td>${inspectors}</td></tr>
+  <tr><td class="grey">Kontrola provedena dne</td><td>${czechDate(data.inspectionDate)}</td></tr>
+  <tr><td class="grey">Následnou kontrolu provést nejpozději do</td><td>${czechDate(data.nextInspectionDate)}</td></tr>
+  ${data.note ? `<tr><td class="grey">Poznámka</td><td>${escape(data.note)}</td></tr>` : ''}
 </table>
-<div class="summary">
-  <div><b>${sum.total - sum.unchecked} / ${sum.total}</b>zkontrolováno</div>
-  <div><b class="t-green">${sum.ok}</b>vyhovuje</div>
-  <div><b class="t-red">${sum.red}</b>závažné závady</div>
-  <div><b class="t-amber">${sum.amber + sum.green}</b>ostatní závady</div>
+${tables}
+<p class="small">*nehodící se škrtněte</p>
+<div class="warning">
+<h2>Při výsledku kontroly nevyhovuje<br>musí být technické vybavení okamžitě vyřazeno z užívání</h2>
+<table class="signatures">
+  <tr><td class="grey">Kontrolu provedl</td><td>${escape(data.leadInspector)}${
+    c.certification ? `<br>${escape(c.certification)}` : ''
+  }</td></tr>
+  <tr><td class="grey">S výsledkem kontroly byl seznámen</td><td></td></tr>
+</table>
+<ul class="statements">${PROTOCOL_STATEMENTS.map((t) => `<li>${escape(t)}</li>`).join('')}</ul>
+${c.footer ? protocolTextHtml(c.footer) : ''}
+${texts.length ? `<h2>Pokyny k provádění kontrol</h2>${texts.map(protocolTextHtml).join('')}` : ''}
 </div>
-${sections}
-<div class="signatures">
-  <div>Kontrolu provedl: ${escape(data.leadInspector)}${c.certification ? `<br>${escape(c.certification)}` : ''}</div>
-  <div>Za zákazníka převzal (jméno, podpis, datum)</div>
-</div>
-${c.footer ? `<div class="footer">${paragraphs(c.footer)}</div>` : ''}
 ${photoPages}
+${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
 </body></html>`;
 }

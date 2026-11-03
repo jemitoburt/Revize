@@ -1,6 +1,6 @@
 # ADR-0016: PDF protokol – šablona v kódu, nastavení v kanceláři
 
-**Stav:** přijato (2026-11-03), rozvržení se upraví podle vzoru od uživatele
+**Stav:** přijato (2026-11-03), rozvržení podle vzoru upřesněno týž den
 
 ## Kontext
 
@@ -38,8 +38,36 @@ nastavení“: rozvržení se připraví podle jeho vzoru a v kanceláři se nas
   nerozdělí mezi strany a záhlaví se na další straně opakuje.
 - **Závady se zmenšenými fotkami** jsou až na dalších stranách. Nejdřív závažné (červené),
   potom ostatní (oranžové, zelené).
-- Vzor od uživatele se nepodařilo otevřít (soubor přišel prázdný). Rozvržení se podle něj ještě
-  doladí.
+
+## Upřesnění 2026-11-03 podle vzoru (`docs/vzory/protokol-o-kontrole.pdf`)
+
+Uživatel chce držet původní šablonu, bez vlastního „designu“ a barev navíc. Protokol proto
+kopíruje formulář firmy:
+
+- **Hlavička každé stránky:** logo, řádek „firma, adresa, IČ“, název formuláře, Datum vydání,
+  Verze a „Stránka X z Y“. Datum vydání a verze formuláře se nastavují v Nastavení. V PDF je
+  hlavička i zápatí šablonou Chromia (`protocolPageHeader`/`protocolPageFooter`, rozhraní
+  `PdfRenderer` dostává hlavičku, zápatí a okraje). Při tisku z prohlížeče se vytisknou jen
+  jednou a bez čísla stránky.
+- **Zápatí:** vlevo text z Nastavení (např. „BOZP • PO • REVIZE“), vpravo web.
+- **Údaje:** Provozovatel, Pracoviště/objekt/umístění, Kontrolu provedl, Kontrola provedena
+  dne, Následnou kontrolu provést nejpozději do.
+- **Tabulka** „Kontrolované technické vybavení – <typ>“: Kontrolní číslo | Popis | Schopno
+  bezpečného provozu* ANO/NE | Poznámka (popis zjištění, závady, doporučení atd.). Podle
+  poznámky „*nehodící se škrtněte“ se nehodící odpověď přeškrtne: v pořádku a zelená = ANO,
+  žlutá a červená = NE, nezkontrolováno = nic. U závady je v poznámce popis a úroveň rizika.
+- **Další strana:** „Při výsledku kontroly nevyhovuje musí být technické vybavení okamžitě
+  vyřazeno z užívání“, podpisy (Kontrolu provedl, S výsledkem kontroly byl seznámen), dva
+  standardní body formuláře a doplňující text z Nastavení.
+- **Pokyny k provádění kontrol:** jen texty typů, které v protokolu jsou. Stejný text více typů
+  (všechny regály) se vytiskne jednou. Texty jsou texty z formuláře. Formát: `# nadpis`,
+  `• bod`, odsazený `• podbod` (`protocolTextHtml`).
+- **Závady s fotkami** jsou na dalších stranách: nejdřív závažné (červené), pod nimi ostatní.
+- Barvy jsou jen ty z formuláře: červené nadpisy a žluté pole s webem. Šedé jsou buňky
+  s popisky.
+- Knihovna typů obsahuje i typy, které formulář zná (sekční vrata, pojízdné lešení, OOPP,
+  vozíky, rollkontejnery, ostatní vybavení), s jejich texty. Migrace `0008` nahradila staré
+  návrhy textů u typů, kde zůstaly beze změny.
 
 ## Důsledky
 
