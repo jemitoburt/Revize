@@ -100,8 +100,12 @@ export interface ProtocolData {
   sections: ProtocolSection[];
   /** data: URLs of photos of the inspection as a whole. */
   overviewPhotos: string[];
+  /** Equipment list for the customer with the columns chosen in the office (last pages). */
+  appendix?: { columns: string[]; rows: string[][] } | null;
   generatedAt: string;
 }
+
+export const APPENDIX_TITLE = 'Příloha – seznam kontrolovaného technického vybavení';
 
 export interface ProtocolHtmlOptions {
   /**
@@ -332,6 +336,11 @@ td, th { border: 0.75pt solid #000; padding: 1.2mm 1.5mm; vertical-align: middle
 .signatures td.grey { width: 47mm; }
 .statements { margin: 1mm 0 4mm; }
 .photo-pages { page-break-before: always; }
+.appendix { page-break-before: always; }
+.appendix h2 { font-size: 13pt; }
+.list { font-size: 8pt; }
+.list th, .list td { padding: 0.8mm 1.2mm; }
+.list tr { page-break-inside: avoid; }
 .photo-pages h2 { text-transform: none; }
 .defect { page-break-inside: avoid; border: 0.75pt solid #000; padding: 2mm; margin-bottom: 3mm; }
 .photos { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
@@ -454,6 +463,15 @@ ${c.footer ? protocolTextHtml(c.footer) : ''}
 ${texts.length ? `<h2>Pokyny k provádění kontrol</h2>${texts.map(protocolTextHtml).join('')}` : ''}
 </div>
 ${photoPages}
+${
+  data.appendix?.columns.length
+    ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><thead><tr>${data.appendix.columns
+        .map((h) => `<th class="grey">${escape(h)}</th>`)
+        .join('')}</tr></thead><tbody>${data.appendix.rows
+        .map((r) => `<tr>${r.map((v) => `<td>${escape(v)}</td>`).join('')}</tr>`)
+        .join('')}</tbody></table></div>`
+    : ''
+}
 ${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
 </body></html>`;
 }

@@ -38,3 +38,13 @@ soubor oddělí od protokolu.
 - Export celé evidence a filtrované exporty (M8) použijí stejné funkce tabulky.
 - Obraz API je o Perl větší (zhruba 40 MB).
 - Test obnovy v CI ověřuje ZIP fotek včetně popisu zapsaného ExifToolem ve skutečném obrazu.
+
+## Doplnění 2026-11-03: export evidence a příloha protokolu
+
+- **Export evidence:** `GET /exports/items.xlsx|csv?customerId&siteId&equipmentTypeId&includeRetired`
+  (oprávnění `export.read`). Tabulka je v `databaseColumns`/`databaseRow` ve `shared`. Poslední
+  kontrola je výsledek s nejnovějším datem kontroly (`DISTINCT ON`). V kanceláři je tlačítko
+  „Export evidence“ v seznamu artiklů s aktuálním filtrem.
+- **Příloha protokolu pro zákazníka:** parametr `columns` u `protocol.html|pdf|docx`. Nabídku
+  sloupců vrací `GET /inspections/:id/protocol-columns` (`appendixColumns`): pevné sloupce
+  a pole typů v kontrole. Příloha je tabulka na konci protokolu.

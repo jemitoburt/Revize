@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { InspectionItem } from './api/inspections.js';
 import { fieldDefinitionsSchema } from './equipment-fields.js';
 import {
+  appendixColumns,
+  appendixRow,
+  databaseColumns,
+  databaseRow,
   exportColumns,
   exportRow,
   fileNamePart,
@@ -135,5 +139,63 @@ describe('file formats', () => {
     expect(sheetName('x'.repeat(40), [])).toHaveLength(31);
     expect(fileNamePart('Sklad Brno – hala č. 2')).toBe('Sklad-Brno-hala-c-2');
     expect(sheetName('a', [])).toBe('a');
+  });
+});
+
+describe('database export', () => {
+  it('has customer, item, fields, state and the last inspection', () => {
+    const headers = databaseColumns([ladder, rack]).map((c) => c.header);
+    expect(headers.slice(0, 3)).toEqual(['Zákazník', 'Provozovna', 'Číslo TZ']);
+    expect(headers).toContain('Nosnost úrovně [kg]');
+    expect(headers.slice(-3)).toEqual([
+      'Poslední kontrola',
+      'Výsledek poslední kontroly',
+      'Závada',
+    ]);
+    const row = databaseRow([ladder, rack], {
+      customerName: 'Sklad s.r.o.',
+      siteName: 'Brno',
+      locationPath: ['Hala A'],
+      itemNumber: '10001',
+      designation: 'Ž-01',
+      qrCode: null,
+      equipmentTypeId: ladder.id,
+      fieldValues: { manufacturer: 'Alve', rungs: 8 },
+      status: 'out_of_service',
+      retired: false,
+      nextInspectionDate: '2027-11-03',
+      lastInspection: {
+        date: '2026-11-03',
+        result: {
+          outcome: 'defect',
+          takenOutOfService: true,
+          severity: 'red',
+          defectDescription: 'Prasklá příčka',
+        },
+      },
+    });
+    expect(row.slice(0, 6)).toEqual(['Sklad s.r.o.', 'Brno', '10001', 'Ž-01', 'Žebřík', 'Hala A']);
+    expect(row.slice(-5)).toEqual([
+      'vyřazen z provozu',
+      '03/11/2027',
+      '03/11/2026',
+      'Vyřazeno z provozu',
+      'Prasklá příčka',
+    ]);
+  });
+});
+
+describe('protocol appendix', () => {
+  it('offers the fixed columns and the fields of the types, and fills chosen ones', () => {
+    const columns = appendixColumns([ladder, rack]);
+    expect(columns.slice(0, 2).map((c) => c.label)).toEqual(['Číslo TZ', 'Označení']);
+    expect(columns).toContainEqual({ key: 'field:level_load_kg', label: 'Nosnost úrovně [kg]' });
+    expect(
+      appendixRow(
+        ['itemNumber', 'field:rungs', 'field:level_load_kg', 'result'],
+        [ladder, rack],
+        item(),
+      ),
+    ).toEqual(['10001', '8', '', 'Nezkontrolováno']);
   });
 });

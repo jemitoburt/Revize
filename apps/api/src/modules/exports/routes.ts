@@ -56,4 +56,38 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
     },
     async (req, reply) => send(reply, await exports.photosZip(authOf(req), req.params.id)),
   );
+
+  const databaseQuery = z.object({
+    customerId: idSchema.optional(),
+    siteId: idSchema.optional(),
+    equipmentTypeId: idSchema.optional(),
+    includeRetired: z
+      .enum(['true', 'false'])
+      .transform((v) => v === 'true')
+      .optional(),
+  });
+  const records = requirePermission('export.read');
+  app.get(
+    '/exports/items.xlsx',
+    {
+      preHandler: records,
+      schema: {
+        tags,
+        summary: 'Export evidence (artikly) v XLSX: list se vším a list pro každý typ',
+        querystring: databaseQuery,
+      },
+    },
+    async (req, reply) => {
+      const file = await exports.databaseXlsx(authOf(req), req.query);
+      return send(reply, { ...file, data: Buffer.from(file.data) });
+    },
+  );
+  app.get(
+    '/exports/items.csv',
+    {
+      preHandler: records,
+      schema: { tags, summary: 'Export evidence (artikly) v CSV', querystring: databaseQuery },
+    },
+    async (req, reply) => send(reply, await exports.databaseCsv(authOf(req), req.query)),
+  );
 };

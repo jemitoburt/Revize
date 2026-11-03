@@ -4,22 +4,36 @@ import {
   formatDateTime,
   exportColumns,
   exportRow,
+  databaseColumns,
+  databaseRow,
   fileNamePart,
   outcomeLabel,
   photoCaption,
   photoFileName,
   sheetName,
   toCsv,
+  type DatabaseItem,
   type ExportType,
   type Inspection,
   type InspectionItem,
 } from '@revize/shared';
-import { and, asc, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import { Zip, ZipPassThrough, strToU8 } from 'fflate';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db } from '../../db/client.js';
-import { appUser, equipmentType, inspectionResult, photo } from '../../db/schema.js';
+import {
+  appUser,
+  customer,
+  equipmentType,
+  inspection,
+  inspectionResult,
+  item,
+  location,
+  photo,
+  site,
+} from '../../db/schema.js';
+import { locationNames, pathNamesOf } from '../locations/service.js';
 import type { FileStorage } from '../../infra/file-storage.js';
 import type { MetadataWriter } from '../../infra/metadata-writer.js';
 import type { InspectionsService } from '../inspections/service.js';
@@ -33,6 +47,14 @@ interface ExportPhoto {
   author: string | null;
   /** The item for defect photos, null for photos of the inspection as a whole. */
   item: InspectionItem | null;
+}
+
+/** Filters of the database export (empty = everything). */
+export interface DatabaseQuery {
+  customerId?: string;
+  siteId?: string;
+  equipmentTypeId?: string;
+  includeRetired?: boolean;
 }
 
 export interface ExportFile<T> {
@@ -120,7 +142,148 @@ export function createExportsService(
     ['Zkontrolováno', `${inspection.progress.checked} / ${inspection.progress.total}` as string],
   ];
 
+  /** Items of the records (filtered) with their type and the result of their last inspection. */
+  async function loadDatabase(auth: AuthContext, query: DatabaseQuery) {
+    const filters: SQL[] = [eq(item.organizationId, auth.organizationId)];
+    if (query.customerId) filters.push(eq(item.customerId, query.customerId));
+    if (query.siteId) filters.push(eq(item.siteId, query.siteId));
+    if (query.equipmentTypeId) filters.push(eq(item.equipmentTypeId, query.equipmentTypeId));
+    if (!query.includeRetired) filters.push(isNull(item.retiredAt));
+    const rows = await db
+      .select({
+        item,
+        customerName: customer.name,
+        siteName: site.name,
+        pathIds: location.pathIds,
+        sortPath: location.sortPath,
+      })
+      .from(item)
+      .innerJoin(customer, eq(customer.id, item.customerId))
+      .innerJoin(site, eq(site.id, item.siteId))
+      .leftJoin(location, eq(location.id, item.locationId))
+      .where(and(...filters))
+      .orderBy(
+        asc(customer.name),
+        asc(site.name),
+        sql`${location.sortPath} asc nulls last`,
+        sql`length(${item.itemNumber})`,
+        asc(item.itemNumber),
+      );
+    const names = await locationNames(
+      db,
+      rows.flatMap((r) => r.pathIds ?? []),
+    );
+    // The last result of every item (latest inspection date, then latest record).
+    const ids = rows.map((r) => r.item.id);
+    const last = new Map<string, DatabaseItem['lastInspection']>();
+    for (let i = 0; i < ids.length; i += 1000) {
+      const results = await db
+        .selectDistinctOn([inspectionResult.itemId], {
+          itemId: inspectionResult.itemId,
+          date: inspection.inspectionDate,
+          outcome: inspectionResult.outcome,
+          takenOutOfService: inspectionResult.takenOutOfService,
+          severity: inspectionResult.severity,
+          defectDescription: inspectionResult.defectDescription,
+        })
+        .from(inspectionResult)
+        .innerJoin(inspection, eq(inspection.id, inspectionResult.inspectionId))
+        .where(inArray(inspectionResult.itemId, ids.slice(i, i + 1000)))
+        .orderBy(
+          inspectionResult.itemId,
+          desc(inspection.inspectionDate),
+          desc(inspectionResult.recordedAt),
+        );
+      for (const r of results) {
+        last.set(r.itemId, {
+          date: r.date,
+          result: {
+            outcome: r.outcome as 'ok' | 'defect',
+            takenOutOfService: r.takenOutOfService,
+            severity: r.severity as 'green' | 'amber' | 'red' | null,
+            defectDescription: r.defectDescription,
+          },
+        });
+      }
+    }
+    const typeIds = [...new Set(rows.map((r) => r.item.equipmentTypeId))];
+    const types: ExportType[] = typeIds.length
+      ? (
+          await db
+            .select({
+              id: equipmentType.id,
+              name: equipmentType.name,
+              fieldDefinitions: equipmentType.fieldDefinitions,
+            })
+            .from(equipmentType)
+            .where(inArray(equipmentType.id, typeIds))
+        ).sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+      : [];
+    const items: DatabaseItem[] = rows.map((r) => ({
+      customerName: r.customerName,
+      siteName: r.siteName,
+      locationPath: r.pathIds ? pathNamesOf(r.pathIds, names) : [],
+      itemNumber: r.item.itemNumber,
+      designation: r.item.designation,
+      qrCode: r.item.qrCode,
+      equipmentTypeId: r.item.equipmentTypeId,
+      fieldValues: r.item.fieldValues,
+      status: r.item.status as DatabaseItem['status'],
+      retired: r.item.retiredAt !== null,
+      nextInspectionDate: r.item.nextInspectionDate,
+      lastInspection: last.get(r.item.id) ?? null,
+    }));
+    return { items, types };
+  }
+
+  const databaseName = () => `evidence-${new Date().toISOString().slice(0, 10)}`;
+
   return {
+    /** The records (all or filtered) as one CSV with the union of the types' fields. */
+    async databaseCsv(auth: AuthContext, query: DatabaseQuery): Promise<ExportFile<string>> {
+      const { items, types } = await loadDatabase(auth, query);
+      return {
+        data: toCsv([
+          databaseColumns(types).map((c) => c.header),
+          ...items.map((i) => databaseRow(types, i)),
+        ]),
+        fileName: `${databaseName()}.csv`,
+        contentType: 'text/csv; charset=utf-8',
+      };
+    },
+
+    /** The records as XLSX: a sheet with everything and one sheet per equipment type. */
+    async databaseXlsx(auth: AuthContext, query: DatabaseQuery): Promise<ExportFile<Uint8Array>> {
+      const { items, types } = await loadDatabase(auth, query);
+      const org = await organizationOf(db, auth);
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = org.name;
+      const sheet = (name: string, sheetTypes: ExportType[], rows: DatabaseItem[]) => {
+        const columns = databaseColumns(sheetTypes);
+        const ws = workbook.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 1 }] });
+        ws.columns = columns.map((c) => ({ header: c.header, width: c.width }));
+        ws.getRow(1).font = { bold: true };
+        ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: columns.length } };
+        for (const i of rows) ws.addRow(databaseRow(sheetTypes, i));
+      };
+      sheet('Vše', types, items);
+      const taken = ['Vše'];
+      for (const type of types) {
+        const name = sheetName(type.name, taken);
+        taken.push(name);
+        sheet(
+          name,
+          [type],
+          items.filter((i) => i.equipmentTypeId === type.id),
+        );
+      }
+      return {
+        data: new Uint8Array(await workbook.xlsx.writeBuffer()),
+        fileName: `${databaseName()}.xlsx`,
+        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      };
+    },
+
     /** All results in one table (union of the types' fields). */
     async csv(auth: AuthContext, inspectionId: string): Promise<ExportFile<string>> {
       const { inspection, items, types, photosOf } = await load(auth, inspectionId);

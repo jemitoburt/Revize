@@ -166,3 +166,152 @@ export function fileNamePart(text: string): string {
       .replace(/^-|-$/g, '') || 'kontrola'
   );
 }
+
+// ---------- export of the whole database (items) ----------
+
+/** One item of the records with what the database export shows about it. */
+export interface DatabaseItem {
+  customerName: string;
+  siteName: string;
+  locationPath: string[];
+  itemNumber: string;
+  designation: string | null;
+  qrCode: string | null;
+  equipmentTypeId: string;
+  fieldValues: Record<string, unknown>;
+  status: 'in_service' | 'out_of_service';
+  retired: boolean;
+  nextInspectionDate: string | null;
+  /** Result in the most recent inspection that checked the item. */
+  lastInspection: {
+    date: string;
+    result: {
+      outcome: 'ok' | 'defect';
+      takenOutOfService: boolean;
+      severity?: 'green' | 'amber' | 'red' | null;
+      defectDescription: string | null;
+    };
+  } | null;
+}
+
+const DB_BEFORE: ExportColumn[] = [
+  { header: 'Zákazník', width: 24 },
+  { header: 'Provozovna', width: 20 },
+  { header: 'Číslo TZ', width: 10 },
+  { header: 'Označení', width: 12 },
+  { header: 'Typ vybavení', width: 22 },
+  { header: 'Umístění', width: 28 },
+  { header: 'QR kód', width: 14 },
+];
+const DB_AFTER: ExportColumn[] = [
+  { header: 'Stav', width: 16 },
+  { header: 'Příští kontrola', width: 14 },
+  { header: 'Poslední kontrola', width: 14 },
+  { header: 'Výsledek poslední kontroly', width: 22 },
+  { header: 'Závada', width: 36 },
+];
+
+/** Columns of the database export: item, the types' fields (union), state and last inspection. */
+export function databaseColumns(types: readonly ExportType[]): ExportColumn[] {
+  const fields = exportColumns(types).slice(FIXED_BEFORE.length, -FIXED_AFTER.length);
+  return [...DB_BEFORE, ...fields, ...DB_AFTER];
+}
+
+/** One row of the database export, matching `databaseColumns(types)`. */
+export function databaseRow(types: readonly ExportType[], item: DatabaseItem): ExportCell[] {
+  const type = types.find((t) => t.id === item.equipmentTypeId);
+  const fieldHeaders = databaseColumns(types).slice(DB_BEFORE.length, -DB_AFTER.length);
+  const ownFields = type ? activeFields(type) : [];
+  const last = item.lastInspection;
+  return [
+    item.customerName,
+    item.siteName,
+    item.itemNumber,
+    item.designation ?? '',
+    type?.name ?? '',
+    item.locationPath.join(LOCATION_SEPARATOR),
+    item.qrCode ?? '',
+    ...fieldHeaders.map(({ header }) => {
+      const field = ownFields.find((f) => fieldHeader(f) === header);
+      return field ? fieldCell(field, item.fieldValues[field.key]) : null;
+    }),
+    item.retired
+      ? 'vyřazen z evidence'
+      : item.status === 'out_of_service'
+        ? 'vyřazen z provozu'
+        : 'v provozu',
+    formatDate(item.nextInspectionDate),
+    formatDate(last?.date ?? null),
+    last ? outcomeLabel(last.result) : '',
+    last?.result.defectDescription ?? '',
+  ];
+}
+
+// ---------- appendix of the protocol: equipment list with chosen columns ----------
+
+export interface AppendixColumn {
+  /** `itemNumber`, `designation`, … or `field:<key>` for a field of the equipment type. */
+  key: string;
+  label: string;
+}
+
+const APPENDIX_FIXED: AppendixColumn[] = [
+  { key: 'itemNumber', label: 'Číslo TZ' },
+  { key: 'designation', label: 'Označení' },
+  { key: 'type', label: 'Typ vybavení' },
+  { key: 'location', label: 'Umístění' },
+  { key: 'qrCode', label: 'QR kód' },
+  { key: 'result', label: 'Výsledek' },
+  { key: 'defect', label: 'Závada' },
+  { key: 'nextInspection', label: 'Příští kontrola' },
+];
+
+/** Columns the office can choose from for the inspection's types. */
+export function appendixColumns(types: readonly ExportType[]): AppendixColumn[] {
+  const fields: AppendixColumn[] = [];
+  for (const type of types) {
+    for (const f of activeFields(type)) {
+      const key = `field:${f.key}`;
+      if (!fields.some((c) => c.key === key)) fields.push({ key, label: fieldHeader(f) });
+    }
+  }
+  return [...APPENDIX_FIXED, ...fields];
+}
+
+export const DEFAULT_APPENDIX_COLUMNS = ['itemNumber', 'designation', 'type', 'location', 'result'];
+
+/** One row of the appendix: the chosen columns as text. */
+export function appendixRow(
+  keys: readonly string[],
+  types: readonly ExportType[],
+  item: InspectionItem,
+): string[] {
+  const type = types.find((t) => t.id === item.equipmentTypeId);
+  return keys.map((key) => {
+    if (key.startsWith('field:')) {
+      const field = type?.fieldDefinitions.find((f) => f.key === key.slice(6));
+      const cell = field ? fieldCell(field, item.fieldValues[field.key]) : null;
+      return cell === null ? '' : typeof cell === 'number' ? cell.toLocaleString('cs-CZ') : cell;
+    }
+    switch (key) {
+      case 'itemNumber':
+        return item.itemNumber;
+      case 'designation':
+        return item.designation ?? '';
+      case 'type':
+        return type?.name ?? '';
+      case 'location':
+        return item.locationPath.join(LOCATION_SEPARATOR);
+      case 'qrCode':
+        return item.qrCode ?? '';
+      case 'result':
+        return outcomeLabel(item.result);
+      case 'defect':
+        return item.result?.defectDescription ?? '';
+      case 'nextInspection':
+        return formatDate(item.nextInspectionDate);
+      default:
+        return '';
+    }
+  });
+}

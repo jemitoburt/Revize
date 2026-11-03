@@ -33,6 +33,7 @@ import { formatDate, locationLabel } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { itemsRoute, type ItemsSearch } from '../router.js';
 import { DateField } from '../components/DateField.js';
+import { DatabaseExportMenu } from '../components/DatabaseExportMenu.js';
 
 const PAGE_SIZE = 100;
 
@@ -208,7 +209,16 @@ export function ItemsPage() {
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Artikly</Title>
-        {canWrite && <Button onClick={() => openItem(null)}>Nový artikl</Button>}
+        <Group>
+          <DatabaseExportMenu
+            filters={{
+              customerId: search.customerId,
+              siteId: search.siteId,
+              equipmentTypeId: search.equipmentTypeId,
+            }}
+          />
+          {canWrite && <Button onClick={() => openItem(null)}>Nový artikl</Button>}
+        </Group>
       </Group>
 
       <Paper withBorder p="sm">

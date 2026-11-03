@@ -1,9 +1,42 @@
-import { Alert, Button, Group, Loader, Menu, Modal, Select, Stack } from '@mantine/core';
+import {
+  Alert,
+  Button,
+  Group,
+  Loader,
+  Menu,
+  Modal,
+  MultiSelect,
+  Select,
+  Stack,
+  Switch,
+} from '@mantine/core';
+import { DEFAULT_APPENDIX_COLUMNS } from '@revize/shared';
 import { IconDownload, IconPrinter } from '@tabler/icons-react';
 import { useRef, useState } from 'react';
 import { DEMO, downloadFile, queryString } from '../api/client.js';
-import { useOutbox, useProtocolHtml } from '../api/hooks.js';
+import { useOutbox, useProtocolColumns, useProtocolHtml } from '../api/hooks.js';
 import { notifyError } from '../lib/notify.js';
+
+const COLUMNS_KEY = 'revize.protocol-columns';
+
+/** The last chosen appendix columns of this browser (a convenience, not stored data). */
+function loadColumns(): string[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLUMNS_KEY) ?? 'null') as unknown;
+    if (Array.isArray(saved) && saved.every((v) => typeof v === 'string')) return saved;
+  } catch {
+    // Blocked or broken storage: fall back to the defaults.
+  }
+  return [...DEFAULT_APPENDIX_COLUMNS];
+}
+
+function saveColumns(columns: string[]) {
+  try {
+    localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
+  } catch {
+    // Not remembered, nothing else depends on it.
+  }
+}
 
 export interface ProtocolPreviewProps {
   inspectionId: string;
@@ -26,14 +59,22 @@ export function ProtocolPreview({
   onClose,
 }: ProtocolPreviewProps) {
   const [typeId, setTypeId] = useState<string | null>(null);
-  const html = useProtocolHtml(inspectionId, typeId, opened);
+  const columnOptions = useProtocolColumns(inspectionId, opened);
+  const [withList, setWithList] = useState(false);
+  const [columns, setColumns] = useState<string[]>(loadColumns);
+  const chosen = withList ? columns : [];
+  const html = useProtocolHtml(inspectionId, typeId, opened, chosen);
   const frame = useRef<HTMLIFrameElement>(null);
   const [downloading, setDownloading] = useState(false);
   const base = fileName.replace(/\.pdf$/, '');
   const download = (file: string, query: Record<string, string>, name: string) => {
     setDownloading(true);
     downloadFile(
-      `/inspections/${inspectionId}/${file}${queryString({ equipmentTypeId: typeId, ...query })}`,
+      `/inspections/${inspectionId}/${file}${queryString({
+        equipmentTypeId: typeId,
+        columns: chosen.join(',') || undefined,
+        ...query,
+      })}`,
       name,
     )
       .catch(notifyError)
@@ -104,6 +145,27 @@ export function ProtocolPreview({
             </Menu>
           </Group>
         </Group>
+        <Stack gap={6}>
+          <Switch
+            label="Přiložit seznam vybavení pro zákazníka (příloha na konci protokolu)"
+            checked={withList}
+            onChange={(e) => setWithList(e.currentTarget.checked)}
+          />
+          {withList && (
+            <MultiSelect
+              label="Sloupce seznamu"
+              description="V pořadí, v jakém je vyberete. Výběr se zapamatuje."
+              data={(columnOptions.data ?? []).map((c) => ({ value: c.key, label: c.label }))}
+              value={columns}
+              onChange={(next) => {
+                setColumns(next);
+                saveColumns(next);
+              }}
+              searchable
+              clearable
+            />
+          )}
+        </Stack>
         {html.isPending && <Loader m="xl" />}
         {html.error && <Alert color="red">{html.error.message}</Alert>}
         {html.data && (

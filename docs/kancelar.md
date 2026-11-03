@@ -28,6 +28,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      písmen, mezery a pomlčky se při porovnání nepočítají. Hledat jde podle obojího.
    - Kliknutím na řádek artikl upravíte. Změna stavu (vyřazen z provozu ↔ v provozu) vyžaduje
      důvod a zapíše se do auditu.
+   - **Export evidence** (Excel nebo CSV): artikly podle zvoleného filtru (bez filtru celá
+     evidence). Obsahuje zákazníka, provozovnu, číslo TZ, označení, umístění, všechna pole, stav,
+     příští a poslední kontrolu s výsledkem a závadou. V Excelu je list se vším a list pro každý
+     typ vybavení.
    - Hromadné akce na zaškrtnutých artiklech: přesun, stav, datum příští kontroly, vyřazení
      z evidence.
 6. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace
@@ -78,7 +82,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      s výsledky všech artiklů (filtry Závady a Nezkontrolované).
    - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
      dvěma stranami na list (A4 na šířku) a Word (DOCX, dá se dál upravovat). Dokud kontrola
-     není uzavřená, je protokol označený jako předběžný. Fotky z iPadu se v protokolu objeví,
+     není uzavřená, je protokol označený jako předběžný.
+   - **Seznam vybavení pro zákazníka:** v náhledu protokolu zapněte _Přiložit seznam vybavení_
+     a vyberte sloupce (číslo TZ, označení, typ, umístění, pole typu, výsledek, závada, příští
+     kontrola). Seznam se přidá jako příloha na konec protokolu, v PDF i ve Wordu. Výběr
+     sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
      až se odešlou (stav „Vše odesláno“).
    - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
      kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).

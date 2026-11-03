@@ -206,6 +206,25 @@ describe('organization settings and protocol', () => {
     expect(pdf.rawPayload.subarray(0, 5).toString()).toBe('%PDF-');
     expect(pdf.rawPayload.length).toBeGreaterThan(20_000);
 
+    // Appendix for the customer with the chosen columns.
+    const columns = (await api('GET', `/api/inspections/${id}/protocol-columns`)).json();
+    expect(columns.map((c: { key: string }) => c.key)).toEqual(
+      expect.arrayContaining(['itemNumber', 'designation', 'result', 'field:manufacturer']),
+    );
+    const withList = (
+      await api(
+        'GET',
+        `/api/inspections/${id}/protocol.html?columns=itemNumber,field:manufacturer,result,unknown`,
+      )
+    ).body;
+    expect(withList).toContain('Příloha – seznam kontrolovaného technického vybavení');
+    expect(withList).toContain('<th class="grey">Číslo TZ</th><th class="grey">Výrobce</th>');
+    expect(html).not.toContain('Příloha – seznam');
+    const docxList = await api('GET', `/api/inspections/${id}/protocol.docx?columns=itemNumber`);
+    expect(
+      strFromU8(unzipSync(new Uint8Array(docxList.rawPayload))['word/document.xml']!),
+    ).toContain('Příloha');
+
     // Two A4 pages on one landscape A4 sheet.
     const twoUp = await api('GET', `/api/inspections/${id}/protocol.pdf?layout=two-up`);
     expect(twoUp.headers['content-disposition']).toContain('-2-na-list.pdf');

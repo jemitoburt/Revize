@@ -1,5 +1,7 @@
 import {
   LOCATION_SEPARATOR,
+  appendixColumns,
+  appendixRow,
   displayFields,
   fileNamePart,
   fillProtocolTemplate,
@@ -10,6 +12,8 @@ import {
   protocolPageHeader,
   renderProtocolHtml,
   severityOf,
+  type AppendixColumn,
+  type ExportType,
   type InspectionItem,
   type ProtocolData,
   type ProtocolItem,
@@ -44,6 +48,29 @@ function printedResult(
 
 const czechDate = (iso: string | null) => formatDate(iso);
 
+/** The equipment list with the chosen columns (unknown keys are ignored). */
+function appendixOf(
+  types: ExportType[],
+  items: InspectionItem[],
+  keys: readonly string[],
+): ProtocolData['appendix'] {
+  const available = appendixColumns(types);
+  const chosen = keys
+    .map((key) => available.find((c) => c.key === key))
+    .filter((c): c is NonNullable<typeof c> => c !== undefined);
+  if (!chosen.length) return null;
+  return {
+    columns: chosen.map((c) => c.label),
+    rows: items.map((i) =>
+      appendixRow(
+        chosen.map((c) => c.key),
+        types,
+        i,
+      ),
+    ),
+  };
+}
+
 export function createProtocolsService(
   db: Db,
   files: FileStorage,
@@ -60,6 +87,8 @@ export function createProtocolsService(
     auth: AuthContext,
     inspectionId: string,
     equipmentTypeId?: string,
+    /** Columns of the equipment list appended for the customer (none = no appendix). */
+    columns: readonly string[] = [],
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of one equipment type contains only its items and its protocol text.
@@ -162,26 +191,28 @@ export function createProtocolsService(
       note: inspection.note,
       sections,
       overviewPhotos,
+      appendix: appendixOf(types, items, columns),
       generatedAt: new Date().toISOString(),
     };
   }
 
   return {
-    async html(auth: AuthContext, inspectionId: string, equipmentTypeId?: string): Promise<string> {
-      return renderProtocolHtml(await build(auth, inspectionId, equipmentTypeId));
+    async html(auth: AuthContext, inspectionId: string, options: ProtocolOptions = {}) {
+      return renderProtocolHtml(
+        await build(auth, inspectionId, options.equipmentTypeId, options.columns),
+      );
     },
 
     /** `twoUp`: two A4 pages side by side on each landscape A4 sheet. */
     async pdf(
       auth: AuthContext,
       inspectionId: string,
-      equipmentTypeId?: string,
-      twoUp = false,
+      options: ProtocolOptions & { twoUp?: boolean } = {},
     ): Promise<{ data: Uint8Array; fileName: string }> {
       if (!pdf) {
         throw new AppError(501, 'pdf_unavailable', 'PDF se zde nevytváří, použijte tisk náhledu.');
       }
-      const data = await build(auth, inspectionId, equipmentTypeId);
+      const data = await build(auth, inspectionId, options.equipmentTypeId, options.columns);
       const bytes = await pdf.render(renderProtocolHtml(data, { pageFrame: false }), {
         header: protocolPageHeader(data),
         footer: protocolPageFooter(data),
@@ -189,8 +220,8 @@ export function createProtocolsService(
       });
       const slug = fileNamePart(data.site.name);
       return {
-        data: twoUp ? await twoPagesPerSheet(bytes) : bytes,
-        fileName: `protokol-${slug}-${data.inspectionDate}${twoUp ? '-2-na-list' : ''}.pdf`,
+        data: options.twoUp ? await twoPagesPerSheet(bytes) : bytes,
+        fileName: `protokol-${slug}-${data.inspectionDate}${options.twoUp ? '-2-na-list' : ''}.pdf`,
       };
     },
 
@@ -198,15 +229,31 @@ export function createProtocolsService(
     async docx(
       auth: AuthContext,
       inspectionId: string,
-      equipmentTypeId?: string,
+      options: ProtocolOptions = {},
     ): Promise<{ data: Uint8Array; fileName: string }> {
-      const data = await build(auth, inspectionId, equipmentTypeId);
+      const data = await build(auth, inspectionId, options.equipmentTypeId, options.columns);
       return {
         data: await renderProtocolDocx(data),
         fileName: `protokol-${fileNamePart(data.site.name)}-${data.inspectionDate}.docx`,
       };
     },
+
+    /** Columns that can be chosen for the appendix (fixed ones and the types' fields). */
+    async columns(auth: AuthContext, inspectionId: string): Promise<AppendixColumn[]> {
+      const items = await inspections.items(auth, inspectionId);
+      const typeIds = [...new Set(items.map((i) => i.equipmentTypeId))];
+      const types = typeIds.length
+        ? await db.select().from(equipmentType).where(inArray(equipmentType.id, typeIds))
+        : [];
+      return appendixColumns(types.sort((a, b) => a.name.localeCompare(b.name, 'cs')));
+    },
   };
+}
+
+/** Options of a protocol: one equipment type only, columns of the appendix. */
+export interface ProtocolOptions {
+  equipmentTypeId?: string;
+  columns?: string[];
 }
 
 export type ProtocolsService = ReturnType<typeof createProtocolsService>;

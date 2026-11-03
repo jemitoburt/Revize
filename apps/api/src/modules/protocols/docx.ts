@@ -1,4 +1,5 @@
 import {
+  APPENDIX_TITLE,
   PROTOCOL_STATEMENTS,
   companyLine,
   formatDate,
@@ -429,6 +430,30 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
         }),
       );
     }
+  }
+
+  if (data.appendix?.columns.length) {
+    const { columns, rows } = data.appendix;
+    const width = Math.floor(CONTENT_WIDTH / columns.length);
+    children.push(
+      heading(APPENDIX_TITLE, { size: 13, pageBreak: true }),
+      table(
+        columns.map(() => width),
+        [
+          new TableRow({
+            tableHeader: true,
+            children: columns.map((h) => cell(lines([h], { bold: true, size: 8 }), { grey: true })),
+          }),
+          ...rows.map(
+            (r) =>
+              new TableRow({
+                cantSplit: true,
+                children: r.map((v) => cell(lines([v], { size: 8 }))),
+              }),
+          ),
+        ],
+      ),
+    );
   }
 
   const document = new Document({

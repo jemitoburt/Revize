@@ -144,4 +144,29 @@ describe('inspection exports', () => {
       await rm(dir, { recursive: true, force: true });
     }
   }, 60_000);
+
+  it('exports the whole database as CSV and XLSX with the last inspection result', async () => {
+    const { items } = await inspection();
+    const csv = await api('GET', '/api/exports/items.csv');
+    expect(csv.statusCode).toBe(200);
+    expect(csv.headers['content-disposition']).toMatch(/evidence-\d{4}-\d{2}-\d{2}\.csv/);
+    expect(csv.body.startsWith('\uFEFFZákazník;Provozovna;Číslo TZ;Označení;')).toBe(true);
+    const line = csv.body.split('\r\n').find((l) => l.includes(`;${items[1]!.itemNumber};`))!;
+    expect(line).toContain('Ukázkový sklad s.r.o.;Provozovna Brno');
+    expect(line).toContain('Závada – žlutá');
+    expect(line).toContain('Uvolněná příčka');
+    // Seeded demo items: 35 rows plus the header.
+    expect(csv.body.trim().split('\r\n')).toHaveLength(36);
+
+    const ladderOnly = await api('GET', `/api/exports/items.csv?equipmentTypeId=${ladderTypeId}`);
+    expect(ladderOnly.body).not.toContain(';Regál;');
+
+    const xlsx = await api('GET', '/api/exports/items.xlsx');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(xlsx.rawPayload as unknown as ArrayBuffer);
+    expect(workbook.worksheets.map((w) => w.name)).toEqual(
+      expect.arrayContaining(['Vše', 'Regál', 'Žebřík']),
+    );
+    expect(workbook.getWorksheet('Vše')!.rowCount).toBe(36);
+  });
 });

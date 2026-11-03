@@ -44,12 +44,36 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
   await expect(preview.getByText('Revize Novák s.r.o.').first()).toBeVisible();
   await expect(preview.getByText('Osvědčení č. 42/2025')).toBeVisible();
+  // Appendix for the customer: an equipment list with the chosen columns.
+  await page
+    .getByLabel('Přiložit seznam vybavení pro zákazníka (příloha na konci protokolu)')
+    .check();
+  await expect(
+    preview.getByText('Příloha – seznam kontrolovaného technického vybavení'),
+  ).toBeVisible();
+  await expect(preview.locator('.appendix th')).toHaveText([
+    'Číslo TZ',
+    'Označení',
+    'Typ vybavení',
+    'Umístění',
+    'Výsledek',
+  ]);
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Stáhnout', exact: true }).click();
   await page.getByRole('menuitem', { name: 'PDF (A4)' }).click();
   const pdf = readFileSync(await (await download).path());
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   await page.keyboard.press('Escape');
+
+  // Export of the whole database (items with their last result).
+  await page.goto('/artikly');
+  const database = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export evidence' }).click();
+  await page.getByRole('menuitem', { name: 'CSV' }).click();
+  expect(readFileSync(await (await database).path(), 'utf8')).toContain(
+    'Zákazník;Provozovna;Číslo TZ;',
+  );
+  await page.goBack();
 
   // Exports: results in Excel and CSV.
   const xlsx = page.waitForEvent('download');

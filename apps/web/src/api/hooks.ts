@@ -665,18 +665,31 @@ export const useProtocolHtml = (
   inspectionId: string,
   equipmentTypeId: string | null,
   enabled: boolean,
+  /** Columns of the appendix (equipment list for the customer); empty = no appendix. */
+  columns: readonly string[] = [],
 ) =>
   useQuery<string, ApiRequestError>({
-    queryKey: ['protocol', inspectionId, equipmentTypeId],
+    queryKey: ['protocol', inspectionId, equipmentTypeId, columns.join(',')],
     queryFn: async () =>
       (
         await fetchBlob(
-          `/inspections/${inspectionId}/protocol.html${queryString({ equipmentTypeId })}`,
+          `/inspections/${inspectionId}/protocol.html${queryString({
+            equipmentTypeId,
+            columns: columns.join(',') || undefined,
+          })}`,
         )
       ).text(),
     enabled,
     staleTime: 0,
     gcTime: 0,
+  });
+
+/** Columns that can be chosen for the protocol appendix. */
+export const useProtocolColumns = (inspectionId: string, enabled: boolean) =>
+  useQuery<{ key: string; label: string }[], ApiRequestError>({
+    queryKey: ['protocol-columns', inspectionId],
+    queryFn: () => api.get(`/inspections/${inspectionId}/protocol-columns`),
+    enabled,
   });
 
 export const useOrganization = () =>
