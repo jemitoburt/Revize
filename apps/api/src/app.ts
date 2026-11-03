@@ -17,6 +17,7 @@ import type { Db } from './db/client.js';
 import { errorResponse } from './error-response.js';
 import type { FileStorage } from './infra/file-storage.js';
 import type { ImageProcessor } from './infra/image-processor.js';
+import type { MetadataWriter } from './infra/metadata-writer.js';
 import type { PdfRenderer } from './infra/pdf-renderer.js';
 import { registerApiRoutes } from './routes.js';
 
@@ -26,10 +27,11 @@ export interface AppDeps {
   files: FileStorage;
   images: ImageProcessor;
   pdf: PdfRenderer | null;
+  metadata: MetadataWriter;
   logger?: FastifyServerOptions['logger'];
 }
 
-export async function buildApp({ config, db, files, images, pdf, logger }: AppDeps) {
+export async function buildApp({ config, db, files, images, pdf, metadata, logger }: AppDeps) {
   useCzechValidationMessages();
 
   const app = Fastify({
@@ -73,12 +75,16 @@ export async function buildApp({ config, db, files, images, pdf, logger }: AppDe
   await app.register(swaggerUi, { routePrefix: '/api/docs' });
   await app.register(authPlugin, { db, config });
 
-  await app.register((api) => registerApiRoutes(api, { db, config, files, images, pdf }), {
-    prefix: '/api',
-  });
+  await app.register(
+    (api) => registerApiRoutes(api, { db, config, files, images, pdf, metadata }),
+    {
+      prefix: '/api',
+    },
+  );
 
   app.addHook('onClose', async () => {
     await pdf?.close();
+    await metadata.close();
   });
   return app;
 }

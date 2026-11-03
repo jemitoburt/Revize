@@ -50,6 +50,21 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
   await page.keyboard.press('Escape');
 
+  // Exports: results in Excel and CSV.
+  const xlsx = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export' }).click();
+  await page.getByRole('menuitem', { name: 'Výsledky – Excel (XLSX)' }).click();
+  expect((await xlsx).suggestedFilename()).toMatch(/^kontrola-.+\.xlsx$/);
+  expect(
+    readFileSync(await (await xlsx).path())
+      .subarray(0, 2)
+      .toString(),
+  ).toBe('PK');
+  const csv = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export' }).click();
+  await page.getByRole('menuitem', { name: 'Výsledky – CSV' }).click();
+  expect(readFileSync(await (await csv).path(), 'utf8')).toContain('Kontrolní číslo;');
+
   // Closing sets the next inspection date of the checked items.
   await page.getByRole('button', { name: 'Uzavřít kontrolu' }).click();
   await expect(page.getByText('1 artiklů zůstalo nezkontrolovaných')).toBeVisible();

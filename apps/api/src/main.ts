@@ -4,6 +4,7 @@ import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
 import { ChromiumPdfRenderer } from './infra/chromium-pdf-renderer.js';
+import { ExifToolMetadataWriter } from './infra/exiftool-metadata-writer.js';
 import { LocalDiskStorage } from './infra/local-disk-storage.js';
 import { SharpImageProcessor } from './infra/sharp-image-processor.js';
 
@@ -17,6 +18,7 @@ const app = await buildApp({
   files: new LocalDiskStorage(config.FILES_DIR, storageMaxBytes),
   images: new SharpImageProcessor(),
   pdf: new ChromiumPdfRenderer(config.CHROMIUM_PATH || undefined),
+  metadata: new ExifToolMetadataWriter(),
 });
 
 try {

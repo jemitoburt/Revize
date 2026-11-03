@@ -7,6 +7,7 @@ import type { Config } from '../config.js';
 import type { Db } from '../db/client.js';
 import * as schema from '../db/schema.js';
 import type { ImageProcessor } from '../infra/image-processor.js';
+import { noMetadataWriter } from '../infra/metadata-writer.js';
 import { registerApiRoutes } from '../routes.js';
 import { PgliteFileStorage, passThroughImages } from './files.js';
 import { DemoRouter } from './router.js';
@@ -82,7 +83,15 @@ export async function createDemoApi(
   const root = router.instance();
   await root.register(authPlugin, { db, config: demoConfig });
   await root.register(
-    (api) => registerApiRoutes(api, { db, config: demoConfig, files, images, pdf: null }),
+    (api) =>
+      registerApiRoutes(api, {
+        db,
+        config: demoConfig,
+        files,
+        images,
+        pdf: null,
+        metadata: noMetadataWriter,
+      }),
     {
       prefix: '/api',
     },

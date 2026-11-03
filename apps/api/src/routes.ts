@@ -11,7 +11,10 @@ import { createEquipmentTypesService } from './modules/equipment-types/service.j
 import { healthRoutes } from './modules/health/routes.js';
 import type { FileStorage } from './infra/file-storage.js';
 import type { ImageProcessor } from './infra/image-processor.js';
+import type { MetadataWriter } from './infra/metadata-writer.js';
 import type { PdfRenderer } from './infra/pdf-renderer.js';
+import { exportsRoutes } from './modules/exports/routes.js';
+import { createExportsService } from './modules/exports/service.js';
 import { importsRoutes } from './modules/imports/routes.js';
 import { createImportsService } from './modules/imports/service.js';
 import { inspectionsRoutes } from './modules/inspections/routes.js';
@@ -36,6 +39,8 @@ export interface RouteDeps {
   images: ImageProcessor;
   /** Null where no PDF can be made (browser demo: the protocol is printed from its HTML). */
   pdf: PdfRenderer | null;
+  /** Metadata of exported photos (demo: none). */
+  metadata: MetadataWriter;
 }
 
 /**
@@ -44,7 +49,7 @@ export interface RouteDeps {
  */
 export async function registerApiRoutes(
   api: FastifyInstance,
-  { db, config, files, images, pdf }: RouteDeps,
+  { db, config, files, images, pdf, metadata }: RouteDeps,
 ) {
   await api.register(healthRoutes, { db });
   await api.register(authRoutes, { auth: createAuthService(db, config), config });
@@ -60,6 +65,9 @@ export async function registerApiRoutes(
   await api.register(organizationRoutes, { organization: createOrganizationService(db, files) });
   await api.register(protocolsRoutes, {
     protocols: createProtocolsService(db, files, inspections, pdf),
+  });
+  await api.register(exportsRoutes, {
+    exports: createExportsService(db, files, inspections, metadata),
   });
   await api.register(photosRoutes, { photos: createPhotosService(db, files, images) });
 }

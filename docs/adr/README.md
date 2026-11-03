@@ -21,3 +21,4 @@ Každé rozhodnutí, které se později těžko mění, má vlastní soubor `NNN
 | [0014](0014-import.md)                         | Import artiklů z XLSX/CSV                                       | přijato                         |
 | [0015](0015-demo-in-browser.md)                | Ukázková verze na GitHub Pages – API běží v prohlížeči          | přijato                         |
 | [0016](0016-protocol.md)                       | PDF protokol – šablona v kódu, nastavení v kanceláři            | přijato                         |
+| [0017](0017-exports.md)                        | Exporty kontroly – XLSX, CSV a ZIP fotek s metadaty             | přijato                         |

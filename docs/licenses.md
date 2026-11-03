@@ -20,7 +20,8 @@ Kontrolu dělá `pnpm run check:licenses` (skript `scripts/check-licenses.mjs`),
 | @node-rs/argon2                            | MIT                             | hash hesel                        | M2     |
 | React, TanStack, Mantine, Dexie            | MIT / Apache-2.0                | frontend                          | M3     |
 | dexie-react-hooks, fflate, fake-indexeddb  | Apache-2.0 / MIT                | offline fronta, ZIP, testy        | M6     |
-| exceljs, papaparse, archiver               | MIT                             | import XLSX/CSV, export, ZIP      | M4, M7 |
+| exceljs, papaparse                         | MIT                             | import XLSX/CSV, export XLSX      | M4, M7 |
+| exiftool-vendored                          | MIT (ExifTool viz výjimky)      | EXIF/IPTC exportovaných fotek     | M7     |
 | PGlite (@electric-sql/pglite)              | Apache-2.0 / PostgreSQL         | ukázková verze v prohlížeči       | M5     |
 | @noble/hashes, buffer                      | MIT                             | náhrady Node modulů v ukázce      | M5     |
 | Caddy                                      | Apache-2.0                      | reverse proxy, HTTPS              | M2     |

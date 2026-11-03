@@ -136,4 +136,8 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   ČSN EN 15635 (zelená/žlutá/červená, `SEVERITY_LABELS`).
 - Dokploy variant merged (PR vitekdynka-debug/Revize#1): `docker-compose.dokploy.yml`, DB password
   apart from the URL (`DATABASE_PASSWORD`), CPU/RAM/log limits and `STORAGE_MAX_GB` for files.
-- Next: M7 part 2 exports (XLSX/CSV results, photo ZIP with EXIF/IPTC), M8 history and filters.
+- M7 part 2 – done (ADR-0017): `GET /inspections/:id/export.xlsx|export.csv|photos.zip`; table
+  logic in `packages/shared/src/export.ts`; ZIP streamed with fflate (web `ReadableStream`, the
+  demo router collects it); `MetadataWriter` = ExifTool via exiftool-vendored (Perl in the API
+  image), demo `noMetadataWriter`. Users can be deleted (soft delete, `deleted_at`).
+- Next: M8 history and filters, export of the whole database.

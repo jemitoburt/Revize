@@ -32,6 +32,7 @@ import {
   useMe,
   useReopenInspection,
 } from '../api/hooks.js';
+import { ExportMenu } from '../components/ExportMenu.js';
 import { AnchorLink, ButtonLink } from '../components/links.js';
 import { ProtocolPreview } from '../components/ProtocolPreview.js';
 import { formatDate, formatDateTime } from '../lib/format.js';
@@ -203,6 +204,7 @@ export function InspectionDetailPage() {
           >
             Protokol
           </Button>
+          <ExportMenu inspection={data} />
           {open && can('inspection.perform') && (
             <ButtonLink
               variant="default"

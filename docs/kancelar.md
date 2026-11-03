@@ -10,8 +10,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - Šipky mění pořadí, **⋯ → Přesunout** přesune umístění i s podřízenými a artikly.
    - Archivovat jde jen umístění, ve kterém nejsou artikly.
 4. **Typy vybavení → Nový typ:**
-   - _Z knihovny podle norem:_ žebříky, pevné žebříky a regály paletové, policové, konzolové
-     a vjezdové, viz [typy-vybaveni.md](typy-vybaveni.md).
+   - _Z knihovny podle norem:_ žebříky, pevné žebříky, regály paletové, policové, konzolové
+     a vjezdové a typy z formuláře protokolu (sekční vrata, pojízdné lešení, OOPP, vozíky,
+     rollkontejnery, ostatní vybavení), viz [typy-vybaveni.md](typy-vybaveni.md).
    - _Prázdný typ:_ vlastní pole.
    - **Pole:** popisek (z něj vznikne klíč), druh, povinnost, jednotka, hodnoty číselníku
      a nabízené hodnoty. Uložené pole nejde smazat ani mu změnit druh, jde jen archivovat,
@@ -72,3 +73,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
      Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
    - **Znovu otevřít:** jen s uvedením důvodu, zapíše se do auditu.
+   - **Export:**
+     - _Výsledky – Excel_: list se souhrnem a list pro každý typ vybavení s jeho poli.
+     - _Výsledky – CSV_: jedna tabulka, otevře se rovnou v českém Excelu.
+     - _Fotky (ZIP s popisy)_: fotky závad pojmenované podle čísla artiklu (`10001_01.jpg`),
+       fotky kontroly (`kontrola_01.jpg`) a seznam `fotky.csv`. Popis (artikl, umístění,
+       závada, technik) je zapsaný přímo ve fotce (EXIF/IPTC), takže ho ukáže i prohlížeč fotek.
+       V ukázce na GitHub Pages fotky popis nemají.

@@ -13,8 +13,9 @@ RUN pnpm --filter @revize/api build \
  && pnpm --filter @revize/api deploy --legacy --prod /out
 
 FROM node:22-alpine
-# Chromium prints the PDF protocols; Noto fonts cover Czech diacritics.
-RUN apk add --no-cache chromium font-noto \
+# Chromium prints the PDF protocols; Noto fonts cover Czech diacritics; Perl runs ExifTool
+# (exiftool-vendored) for the metadata of exported photos.
+RUN apk add --no-cache chromium font-noto perl \
  && ln -s "$(command -v chromium-browser || command -v chromium)" /usr/local/bin/revize-chromium
 ENV NODE_ENV=production \
     CHROMIUM_PATH=/usr/local/bin/revize-chromium \

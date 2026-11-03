@@ -58,6 +58,12 @@ api "$BASE/api/inspections/$INSPECTION/protocol.pdf" -o "$WORK/protokol.pdf"
 head -c 5 "$WORK/protokol.pdf" | grep -q '%PDF-' || { echo "PDF protokol se nevytvořil."; exit 1; }
 echo "PDF protokol: $(wc -c < "$WORK/protokol.pdf") B"
 
+# Photo export: ZIP with the photo, its description written by ExifTool (Perl in the image).
+api "$BASE/api/inspections/$INSPECTION/photos.zip" -o "$WORK/fotky.zip"
+unzip -o -q "$WORK/fotky.zip" -d "$WORK/fotky"
+grep -q 'Kontrola' "$WORK/fotky/kontrola_01.jpg" || { echo "Fotka v ZIP nemá popis (ExifTool)."; exit 1; }
+echo "ZIP fotek: $(ls "$WORK/fotky" | tr '\n' ' ')"
+
 if diff "$WORK/before.txt" "$WORK/after.txt"; then
   echo "Test obnovy: data i fotky po obnově sedí."
 else

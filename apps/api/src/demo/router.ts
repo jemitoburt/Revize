@@ -186,7 +186,11 @@ export class DemoRouter {
       for (const hook of preHandlers) await hook(request, reply);
 
       const result = await route.handler(request, reply);
-      const payload = reply.sent ? reply.payload : result;
+      let payload = reply.sent ? reply.payload : result;
+      // Streamed downloads (ZIP) are collected: the demo answers with one body.
+      if (payload instanceof ReadableStream) {
+        payload = new Uint8Array(await new Response(payload).arrayBuffer());
+      }
       return serialize(route, reply, payload);
     } catch (error) {
       const { statusCode, body } = errorResponse(error as Error, (detail, message) =>

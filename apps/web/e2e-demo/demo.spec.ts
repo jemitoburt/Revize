@@ -79,4 +79,11 @@ test('demo field mode: a technician records results and photos in the browser', 
   await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Tisk / uložit jako PDF' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Stáhnout PDF' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  // Photos as a ZIP also in the browser (without EXIF/IPTC, no ExifTool there).
+  const zip = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export' }).click();
+  await page.getByRole('menuitem', { name: 'Fotky (ZIP s popisy)' }).click();
+  expect((await zip).suggestedFilename()).toMatch(/^fotky-.+\.zip$/);
 });
