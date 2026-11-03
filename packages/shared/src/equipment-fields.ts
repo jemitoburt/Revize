@@ -155,3 +155,29 @@ export function buildFieldValuesSchema(definitions: readonly FieldDefinition[]) 
     return output;
   });
 }
+
+function formatFieldValue(field: FieldDefinition, value: unknown): string {
+  if (typeof value === 'boolean') return value ? 'ano' : 'ne';
+  if (Array.isArray(value)) return value.join(', ');
+  if (field.kind === 'date' && typeof value === 'string') {
+    const [y, m, d] = value.slice(0, 10).split('-');
+    return `${Number(d)}. ${Number(m)}. ${y}`;
+  }
+  const text = typeof value === 'number' ? value.toLocaleString('cs-CZ') : String(value);
+  return field.unit ? `${text} ${field.unit}` : text;
+}
+
+/** Label/value pairs of an item's fields in definition order; empty values are left out. */
+export function displayFields(
+  definitions: readonly FieldDefinition[],
+  values: Record<string, unknown>,
+): { label: string; value: string }[] {
+  return [...definitions]
+    .filter((field) => !field.archived)
+    .sort((a, b) => a.order - b.order)
+    .flatMap((field) => {
+      const value = values[field.key];
+      if (value === undefined || value === null || value === '') return [];
+      return [{ label: field.label, value: formatFieldValue(field, value) }];
+    });
+}

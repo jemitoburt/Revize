@@ -172,3 +172,14 @@ export type Photo = z.infer<typeof photoSchema>;
 export const listPhotosQuerySchema = z
   .object({ itemId: idSchema.optional(), inspectionId: idSchema.optional() })
   .refine((q) => q.itemId || q.inspectionId, 'Zadejte artikl nebo kontrolu');
+
+/** Office closes the inspection: results become read-only, items get their next date. */
+export const closeInspectionSchema = z.object({
+  /** For all checked items; empty = inspection date + the equipment type's interval. */
+  nextInspectionDate: isoDate.nullable().default(null),
+  note: z.string().trim().max(2000).optional(),
+});
+
+export const reopenInspectionSchema = z.object({
+  reason: z.string().trim().min(3, 'Uveďte důvod znovuotevření').max(500),
+});

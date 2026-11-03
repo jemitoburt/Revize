@@ -53,6 +53,11 @@ scripts/restore.sh "$BACKUP" --yes
 
 TOKEN="$(token)"
 snapshot "$WORK/after.txt"
+# The PDF protocol of the restored inspection (Chromium and fonts in the API image).
+api "$BASE/api/inspections/$INSPECTION/protocol.pdf" -o "$WORK/protokol.pdf"
+head -c 5 "$WORK/protokol.pdf" | grep -q '%PDF-' || { echo "PDF protokol se nevytvořil."; exit 1; }
+echo "PDF protokol: $(wc -c < "$WORK/protokol.pdf") B"
+
 if diff "$WORK/before.txt" "$WORK/after.txt"; then
   echo "Test obnovy: data i fotky po obnově sedí."
 else

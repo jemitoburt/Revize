@@ -33,6 +33,7 @@ const demoConfig: Config = {
   FILES_DIR: '',
   MIGRATIONS_DIR: '',
   MIGRATE_ON_START: true,
+  CHROMIUM_PATH: undefined,
   ORG_NAME: 'Ukázková revizní firma',
   ADMIN_EMAIL: DEMO_ADMIN.email,
   ADMIN_PASSWORD: DEMO_ADMIN.password,
@@ -79,8 +80,11 @@ export async function createDemoApi(
   const router = new DemoRouter();
   const root = router.instance();
   await root.register(authPlugin, { db, config: demoConfig });
-  await root.register((api) => registerApiRoutes(api, { db, config: demoConfig, files, images }), {
-    prefix: '/api',
-  });
+  await root.register(
+    (api) => registerApiRoutes(api, { db, config: demoConfig, files, images, pdf: null }),
+    {
+      prefix: '/api',
+    },
+  );
   return { handle: (request) => router.handle(request) };
 }

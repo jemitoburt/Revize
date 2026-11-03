@@ -24,6 +24,8 @@ const envSchema = z.object({
         .filter(Boolean),
     ),
   FILES_DIR: z.string().default('./data/files'),
+  /** Chromium for PDF protocols; empty = the browser installed for Playwright (development). */
+  CHROMIUM_PATH: z.string().optional(),
   MIGRATIONS_DIR: z.string().default(fileURLToPath(new URL('../drizzle', import.meta.url))),
   /** Run pending migrations when the server starts. */
   MIGRATE_ON_START: bool.default(true),

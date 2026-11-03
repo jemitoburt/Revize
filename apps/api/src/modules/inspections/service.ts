@@ -1,5 +1,7 @@
 import {
+  nextInspectionDateOf,
   shouldApplyResult,
+  type closeInspectionSchema,
   type Inspection,
   type InspectionItem,
   type InspectionProgress,
@@ -516,6 +518,90 @@ export function createInspectionsService(db: Db) {
         }
         return resultDto(tx, saved!);
       });
+    },
+
+    /**
+     * Closes the inspection (office): results become read-only and every checked item gets its
+     * next inspection date – the one given for the inspection, or date + the type's interval.
+     */
+    async close(
+      auth: AuthContext,
+      id: string,
+      input: z.output<typeof closeInspectionSchema>,
+    ): Promise<Inspection> {
+      await db.transaction(async (tx) => {
+        const row = await lockInspection(tx, auth, id);
+        if (row.status === 'closed')
+          throw conflict('inspection_closed', 'Kontrola už je uzavřená.');
+        const checked = await tx
+          .select({ item, interval: equipmentType.defaultIntervalMonths })
+          .from(inspectionResult)
+          .innerJoin(item, eq(item.id, inspectionResult.itemId))
+          .innerJoin(equipmentType, eq(equipmentType.id, item.equipmentTypeId))
+          .where(eq(inspectionResult.inspectionId, id));
+        const dates: string[] = [];
+        for (const { item: target, interval } of checked) {
+          const next = nextInspectionDateOf(row.inspectionDate, interval, input.nextInspectionDate);
+          dates.push(next);
+          if (target.nextInspectionDate === next) continue;
+          await tx
+            .update(item)
+            .set({ nextInspectionDate: next, version: target.version + 1, updatedAt: new Date() })
+            .where(eq(item.id, target.id));
+          await audit(
+            tx,
+            auth,
+            'item.next_inspection',
+            'item',
+            target.id,
+            { nextInspectionDate: target.nextInspectionDate },
+            { nextInspectionDate: next },
+            'Uzavření kontroly',
+          );
+        }
+        const nextForInspection =
+          input.nextInspectionDate ?? (dates.length ? dates.sort()[0]! : null);
+        const [closed] = await tx
+          .update(inspection)
+          .set({
+            status: 'closed',
+            closedAt: new Date(),
+            closedBy: auth.userId,
+            nextInspectionDate: nextForInspection,
+            note: input.note === undefined ? row.note : input.note || null,
+            version: row.version + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(inspection.id, id))
+          .returning();
+        await audit(tx, auth, 'inspection.close', 'inspection', id, row, {
+          ...closed,
+          checkedItems: checked.length,
+        });
+      });
+      return get(db, auth, id);
+    },
+
+    /** Opens a closed inspection again (audited with the reason, ADR-0011). */
+    async reopen(auth: AuthContext, id: string, reason: string): Promise<Inspection> {
+      await db.transaction(async (tx) => {
+        const row = await lockInspection(tx, auth, id);
+        if (row.status === 'open') throw conflict('inspection_open', 'Kontrola je otevřená.');
+        const [opened] = await tx
+          .update(inspection)
+          .set({
+            status: 'open',
+            closedAt: null,
+            closedBy: null,
+            reopenedCount: row.reopenedCount + 1,
+            version: row.version + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(inspection.id, id))
+          .returning();
+        await audit(tx, auth, 'inspection.reopen', 'inspection', id, row, opened, reason);
+      });
+      return get(db, auth, id);
     },
 
     /** Back to "not checked". Defect photos have to be deleted first. */

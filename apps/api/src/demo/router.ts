@@ -213,6 +213,9 @@ function serialize(route: Route, reply: DemoReply, payload: unknown): DemoRespon
     response = { status, headers: { ...reply.headers }, body: null };
   } else if (payload instanceof Uint8Array) {
     response = { status, headers: { ...reply.headers }, body: payload };
+  } else if (typeof payload === 'string' && reply.headers['content-type'] && !schema) {
+    // Text the route sent with its own content type (e.g. the protocol HTML).
+    response = { status, headers: { ...reply.headers }, body: payload };
   } else {
     const body = schema
       ? (

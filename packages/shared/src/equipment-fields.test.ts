@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildFieldValuesSchema,
+  displayFields,
   fieldDefinitionsSchema,
   type FieldDefinition,
 } from './equipment-fields.js';
@@ -67,5 +68,25 @@ describe('buildFieldValuesSchema', () => {
       manufacturer: 'Alve',
       old_code: 'X-1',
     });
+  });
+});
+
+describe('displayFields', () => {
+  it('formats values in Czech in definition order and skips empty ones', () => {
+    const definitions = fieldDefinitionsSchema.parse([
+      { key: 'b', label: 'Výška', kind: 'number', unit: 'mm', order: 2 },
+      { key: 'a', label: 'Výrobce', kind: 'text', order: 1 },
+      { key: 'c', label: 'Kotveno', kind: 'boolean', order: 3 },
+      { key: 'd', label: 'Revize', kind: 'date', order: 4 },
+      { key: 'e', label: 'Poznámka', kind: 'text', order: 5 },
+    ]);
+    expect(
+      displayFields(definitions, { a: 'Mecalux', b: 4500, c: true, d: '2026-03-05', e: '' }),
+    ).toEqual([
+      { label: 'Výrobce', value: 'Mecalux' },
+      { label: 'Výška', value: '4\u00a0500 mm' },
+      { label: 'Kotveno', value: 'ano' },
+      { label: 'Revize', value: '5. 3. 2026' },
+    ]);
   });
 });

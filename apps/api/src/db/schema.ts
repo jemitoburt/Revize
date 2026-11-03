@@ -34,6 +34,11 @@ const tenant = () =>
 export const organization = pgTable('organization', {
   id: uuid('id').primaryKey(),
   name: text('name').notNull(),
+  /** Company details and protocol texts (`organizationSettingsSchema`). */
+  settings: jsonb('settings').$type<Record<string, unknown>>().notNull().default({}),
+  /** Logo printed on protocols (FileStorage key). */
+  logoKey: text('logo_key'),
+  logoMimeType: text('logo_mime_type'),
   ...timestamps,
 });
 

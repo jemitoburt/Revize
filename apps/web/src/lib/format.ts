@@ -1,4 +1,4 @@
-import { LOCATION_SEPARATOR, type FieldDefinition } from '@revize/shared';
+import { LOCATION_SEPARATOR } from '@revize/shared';
 
 export function formatDate(iso: string | null | undefined): string {
   if (!iso) return '–';
@@ -27,25 +27,4 @@ export function slugKey(label: string): string {
   return /^[a-z]/.test(slug) ? slug : `pole_${slug}`.slice(0, 40);
 }
 
-function formatFieldValue(field: FieldDefinition, value: unknown): string {
-  if (typeof value === 'boolean') return value ? 'ano' : 'ne';
-  if (Array.isArray(value)) return value.join(', ');
-  if (field.kind === 'date' && typeof value === 'string') return formatDate(value);
-  const text = typeof value === 'number' ? value.toLocaleString('cs-CZ') : String(value);
-  return field.unit ? `${text} ${field.unit}` : text;
-}
-
-/** Label/value pairs of an item's fields in definition order; empty values are left out. */
-export function displayFields(
-  definitions: readonly FieldDefinition[],
-  values: Record<string, unknown>,
-): { label: string; value: string }[] {
-  return definitions
-    .filter((field) => !field.archived)
-    .sort((a, b) => a.order - b.order)
-    .flatMap((field) => {
-      const value = values[field.key];
-      if (value === undefined || value === null || value === '') return [];
-      return [{ label: field.label, value: formatFieldValue(field, value) }];
-    });
-}
+export { displayFields } from '@revize/shared';

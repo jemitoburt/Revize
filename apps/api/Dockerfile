@@ -13,7 +13,11 @@ RUN pnpm --filter @revize/api build \
  && pnpm --filter @revize/api deploy --legacy --prod /out
 
 FROM node:22-alpine
+# Chromium prints the PDF protocols; Noto fonts cover Czech diacritics.
+RUN apk add --no-cache chromium font-noto \
+ && ln -s "$(command -v chromium-browser || command -v chromium)" /usr/local/bin/revize-chromium
 ENV NODE_ENV=production \
+    CHROMIUM_PATH=/usr/local/bin/revize-chromium \
     MIGRATIONS_DIR=/app/drizzle \
     FILES_DIR=/data/files \
     PORT=3000

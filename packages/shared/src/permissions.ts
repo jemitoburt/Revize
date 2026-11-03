@@ -17,6 +17,7 @@ export const PERMISSIONS = [
   'inspection.close',
   'inspection.reopen',
   'export.read',
+  'settings.manage',
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

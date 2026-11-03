@@ -3,6 +3,7 @@ import { bootstrap } from './bootstrap.js';
 import { loadConfig } from './config.js';
 import { createDatabase } from './db/client.js';
 import { runMigrations } from './db/migrate.js';
+import { ChromiumPdfRenderer } from './infra/chromium-pdf-renderer.js';
 import { LocalDiskStorage } from './infra/local-disk-storage.js';
 import { SharpImageProcessor } from './infra/sharp-image-processor.js';
 
@@ -13,6 +14,7 @@ const app = await buildApp({
   db: database.db,
   files: new LocalDiskStorage(config.FILES_DIR),
   images: new SharpImageProcessor(),
+  pdf: new ChromiumPdfRenderer(config.CHROMIUM_PATH || undefined),
 });
 
 try {

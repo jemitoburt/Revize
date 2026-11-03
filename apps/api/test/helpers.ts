@@ -8,6 +8,7 @@ import { buildApp, type App } from '../src/app.js';
 import { bootstrap } from '../src/bootstrap.js';
 import { loadConfig, type Config } from '../src/config.js';
 import { createDatabase, type Database } from '../src/db/client.js';
+import { ChromiumPdfRenderer } from '../src/infra/chromium-pdf-renderer.js';
 import { LocalDiskStorage } from '../src/infra/local-disk-storage.js';
 import { SharpImageProcessor } from '../src/infra/sharp-image-processor.js';
 
@@ -40,6 +41,7 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     db: database.db,
     files: new LocalDiskStorage(filesDir),
     images: new SharpImageProcessor(),
+    pdf: new ChromiumPdfRenderer(),
     logger: false,
   });
 

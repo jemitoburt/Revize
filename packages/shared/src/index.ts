@@ -9,4 +9,5 @@ export * from './locale.js';
 export * from './location-path.js';
 export * from './outbox.js';
 export * from './permissions.js';
+export * from './protocol.js';
 export * from './scan-payload.js';
