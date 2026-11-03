@@ -10,8 +10,8 @@ import { formatDate } from './dates.js';
 import {
   linesOf,
   PAGE,
+  photoBox,
   planProtocolLayout,
-  PHOTO_ASPECT,
   type ProtocolLayout,
 } from './protocol-layout.js';
 import { SEVERITY_LABELS } from './inspection.js';
@@ -114,6 +114,8 @@ export interface ProtocolData {
   appendix?: { columns: string[]; rows: { cells: string[]; unsafe: boolean }[] } | null;
   /** Příloha 1 even when the table would fit on the first page. */
   forceAppendix?: boolean;
+  /** Risk levels whose defects get a card with photos (default all); the table lists all. */
+  defectSeverities?: readonly ('red' | 'amber' | 'green')[];
   generatedAt: string;
 }
 
@@ -246,6 +248,65 @@ export function protocolDefects(data: ProtocolData): {
   };
 }
 
+/** Defects of one workplace (the top level of the location, e.g. "Hala A"). */
+export interface DefectPlace {
+  place: string;
+  defects: ProtocolDefect[];
+}
+
+/** Defects by risk level (red, yellow, green) and, within it, by workplace. */
+export interface DefectGroup {
+  severity: 'red' | 'amber' | 'green';
+  count: number;
+  places: DefectPlace[];
+}
+
+const PLACE_SEPARATOR = ' › ';
+
+/**
+ * Workplace of a defect – the top level of its location (e.g. the hall) – and what remains for
+ * the card ("Řada 1 › Pozice 4").
+ */
+export function placeOf(location: string): { place: string; rest: string } {
+  const parts = location ? location.split(PLACE_SEPARATOR) : [];
+  return { place: parts[0] ?? '', rest: parts.slice(1).join(PLACE_SEPARATOR) };
+}
+
+/**
+ * Defects grouped primarily by severity and then by workplace, in the order of the protocol
+ * (the items are already sorted by location).
+ */
+export function protocolDefectGroups(data: ProtocolData): DefectGroup[] {
+  const { serious, other } = protocolDefects(data);
+  const all = [...serious, ...other];
+  const shown = data.defectSeverities ?? ['red', 'amber', 'green'];
+  return (['red', 'amber', 'green'] as const).flatMap((severity) => {
+    if (!shown.includes(severity)) return [];
+    const defects = all.filter((d) => d.outcome === severity);
+    if (!defects.length) return [];
+    const places: DefectPlace[] = [];
+    for (const d of defects) {
+      const { place } = placeOf(d.location);
+      const existing = places.find((p) => p.place === place);
+      if (existing) existing.defects.push(d);
+      else places.push({ place, defects: [d] });
+    }
+    return [{ severity, count: defects.length, places }];
+  });
+}
+
+/** Title of a compact defect card: number, designation and the rest of the location. */
+export function defectCardTitle(d: ProtocolDefect): string {
+  return [d.itemNumber, d.designation, placeOf(d.location).rest].filter(Boolean).join(' · ');
+}
+
+/** Heading of a severity group: the level, how many and what it means (once, not per card). */
+export const SEVERITY_GROUP_TITLE: Record<'red' | 'amber' | 'green', string> = {
+  red: 'Červené riziko',
+  amber: 'Žluté riziko',
+  green: 'Zelené riziko',
+};
+
 /** The note column: the defect and its risk level, or "Nezkontrolováno". Plain text lines. */
 export function protocolNoteLines(i: ProtocolItem): string[] {
   if (i.outcome === 'unchecked') return ['Nezkontrolováno'];
@@ -255,12 +316,13 @@ export function protocolNoteLines(i: ProtocolItem): string[] {
 
 /** The layout decisions for this protocol (table on page 1 or Příloha 1, photo size, columns). */
 export function protocolLayout(data: ProtocolData): ProtocolLayout & { useAppendix: boolean } {
-  const { serious, other } = protocolDefects(data);
+  const groups = protocolDefectGroups(data).map((g) =>
+    g.places.map((p) => p.defects.map((d) => ({ title: defectCardTitle(d), item: d }))),
+  );
   const layout = planProtocolLayout(
     data,
     protocolNoteLines,
-    [serious, other],
-    (d) => ('typeName' in d ? String(d.typeName) : ''),
+    groups,
     warningHeight(data),
     data.forceAppendix,
   );
@@ -269,6 +331,9 @@ export function protocolLayout(data: ProtocolData): ProtocolLayout & { useAppend
   );
   return { ...layout, useAppendix };
 }
+
+/** The types' texts are printed at 8 pt (the estimate above is for 9 pt). */
+const TEXT_SCALE = 0.85;
 
 /** Estimated height of the warning, signatures, statements and the types' texts (mm). */
 function warningHeight(data: ProtocolData): number {
@@ -293,7 +358,7 @@ function warningHeight(data: ProtocolData): number {
     0,
   );
   const statements = PROTOCOL_STATEMENTS.reduce((h, t) => h + linesOf(t, PAGE.width - 6) * 3.75, 0);
-  return 26 + 44 + statements + 6 + (textBlocks.length ? 14 : 0) + texts;
+  return 20 + 30 + statements + 4 + (textBlocks.length ? 11 : 0) + texts * TEXT_SCALE;
 }
 
 /** Texts of the types in the protocol, each once (all racks share one text). */
@@ -368,50 +433,59 @@ const PDF_MARGIN_CSS = `${PROTOCOL_PDF_MARGINS.top} ${PROTOCOL_PDF_MARGINS.right
 const STYLE = `
 * { box-sizing: border-box; }
 body { font-family: ${FONT}; font-size: 9pt; color: #000; margin: 0; }
-h1 { font-size: 15pt; text-align: center; color: #e00000; margin: 4mm 0 5mm; }
-h2 { font-size: 15pt; text-align: center; color: #e00000; margin: 6mm 0 3mm; }
-h3 { font-size: 9pt; margin: 2.5mm 0 1mm; }
+h1 { font-size: 14pt; text-align: center; color: #e00000; margin: 2mm 0 3mm; }
+h2 { font-size: 13pt; text-align: center; color: #e00000; margin: 4mm 0 2mm; }
+h3 { font-size: 9pt; margin: 1.5mm 0 0.5mm; }
 p { margin: 0 0 1.5mm; }
 ul { margin: 0 0 1mm; padding-left: 5mm; }
 ul ul { padding-left: 7mm; }
 li { margin: 0; text-align: justify; }
 table { width: 100%; border-collapse: collapse; }
-td, th { border: 0.75pt solid #000; padding: 1.2mm 1.5mm; vertical-align: middle; text-align: left; }
+td, th { border: 0.75pt solid #000; padding: 0.8mm 1.2mm; vertical-align: middle; text-align: left; }
 .grey { background: #f2f2f2; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.info td { height: 10mm; }
+.info td { height: 8mm; }
 .info td.grey { width: 47mm; }
-.items { table-layout: fixed; margin-top: 4mm; }
+.items { table-layout: fixed; margin-top: 3mm; }
 .items th { font-weight: 700; }
 .items tr { page-break-inside: avoid; }
 .items .c-num { width: 19mm; } .items .c-yn { width: 11mm; text-align: center; font-weight: 700; }
 .items .c-note { width: 70mm; }
-.items td { height: 9mm; overflow-wrap: anywhere; }
+.items td { height: 7mm; overflow-wrap: anywhere; }
 .items .struck { text-decoration: line-through; text-decoration-thickness: 1.2pt; }
 .where { font-size: 8pt; }
 .small { font-size: 8pt; margin: 1mm 0 0; }
 .draft { border: 1.5pt solid #000; padding: 2mm 3mm; margin: 3mm 0; font-weight: 700; text-align: center; }
 .warning.new-page { page-break-before: always; }
-.warning h2 { margin-top: 2mm; text-transform: uppercase; font-size: 13pt; }
-.signatures { margin: 4mm 0 2mm; page-break-inside: avoid; }
-.signatures td { height: 20mm; vertical-align: middle; }
+.warning h2 { margin-top: 2mm; text-transform: uppercase; font-size: 12pt; }
+.signatures { margin: 2mm 0 1mm; page-break-inside: avoid; }
+.signatures td { height: 13mm; vertical-align: middle; }
 .signatures td.grey { width: 47mm; }
-.statements { margin: 1mm 0 4mm; }
-.photo-pages { margin-top: 6mm; }
+.statements { margin: 1mm 0 2mm; }
+.texts { font-size: 8pt; }
+.texts h3 { font-size: 8pt; }
+.photo-pages { margin-top: 3mm; }
 .appendix { page: appendix; page-break-before: always; }
 .appendix h2 { font-size: 13pt; }
 .list { font-size: 8pt; table-layout: auto; }
 .list td:last-child { min-width: 70mm; }
 .list tr.unsafe td { font-weight: 700; color: #e00000; }
-.list th, .list td { padding: 0.8mm 1.2mm; }
+.list th, .list td { padding: 0.4mm 1mm; line-height: 1.15; }
 .list tr { page-break-inside: avoid; }
 .photo-pages h2 { text-transform: none; }
-.defect { page-break-inside: avoid; border: 0.75pt solid #000; padding: 2mm; margin-bottom: 3mm; }
-.photos { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
+.sev { font-size: 11pt; text-align: left; margin: 3mm 0 1mm; text-transform: none; }
+.sev span { font-size: 8pt; font-weight: 400; color: #000; margin-left: 2mm; }
+.place { font-size: 8.5pt; margin: 1.5mm 0 1mm; }
+.sev { break-after: avoid; page-break-after: avoid; }
+.flow { column-gap: 2mm; }
+.flow.c1 { column-count: 1; } .flow.c2 { column-count: 2; } .flow.c3 { column-count: 3; }
+.flow .keep, .flow > .defect { break-inside: avoid; page-break-inside: avoid; }
+.place { break-after: avoid; page-break-after: avoid; }
+.defect { border: 0.5pt solid #000; padding: 1mm 1.2mm; font-size: 8pt; line-height: 1.2; margin-bottom: 2mm; break-inside: avoid; page-break-inside: avoid; }
+.defect .t { font-weight: 700; }
+.photos { display: flex; flex-wrap: wrap; gap: 1mm; margin-top: 1mm; }
 .photos img { object-fit: cover; border: 0.5pt solid #000; }
 .keep { break-inside: avoid; page-break-inside: avoid; }
-.cards.two { display: flex; flex-wrap: wrap; gap: 0 3mm; }
-.cards.two .defect { width: calc(50% - 1.5mm); }
-.reference { margin: 6mm 0; font-weight: 700; }
+.reference { margin: 4mm 0; font-weight: 700; }
 .frame-head { margin-bottom: 2mm; }
 .frame-foot { margin-top: 6mm; }
 ${HEADER_STYLE}
@@ -434,9 +508,11 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
   const { serious, other } = protocolDefects(data);
   const defects = [...serious, ...other];
   const layout = protocolLayout(data);
-  const photoStyle = `height:${layout.photoHeight}mm;width:${Math.round(layout.photoHeight * PHOTO_ASPECT)}mm`;
-  const photoTags = (photos: string[]) =>
-    photos.map((p) => `<img src="${p}" alt="" style="${photoStyle}">`).join('');
+  const photoTags = (photos: string[], columns: 1 | 2 | 3 = 1) => {
+    const { width } = photoBox(columns, layout.photoHeight, photos.length);
+    const style = `height:${layout.photoHeight}mm;width:${width}mm`;
+    return photos.map((p) => `<img src="${p}" alt="" style="${style}">`).join('');
+  };
 
   const row = (i: ProtocolItem) => {
     // "nehodící se škrtněte": the answer that does not apply is struck through.
@@ -468,31 +544,28 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
   // The same text for several types (e.g. all racks) is printed once.
   const texts = protocolTexts(data);
 
-  const defectCard = (d: (typeof defects)[number]) => `
-<div class="defect">
-  <strong>Kontrolní číslo ${escape(d.itemNumber)}${
-    d.designation ? `, označení ${escape(d.designation)}` : ''
-  }</strong> – ${escape(d.typeName)}${d.location ? `, ${escape(d.location)}` : ''}
-  <div>${escape(d.defectDescription ?? '')}</div>
-  <div class="small">${escape(SEVERITY_LABELS[d.outcome].protocol)}</div>
-  ${d.photos.length ? `<div class="photos">${photoTags(d.photos)}</div>` : ''}
-</div>`;
-
-  const cards = layout.defectColumns === 2 ? 'cards two' : 'cards';
-  // The heading stays with the first card (or the first row of two cards): never alone at the
-  // bottom of a page.
-  const defectSection = (title: string, list: typeof defects) => {
-    if (!list.length) return '';
-    const first = layout.defectColumns;
-    return `<div class="keep"><h2>${title}</h2><div class="${cards}">${list
-      .slice(0, first)
-      .map(defectCard)
-      .join('')}</div></div>${
-      list.length > first
-        ? `<div class="${cards}">${list.slice(first).map(defectCard).join('')}</div>`
-        : ''
-    }`;
-  };
+  // Defects: by severity, then by workplace; compact cards in 1–3 columns (rows never split).
+  const columns = layout.defectColumns;
+  const defectCard = (d: ProtocolDefect) =>
+    `<div class="defect"><div class="t">${escape(defectCardTitle(d))}</div>${
+      d.defectDescription ? `<div>${escape(d.defectDescription)}</div>` : ''
+    }${d.photos.length ? `<div class="photos">${photoTags(d.photos, columns)}</div>` : ''}</div>`;
+  // Cards flow in newspaper columns (no half-empty rows); a workplace heading stays with its
+  // first card, a severity heading spans the columns.
+  const defectGroups = protocolDefectGroups(data)
+    .map((group) => {
+      const places = group.places
+        .map((place) => {
+          const [first, ...rest] = place.defects;
+          const heading = place.place ? `<h3 class="place">${escape(place.place)}</h3>` : '';
+          return `<div class="keep">${heading}${defectCard(first!)}</div>${rest.map(defectCard).join('')}`;
+        })
+        .join('');
+      return `<h2 class="sev">${SEVERITY_GROUP_TITLE[group.severity]} (${group.count})<span>${escape(
+        SEVERITY_LABELS[group.severity].protocol.replace(/^[^–]*–\s*/, ''),
+      )}</span></h2><div class="flow c${columns}">${places}</div>`;
+    })
+    .join('');
   const appendixHtml = data.appendix
     ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><thead><tr>${data.appendix.columns
         .map((h) => `<th class="grey">${escape(h)}</th>`)
@@ -506,11 +579,10 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
   const photoPages =
     defects.length || data.overviewPhotos.length
       ? `<div class="photo-pages">
-${defectSection(`Závažné závady (${serious.length})`, serious)}
-${defectSection(`Závady (${other.length})`, other)}
+${defectGroups}
 ${
   data.overviewPhotos.length
-    ? `<h2>Fotodokumentace</h2><div class="photos">${photoTags(data.overviewPhotos)}</div>`
+    ? `<div class="keep"><h2 class="sev">Fotodokumentace</h2><div class="photos">${photoTags(data.overviewPhotos)}</div></div>`
     : ''
 }
 </div>`
@@ -574,7 +646,7 @@ ${
 </table>
 <ul class="statements">${PROTOCOL_STATEMENTS.map((t) => `<li>${escape(t)}</li>`).join('')}</ul>
 ${c.footer ? protocolTextHtml(c.footer) : ''}
-${texts.length ? `<h2>Pokyny k provádění kontrol</h2>${texts.map(protocolTextHtml).join('')}` : ''}
+${texts.length ? `<h2>Pokyny k provádění kontrol</h2><div class="texts">${texts.map(protocolTextHtml).join('')}</div>` : ''}
 </div>
 ${photoPages}
 ${layout.useAppendix ? appendixHtml : ''}

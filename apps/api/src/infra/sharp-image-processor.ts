@@ -19,4 +19,18 @@ export class SharpImageProcessor implements ImageProcessor {
       return null;
     }
   }
+
+  async fit(data: Uint8Array, width: number, height: number): Promise<Uint8Array | null> {
+    try {
+      const out = await sharp(data, { failOn: 'error' })
+        .rotate()
+        .resize(width, height, { fit: 'cover', withoutEnlargement: false })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .withMetadata({ density: 300 })
+        .toBuffer();
+      return new Uint8Array(out);
+    } catch {
+      return null;
+    }
+  }
 }

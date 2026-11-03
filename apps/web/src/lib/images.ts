@@ -33,3 +33,41 @@ export async function resizeToJpeg(
     bitmap.close();
   }
 }
+
+/** The image cropped to fill exactly `width` × `height` pixels (centre crop), as JPEG. */
+export async function coverJpeg(
+  source: Blob,
+  width: number,
+  height: number,
+  quality: number,
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(source);
+  try {
+    const scale = Math.max(width / bitmap.width, height / bitmap.height);
+    const sw = width / scale;
+    const sh = height / scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas 2D není k dispozici');
+    context.drawImage(
+      bitmap,
+      (bitmap.width - sw) / 2,
+      (bitmap.height - sh) / 2,
+      sw,
+      sh,
+      0,
+      0,
+      width,
+      height,
+    );
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', quality),
+    );
+    if (!blob) throw new Error('Fotku se nepodařilo zakódovat');
+    return blob;
+  } finally {
+    bitmap.close();
+  }
+}

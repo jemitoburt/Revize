@@ -89,8 +89,17 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
        a vytiskne ji na konci na A4 na šířku se zvolenými sloupci (číslo TZ, označení, typ,
        umístění, schopno bezpečného provozu, poznámka…). Nezpůsobilé vybavení je tučně
        a červeně. Přepínač _Tabulku vybavení vždy jako Přílohu 1_ ji tam dá vždy.
-     - Fotky závad mají výšku 6 cm a zmenší se (nejvýš na 3,5 cm), jen když se tím ušetří
-       strana. Má-li každá závada jednu fotku, mohou být závady ve dvou sloupcích.
+     - Závady jsou seskupené podle závažnosti (červené, žluté, zelené – co znamenají, je napsáno
+       jednou u skupiny) a pak podle pracoviště (hala). Karty jsou kompaktní: číslo TZ,
+       označení, řada a pozice, popis a fotky, v jednom až třech sloupcích.
+     - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
+       U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají
+       v rozlišení 300 dpi přesně podle tištěné velikosti, mírně oříznuté (až na čtverec), aby
+       se dvě vešly vedle sebe.
+     - Karty závad tečou v novinových sloupcích (1–3), takže malé skupiny nenechávají prázdná
+       místa.
+     - Volba **Všechny závady / Červené a žluté / Jen červené** určuje, které závady dostanou
+       v protokolu kartu s fotkami. Tabulka vybavení dál uvádí výsledky všech artiklů.
      - Varování a podpisy se vejdou-li, pokračují na první straně a závady na straně s texty.
      - **Stáhnout → Jen příloha 1** vytiskne tabulku samostatně (PDF nebo Word).
      - Výběr sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,

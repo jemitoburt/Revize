@@ -64,7 +64,7 @@ export async function registerApiRoutes(
   await api.register(inspectionsRoutes, { inspections });
   await api.register(organizationRoutes, { organization: createOrganizationService(db, files) });
   await api.register(protocolsRoutes, {
-    protocols: createProtocolsService(db, files, inspections, pdf),
+    protocols: createProtocolsService(db, files, inspections, pdf, images),
   });
   await api.register(exportsRoutes, {
     exports: createExportsService(db, files, inspections, metadata),

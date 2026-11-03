@@ -34,6 +34,7 @@ export interface ProcessedImage {
 
 export interface ImageProcessor {
   process(data: Uint8Array, thumbnailSize: number): Promise<ProcessedImage | null>;
+  fit(data: Uint8Array, width: number, height: number): Promise<Uint8Array | null>;
 }
 
 export interface DemoApi {

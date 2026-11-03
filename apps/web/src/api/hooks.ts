@@ -669,9 +669,18 @@ export const useProtocolHtml = (
   columns: readonly string[] = [],
   /** The equipment table as Příloha 1 even when it fits on the first page. */
   forceAppendix = false,
+  /** Defects with cards and photos. */
+  defects: 'all' | 'red-amber' | 'red' = 'all',
 ) =>
   useQuery<string, ApiRequestError>({
-    queryKey: ['protocol', inspectionId, equipmentTypeId, columns.join(','), forceAppendix],
+    queryKey: [
+      'protocol',
+      inspectionId,
+      equipmentTypeId,
+      columns.join(','),
+      forceAppendix,
+      defects,
+    ],
     queryFn: async () =>
       (
         await fetchBlob(
@@ -679,6 +688,7 @@ export const useProtocolHtml = (
             equipmentTypeId,
             columns: columns.join(',') || undefined,
             appendix: forceAppendix ? 'always' : undefined,
+            defects: defects === 'all' ? undefined : defects,
           })}`,
         )
       ).text(),

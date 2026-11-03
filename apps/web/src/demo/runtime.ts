@@ -7,7 +7,7 @@ import {
   type ImageProcessor,
   type Migration,
 } from '@revize/api/demo';
-import { resizeToJpeg } from '../lib/images.js';
+import { coverJpeg, resizeToJpeg } from '../lib/images.js';
 
 /** The demo's PostgreSQL database lives in this browser's IndexedDB under this name. */
 const DATABASE_NAME = 'revize-demo';
@@ -36,6 +36,14 @@ const canvasImages: ImageProcessor = {
         0.75,
       );
       return { width, height, thumbnail: new Uint8Array(await blob.arrayBuffer()) };
+    } catch {
+      return null;
+    }
+  },
+  async fit(data, width, height) {
+    try {
+      const blob = await coverJpeg(new Blob([new Uint8Array(data)]), width, height, 0.82);
+      return new Uint8Array(await blob.arrayBuffer());
     } catch {
       return null;
     }

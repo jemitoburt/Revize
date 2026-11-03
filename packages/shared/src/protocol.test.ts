@@ -3,6 +3,7 @@ import { EQUIPMENT_TYPE_PRESETS } from './equipment-presets.js';
 import {
   addMonths,
   nextInspectionDateOf,
+  placeOf,
   protocolPageHeader,
   protocolTextHtml,
   renderProtocolHtml,
@@ -105,14 +106,21 @@ describe('renderProtocolHtml', () => {
       '<td class="c-yn">ANO</td><td class="c-yn">NE</td><td>Nezkontrolováno</td>',
     );
     expect(html).toContain('Žluté riziko');
-    expect(html).toContain('Pokyny k provádění kontrol</h2><h3>Žebříky</h3>');
+    expect(html).toContain('Pokyny k provádění kontrol</h2><div class="texts"><h3>Žebříky</h3>');
     expect(html).toContain('<li>Kontrola zahrnuje:<ul><li>vizuální kontrolu,</li>');
     expect(html).toContain('Za odstranění případných závad odpovídá provozovatel.');
     expect(html).toContain('Osvědčení č. 12/2025');
     expect(html).toContain('BOZP • PO • REVIZE');
     // Defects on their own pages: serious (red) first, then the others.
-    expect(html.indexOf('Závažné závady (1)')).toBeGreaterThan(html.indexOf('photo-pages'));
-    expect(html.indexOf('Závažné závady (1)')).toBeLessThan(html.indexOf('Závady (1)'));
+    // Defects by severity (red first), then by workplace, the risk explained once per group.
+    expect(html.indexOf('Červené riziko (1)')).toBeGreaterThan(html.indexOf('photo-pages'));
+    expect(html.indexOf('Červené riziko (1)')).toBeLessThan(html.indexOf('Žluté riziko (1)'));
+    expect(html).toContain('<h3 class="place">Hala A</h3>');
+    expect(html).toContain('<div class="t">10002 · Řada 1</div>');
+    expect(placeOf('Hala A › Řada 1 › Pozice 4')).toEqual({
+      place: 'Hala A',
+      rest: 'Řada 1 › Pozice 4',
+    });
     expect(html).toContain('<img src="data:image/jpeg;base64,AAAA"');
   });
   it('omits the draft banner once closed and the page frame for the PDF renderer', () => {

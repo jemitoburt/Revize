@@ -11,4 +11,9 @@ export interface ProcessedImage {
  */
 export interface ImageProcessor {
   process(data: Uint8Array, thumbnailSize: number): Promise<ProcessedImage | null>;
+  /**
+   * The image cropped to fill exactly `width` × `height` pixels (JPEG): photos in the protocol
+   * at 300 dpi of their printed size. `null` = not a readable image.
+   */
+  fit(data: Uint8Array, width: number, height: number): Promise<Uint8Array | null>;
 }

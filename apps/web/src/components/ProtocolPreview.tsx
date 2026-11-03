@@ -6,6 +6,7 @@ import {
   Menu,
   Modal,
   MultiSelect,
+  SegmentedControl,
   Select,
   Stack,
   Switch,
@@ -62,8 +63,10 @@ export function ProtocolPreview({
   const [typeId, setTypeId] = useState<string | null>(null);
   const columnOptions = useProtocolColumns(inspectionId, opened);
   const [withList, setWithList] = useState(false);
+  /** Defects with cards and photos: all, red and yellow, or only red. */
+  const [defects, setDefects] = useState<'all' | 'red-amber' | 'red'>('all');
   const [columns, setColumns] = useState<string[]>(loadColumns);
-  const html = useProtocolHtml(inspectionId, typeId, opened, columns, withList);
+  const html = useProtocolHtml(inspectionId, typeId, opened, columns, withList, defects);
   const frame = useRef<HTMLIFrameElement>(null);
   const [downloading, setDownloading] = useState(false);
   const base = fileName.replace(/\.pdf$/, '');
@@ -74,6 +77,7 @@ export function ProtocolPreview({
         equipmentTypeId: typeId,
         columns: columns.join(',') || undefined,
         appendix: withList ? 'always' : undefined,
+        defects: defects === 'all' ? undefined : defects,
         ...query,
       })}`,
       name,
@@ -178,6 +182,16 @@ export function ProtocolPreview({
             ji jako Přílohu 1 na A4 na šířku se zvolenými sloupci. Velikost fotek a počet sloupců
             závad se volí tak, aby měl protokol co nejméně stran.
           </Text>
+          <SegmentedControl
+            aria-label="Závady s fotkami v protokolu"
+            data={[
+              { value: 'all', label: 'Všechny závady' },
+              { value: 'red-amber', label: 'Červené a žluté' },
+              { value: 'red', label: 'Jen červené' },
+            ]}
+            value={defects}
+            onChange={(v) => setDefects(v as typeof defects)}
+          />
           <Switch
             label="Tabulku vybavení vždy jako Přílohu 1"
             checked={withList}

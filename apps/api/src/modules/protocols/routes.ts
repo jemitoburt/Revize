@@ -14,13 +14,22 @@ const querystring = z.object({
   appendix: z.enum(['auto', 'always']).default('auto'),
   /** `appendix`: only Příloha 1 (printed on its own). */
   part: z.enum(['all', 'appendix']).default('all'),
+  /** Defects with cards and photos: only red, red and yellow, or all (default). */
+  defects: z.enum(['red', 'red-amber', 'all']).default('all'),
 });
+const SEVERITIES_OF = {
+  red: ['red'],
+  'red-amber': ['red', 'amber'],
+  all: ['red', 'amber', 'green'],
+} as const;
 const optionsOf = (q: {
   equipmentTypeId?: string;
   columns?: string;
   appendix: 'auto' | 'always';
   part: 'all' | 'appendix';
+  defects: keyof typeof SEVERITIES_OF;
 }) => ({
+  severities: [...SEVERITIES_OF[q.defects]],
   equipmentTypeId: q.equipmentTypeId,
   columns: q.columns ? q.columns.split(',').filter(Boolean) : [],
   forceAppendix: q.appendix === 'always',

@@ -280,6 +280,8 @@ export function appendixColumns(types: readonly ExportType[]): AppendixColumn[] 
   return [...APPENDIX_FIXED, ...fields];
 }
 
+const RISK_SHORT = { red: 'červené riziko', amber: 'žluté riziko', green: 'zelené riziko' };
+
 /** Preset columns of Příloha 1 (the equipment table on A4 landscape). */
 export const DEFAULT_APPENDIX_COLUMNS = [
   'itemNumber',
@@ -327,10 +329,9 @@ export function appendixRow(
       case 'note': {
         if (!item.result) return 'Nezkontrolováno';
         const severity = severityOf(item.result);
+        // Short: the meaning of the levels is explained with the defect groups.
         return severity
-          ? [item.result.defectDescription, SEVERITY_LABELS[severity].protocol]
-              .filter(Boolean)
-              .join(' – ')
+          ? [item.result.defectDescription, RISK_SHORT[severity]].filter(Boolean).join(' – ')
           : '';
       }
       case 'nextInspection':

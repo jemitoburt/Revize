@@ -3,6 +3,9 @@ import {
   appendixColumns,
   appendixRow,
   DEFAULT_APPENDIX_COLUMNS,
+  photoBox,
+  protocolDefectGroups,
+  protocolLayout,
   displayFields,
   fileNamePart,
   fillProtocolTemplate,
@@ -19,12 +22,13 @@ import {
   type ProtocolData,
   type ProtocolItem,
 } from '@revize/shared';
-import { and, eq, inArray, isNotNull } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db } from '../../db/client.js';
 import { customer, equipmentType, inspectionResult, photo, site } from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import type { FileStorage } from '../../infra/file-storage.js';
+import type { ImageProcessor } from '../../infra/image-processor.js';
 import type { PdfRenderer } from '../../infra/pdf-renderer.js';
 import type { InspectionsService } from '../inspections/service.js';
 import { organizationOf, settingsOf } from '../organization/service.js';
@@ -84,11 +88,17 @@ function appendixOf(
   };
 }
 
+interface PhotoRef {
+  storageKey: string;
+  thumbnailKey: string | null;
+}
+
 export function createProtocolsService(
   db: Db,
   files: FileStorage,
   inspections: InspectionsService,
   pdf: PdfRenderer | null,
+  images: ImageProcessor,
 ) {
   async function dataUrl(key: string | null, mimeType: string): Promise<string | null> {
     if (!key || !(await files.exists(key))) return null;
@@ -103,6 +113,7 @@ export function createProtocolsService(
     /** Columns of Příloha 1 (none = the preset columns). */
     columns: readonly string[] = [],
     forceAppendix = false,
+    defectSeverities?: ProtocolData['defectSeverities'],
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of one equipment type contains only its items and its protocol text.
@@ -120,26 +131,30 @@ export function createProtocolsService(
       ? await db.select().from(equipmentType).where(inArray(equipmentType.id, typeIds))
       : [];
 
-    // Thumbnails of defect photos (by item) and of the inspection as a whole.
+    // Photos are references ("ref:<n>") until the layout knows their printed size; then each
+    // is made from the original at 300 dpi of that size (`resolvePhotos`).
+    const refs: PhotoRef[] = [];
+    const refOf = (p: PhotoRef) => `ref:${refs.push(p) - 1}`;
     const resultPhotos = await db
-      .select({ itemId: inspectionResult.itemId, key: photo.thumbnailKey })
+      .select({
+        itemId: inspectionResult.itemId,
+        storageKey: photo.storageKey,
+        thumbnailKey: photo.thumbnailKey,
+      })
       .from(photo)
       .innerJoin(inspectionResult, eq(inspectionResult.id, photo.inspectionResultId))
-      .where(and(eq(inspectionResult.inspectionId, inspectionId), isNotNull(photo.thumbnailKey)))
+      .where(eq(inspectionResult.inspectionId, inspectionId))
       .orderBy(photo.createdAt);
     const photosByItem = new Map<string, string[]>();
     for (const p of resultPhotos) {
-      const url = await dataUrl(p.key, 'image/jpeg');
-      if (url) photosByItem.set(p.itemId, [...(photosByItem.get(p.itemId) ?? []), url]);
+      photosByItem.set(p.itemId, [...(photosByItem.get(p.itemId) ?? []), refOf(p)]);
     }
     const overview = await db
-      .select({ key: photo.thumbnailKey })
+      .select({ storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey })
       .from(photo)
       .where(eq(photo.inspectionId, inspectionId))
       .orderBy(photo.createdAt);
-    const overviewPhotos = (
-      await Promise.all(overview.map((p) => dataUrl(p.key, 'image/jpeg')))
-    ).filter((u): u is string => u !== null);
+    const overviewPhotos = overview.map(refOf);
 
     const inspectors = inspection.inspectors.map((i) => i.displayName);
     const nextDates: string[] = [];
@@ -174,7 +189,7 @@ export function createProtocolsService(
         return { typeName: type.name, text, items: rows };
       });
 
-    return {
+    const data: ProtocolData = {
       number: `${inspection.inspectionDate}/${inspection.id.slice(-8)}`,
       final: inspection.status === 'closed',
       company: {
@@ -207,8 +222,55 @@ export function createProtocolsService(
       overviewPhotos,
       appendix: appendixOf(types, items, columns.length ? columns : DEFAULT_APPENDIX_COLUMNS),
       forceAppendix,
+      defectSeverities,
       generatedAt: new Date().toISOString(),
     };
+    return resolvePhotos(data, refs);
+  }
+
+  /**
+   * Photos at 300 dpi of the size the layout prints them (JPEG, cropped to 4:3). Photos of
+   * defects without a card (other severities) are left out. Falls back to the thumbnail.
+   */
+  async function resolvePhotos(data: ProtocolData, refs: PhotoRef[]): Promise<ProtocolData> {
+    const layout = protocolLayout(data);
+    const dpmm = 300 / 25.4;
+    const height = Math.round(layout.photoHeight * dpmm);
+    // Width as printed: depends on the column and how many photos share a row of the card.
+    const widthFor = (columns: 1 | 2 | 3, count: number) =>
+      Math.round(photoBox(columns, layout.photoHeight, count).width * dpmm);
+    const shown = new Set(
+      protocolDefectGroups(data).flatMap((g) =>
+        g.places.flatMap((p) => p.defects.map((d) => d.itemNumber)),
+      ),
+    );
+    const resolve = async (ref: string, width: number): Promise<string | null> => {
+      const p = refs[Number(ref.slice(4))];
+      if (!p) return null;
+      if (await files.exists(p.storageKey)) {
+        const fitted = await images.fit(await files.read(p.storageKey), width, height);
+        if (fitted) return `data:image/jpeg;base64,${Buffer.from(fitted).toString('base64')}`;
+      }
+      return dataUrl(p.thumbnailKey, 'image/jpeg');
+    };
+    const all = async (list: string[], columns: 1 | 2 | 3) => {
+      const width = widthFor(columns, list.length);
+      return (await Promise.all(list.map((ref) => resolve(ref, width)))).filter(
+        (u): u is string => u !== null,
+      );
+    };
+    const sections = [];
+    for (const section of data.sections) {
+      const items = [];
+      for (const item of section.items) {
+        items.push({
+          ...item,
+          photos: shown.has(item.itemNumber) ? await all(item.photos, layout.defectColumns) : [],
+        });
+      }
+      sections.push({ ...section, items });
+    }
+    return { ...data, sections, overviewPhotos: await all(data.overviewPhotos, 1) };
   }
 
   return {
@@ -295,6 +357,8 @@ export interface ProtocolOptions {
   forceAppendix?: boolean;
   /** `appendix`: only Příloha 1. */
   part?: 'all' | 'appendix';
+  /** Risk levels whose defects get cards with photos (default all). */
+  severities?: ('red' | 'amber' | 'green')[];
 }
 
 export type ProtocolsService = ReturnType<typeof createProtocolsService>;

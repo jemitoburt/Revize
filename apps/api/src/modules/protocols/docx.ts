@@ -1,13 +1,16 @@
 import {
   APPENDIX_REFERENCE,
   APPENDIX_TITLE,
-  PHOTO_ASPECT,
+  photoBox,
   PROTOCOL_STATEMENTS,
   companyLine,
   formatDate,
   parseProtocolText,
-  protocolDefects,
+  defectCardTitle,
+  protocolDefectGroups,
   protocolLayout,
+  SEVERITY_GROUP_TITLE,
+  SEVERITY_LABELS,
   protocolNoteLines,
   protocolTexts,
   safeToOperate,
@@ -26,6 +29,7 @@ import {
   PageBreak,
   PageNumber,
   PageOrientation,
+  SectionType,
   Paragraph,
   ShadingType,
   Table,
@@ -339,63 +343,53 @@ function protocolText(text: string): Paragraph[] {
   });
 }
 
-function defectBlock(d: ProtocolDefect, photoHeight: number): Paragraph[] {
+/** A compact defect card (8 pt): number · designation · location, description, photos. */
+function defectBlock(d: ProtocolDefect, photoHeight: number, columns: 1 | 2 | 3): Paragraph[] {
+  const { width } = photoBox(columns, photoHeight, d.photos.length);
   const photos = d.photos
-    .map((p) => imageRun(p, photoHeight * PHOTO_ASPECT, photoHeight))
+    .map((p) => imageRun(p, width, photoHeight))
     .filter((r): r is ImageRun => r !== null)
-    .flatMap((r) => [r, new TextRun({ text: '  ', font: FONT })]);
+    .flatMap((r) => [r, new TextRun({ text: ' ', font: FONT })]);
   return [
-    new Paragraph({
-      keepNext: true,
-      spacing: { before: mm(3) },
-      children: [
-        run(
-          `Kontrolní číslo ${d.itemNumber}${d.designation ? `, označení ${d.designation}` : ''}`,
-          { bold: true, size: 10 },
-        ),
-        run(` – ${[d.typeName, d.location].filter(Boolean).join(', ')}`, { size: 10 }),
-      ],
-    }),
+    new Paragraph({ keepNext: true, children: [run(defectCardTitle(d), { bold: true, size: 8 })] }),
     ...(d.defectDescription
-      ? [new Paragraph({ keepNext: true, children: [run(d.defectDescription, { size: 10 })] })]
+      ? [new Paragraph({ keepNext: true, children: [run(d.defectDescription, { size: 8 })] })]
       : []),
-    new Paragraph({
-      keepNext: photos.length > 0,
-      children: [run(protocolNoteLines(d).at(-1) ?? '', { size: 8 })],
-    }),
     ...(photos.length ? [new Paragraph({ children: photos })] : []),
   ];
 }
 
-/** Defects in two columns (one photo each): a borderless two-column table. */
-function defectGrid(defects: ProtocolDefect[], photoHeight: number): Table {
-  const half = Math.floor(CONTENT_WIDTH / 2);
-  const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-  const rows: TableRow[] = [];
-  for (let i = 0; i < defects.length; i += 2) {
-    rows.push(
+/** One defect card: a one-cell table with a thin border that never splits between pages. */
+function defectCard(d: ProtocolDefect, photoHeight: number, columns: 1 | 2 | 3): Table {
+  const width = Math.floor((CONTENT_WIDTH - (columns - 1) * mm(2)) / columns);
+  const thin = { style: BorderStyle.SINGLE, size: 4, color: '000000' };
+  return table(
+    [width],
+    [
       new TableRow({
         cantSplit: true,
-        children: [defects[i], defects[i + 1]].map(
-          (d) =>
-            new TableCell({
-              children: d ? defectBlock(d, photoHeight) : [new Paragraph({ children: [] })],
-              borders: { top: none, bottom: none, left: none, right: none },
-              width: { size: half, type: WidthType.DXA },
-            }),
-        ),
+        children: [
+          new TableCell({
+            children: defectBlock(d, photoHeight, columns),
+            borders: { top: thin, bottom: thin, left: thin, right: thin },
+            margins: { top: mm(0.8), bottom: mm(0.8), left: mm(1), right: mm(1) },
+            width: { size: width, type: WidthType.DXA },
+          }),
+        ],
       }),
-    );
-  }
-  return table([half, half], rows);
+    ],
+  );
 }
+/** Space below a card (a table needs a paragraph to separate it from the next one). */
+const gap = () =>
+  new Paragraph({ spacing: { before: 0, after: 0 }, children: [run('', { size: 4 })] });
 
 export async function renderProtocolDocx(
   data: ProtocolData,
   part: 'all' | 'appendix' = 'all',
 ): Promise<Uint8Array> {
   const layout = protocolLayout(data);
-  const { serious, other } = protocolDefects(data);
+  const groups = protocolDefectGroups(data);
   const texts = protocolTexts(data);
   const c = data.company;
   const children: (Paragraph | Table)[] = [
@@ -453,28 +447,58 @@ export async function renderProtocolDocx(
       ? [heading('Pokyny k provádění kontrol'), ...texts.flatMap(protocolText)]
       : []),
   ];
-  const defects = serious.length || other.length || data.overviewPhotos.length;
-  if (defects) {
-    // The defects follow on the same page when there is room (fewer pages).
-    const section = (title: string) => heading(title, { keepNext: true });
-    const block = (list: ProtocolDefect[]) =>
-      layout.defectColumns === 2
-        ? [defectGrid(list, layout.photoHeight)]
-        : list.flatMap((d) => defectBlock(d, layout.photoHeight));
-    if (serious.length)
-      children.push(section(`Závažné závady (${serious.length})`), ...block(serious));
-    if (other.length) children.push(section(`Závady (${other.length})`), ...block(other));
-    if (data.overviewPhotos.length) {
-      children.push(
-        section('Fotodokumentace'),
-        new Paragraph({
-          children: data.overviewPhotos
-            .map((p) => imageRun(p, layout.photoHeight * PHOTO_ASPECT, layout.photoHeight))
-            .filter((r): r is ImageRun => r !== null)
-            .flatMap((r) => [r, new TextRun({ text: '  ', font: FONT })]),
-        }),
-      );
+  // Defects by severity, then workplace, in newspaper columns (their own continuous section,
+  // the same decisions as the PDF).
+  const defects: (Paragraph | Table)[] = [];
+  for (const group of groups) {
+    defects.push(
+      new Paragraph({
+        keepNext: true,
+        spacing: { before: mm(3), after: mm(1) },
+        children: [
+          run(`${SEVERITY_GROUP_TITLE[group.severity]} (${group.count})`, {
+            bold: true,
+            size: 11,
+            color: RED,
+          }),
+          run(`  ${SEVERITY_LABELS[group.severity].protocol.replace(/^[^–]*–\s*/, '')}`, {
+            size: 8,
+          }),
+        ],
+      }),
+    );
+    for (const place of group.places) {
+      if (place.place) {
+        defects.push(
+          new Paragraph({
+            keepNext: true,
+            spacing: { before: mm(1), after: mm(0.5) },
+            children: [run(place.place, { bold: true, size: 8.5 })],
+          }),
+        );
+      }
+      for (const d of place.defects) {
+        defects.push(defectCard(d, layout.photoHeight, layout.defectColumns), gap());
+      }
     }
+  }
+  const overview: (Paragraph | Table)[] = [];
+  if (data.overviewPhotos.length) {
+    overview.push(
+      heading('Fotodokumentace', { keepNext: true }),
+      new Paragraph({
+        children: data.overviewPhotos
+          .map((p) =>
+            imageRun(
+              p,
+              photoBox(1, layout.photoHeight, data.overviewPhotos.length).width,
+              layout.photoHeight,
+            ),
+          )
+          .filter((r): r is ImageRun => r !== null)
+          .flatMap((r) => [r, new TextRun({ text: ' ', font: FONT })]),
+      }),
+    );
   }
 
   // Appendix for the customer: its own landscape section (long texts in the last column).
@@ -536,6 +560,41 @@ export async function renderProtocolDocx(
               footers: { default: new Footer({ children: [pageFooter(data, CONTENT_WIDTH)] }) },
               children,
             },
+            ...(defects.length
+              ? [
+                  {
+                    properties: {
+                      type: SectionType.CONTINUOUS,
+                      page: { size: { width: mm(210), height: mm(297) }, margin },
+                      column: {
+                        count: layout.defectColumns,
+                        space: mm(2),
+                        equalWidth: true,
+                      },
+                    },
+                    headers,
+                    footers: {
+                      default: new Footer({ children: [pageFooter(data, CONTENT_WIDTH)] }),
+                    },
+                    children: defects,
+                  },
+                ]
+              : []),
+            ...(overview.length
+              ? [
+                  {
+                    properties: {
+                      type: SectionType.CONTINUOUS,
+                      page: { size: { width: mm(210), height: mm(297) }, margin },
+                    },
+                    headers,
+                    footers: {
+                      default: new Footer({ children: [pageFooter(data, CONTENT_WIDTH)] }),
+                    },
+                    children: overview,
+                  },
+                ]
+              : []),
           ]),
       ...(appendix.length
         ? [

@@ -107,3 +107,42 @@ kopíruje formulář firmy:
 - Ověřeno na pěti modelových protokolech (A–E). Odhad „vejde se na 1. stranu“ se se
   skutečností shodoval ve 29 z 30 případů. Jediná chyba byla v bezpečném směru (příloha
   zbytečně, nikdy přetečení).
+
+## Doplnění 2026-11-03: kompaktní protokol, závady podle závažnosti a pracoviště
+
+- Protokol s desítkami závad musí zůstat krátký (přání uživatele). Proto jsou menší odsazení
+  a řádky tabulek (7 mm), texty pokynů mají 8 pt a podpisová pole 13 mm.
+- Závady se seskupují podle úrovně rizika (červená, žlutá, zelená) a pak podle pracoviště, tedy
+  nejvyšší úrovně umístění (hala). Význam úrovně je napsaný jednou v nadpisu skupiny. Karta
+  (8 pt) obsahuje číslo TZ, označení, zbytek umístění, popis a fotky. Karty jsou v jednom až
+  třech sloupcích a řádky karet se nedělí mezi strany.
+- Měřeno na PDF: 60 artiklů a 40 závad s jednou fotkou dá 7 stran (4 strany závad, 3 sloupce,
+  fotky 3,5 cm). Se dvěma fotkami u závady 10 stran. Bez závad 2 strany.
+
+## Doplnění 2026-11-03: cíl 8 stran, fotky 5 cm a 300 dpi, novinové sloupce
+
+- **Výběr velikosti:** dokud odhad celého protokolu (včetně Přílohy 1) nepřesáhne 8 stran
+  (`TARGET_PAGES`, cíl, ne strop), vyhrává výška fotek nejbližší 5 cm. Jinak vyhrává nejmenší
+  počet stran a nejmenší rozměry, nejméně ale 3,5 cm.
+- **Fotky** se do protokolu vkládají z originálů, oříznuté na tištěnou velikost v 300 dpi
+  (`ImageProcessor.fit`, sharp, v ukázce canvas). Poměr stran je mezi 4:3 a 1:1, aby se dvě
+  fotky vešly vedle sebe (`photoBox`).
+- **Novinové sloupce:** karty tečou v CSS multicol (ve Wordu oddíl se sloupci), takže skupiny
+  s pár závadami nenechávají poloprázdné řádky. Nadpis úrovně rizika jde přes celou šířku
+  a nadpis haly drží s první kartou.
+- **Výběr závad:** `?defects=red|red-amber|all` určuje, které úrovně dostanou kartu s fotkami.
+- **Ověření:** deset modelových protokolů přes API (`test/protocol-samples.test.ts`, spouští
+  se s `PROTOCOL_SAMPLES=<složka>`):
+
+| Protokol | Artikly | Závady | Fotky | Stran | Fotky | Sloupce |
+| -------- | ------- | ------ | ----- | ----- | ----- | ------- |
+| 01       | 10      | 2      | 2     | 2     | 50 mm | 1       |
+| 02       | 20      | 5      | 5     | 3     | 50 mm | 2       |
+| 03       | 30      | 10     | 15    | 4     | 50 mm | 3       |
+| 04       | 40      | 15     | 15    | 5     | 50 mm | 3       |
+| 05       | 60      | 25     | 35    | 7     | 45 mm | 3       |
+| 06       | 80      | 35     | 70    | 8     | 35 mm | 2       |
+| 07       | 100     | 45     | 92    | 11    | 35 mm | 2       |
+| 08       | 120     | 60     | 60    | 10    | 35 mm | 3       |
+| 09       | 50      | 20     | 0     | 4     | –     | –       |
+| 10       | 150     | 80     | 80    | 12    | 35 mm | 3       |

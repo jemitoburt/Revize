@@ -42,4 +42,5 @@ export class PgliteFileStorage implements FileStorage {
 /** Without a browser canvas (Node tests): no real decoding, the original is its own thumbnail. */
 export const passThroughImages: ImageProcessor = {
   process: async (data) => (data.byteLength > 0 ? { width: 0, height: 0, thumbnail: data } : null),
+  fit: async (data) => (data.byteLength > 0 ? data : null),
 };

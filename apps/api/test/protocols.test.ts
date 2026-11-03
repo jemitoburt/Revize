@@ -171,7 +171,7 @@ describe('organization settings and protocol', () => {
     expect(listed[1].result).toMatchObject({ severity: 'red', takenOutOfService: true });
 
     const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
-    expect(html).toContain('Závažné závady (1)');
+    expect(html).toContain('Červené riziko (1)');
     expect(html).toContain('Prasklá příčka');
     expect(html).not.toContain('Odřený lak');
 
@@ -192,7 +192,14 @@ describe('organization settings and protocol', () => {
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
     expect(html).toContain('Ukázkový sklad s.r.o.');
     expect(html).toContain('Prasklá příčka');
-    expect(html).toContain('Červené riziko – okamžitě vyprázdnit a vyřadit z užívání');
+    // The defect card under its risk level (explained once in the group heading).
+    expect(html).toContain('Červené riziko (1)<span>okamžitě vyprázdnit a vyřadit z užívání');
+    // The photo at 300 dpi of its printed size (layout: 50 mm high).
+    expect(html).toMatch(/style="height:50mm;width:\d+(\.\d)?mm"/);
+    // Only red defects get cards: the green one is left out of the cards.
+    const redOnly = (await api('GET', `/api/inspections/${id}/protocol.html?defects=red`)).body;
+    expect(redOnly).toContain('Červené riziko (1)');
+    expect(redOnly).not.toContain('Zelené riziko (');
     expect(html).toContain('data:image/jpeg;base64,');
     // Only the protocol text of the type in the protocol.
     expect(html).toContain('<h3>Žebříky a schůdky</h3>');
