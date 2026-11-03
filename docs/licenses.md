@@ -12,8 +12,8 @@ Kontrolu dělá `pnpm run check:licenses` (skript `scripts/check-licenses.mjs`),
 | zxing-wasm (wrapper) + zxing-cpp           | MIT + Apache-2.0                | dekódování QR v prohlížeči        | M1     |
 | qrcode (node-qrcode)                       | MIT                             | testovací arch QR, později štítky | M1     |
 | vite-plugin-pwa, Workbox                   | MIT                             | service worker, PWA               | M1     |
-| Playwright                                 | Apache-2.0                      | e2e testy, později render PDF     | M1     |
-| Chromium (přes Playwright)                 | BSD-3-Clause a další permisivní | headless render PDF               | M7     |
+| Playwright, playwright-core                | Apache-2.0                      | e2e testy, render PDF protokolu   | M1, M7 |
+| Chromium (balíček Alpine v obrazu API)     | BSD-3-Clause a další permisivní | headless render PDF               | M7     |
 | Fastify, @fastify/*                        | MIT                             | API                               | M2     |
 | Drizzle ORM, drizzle-kit                   | Apache-2.0                      | ORM, migrace                      | M2     |
 | PostgreSQL                                 | PostgreSQL                      | databáze                          | M2     |

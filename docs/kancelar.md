@@ -1,4 +1,4 @@
-# Kancelář – návod k evidenci (M3, M4)
+# Kancelář – návod k evidenci (M3, M4, M7)
 
 Přihlášení na `https://<server>/` (účet administrátora z `.env`).
 
@@ -42,3 +42,17 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Importovat:** proběhne najednou v jedné transakci, takže buď vše, nebo nic. Chybějící
      umístění se založí, artikly bez čísla dostanou další volná čísla. Každý artikl má záznam
      v auditu.
+8. **Nastavení** (administrátor):
+   - Název firmy, IČO, adresa, kontakty a oprávnění technika (tiskne se pod podpisem).
+   - Logo (PNG/JPEG) a zápatí protokolu.
+   - Text o rozsahu kontroly je u každého typu vybavení v **Typy vybavení → Text protokolu**.
+     Používá zástupné údaje (Naše firma, Zákazník, Provozovna, Datum kontroly…).
+9. **Kontroly:**
+   - Přehled otevřených a uzavřených kontrol s postupem a počtem závad. Řádek otevře detail
+     s výsledky všech artiklů (filtry Závady a Nezkontrolované).
+   - **Protokol:** náhled přesně v podobě tisku, **Stáhnout PDF** a **Tisk**. Dokud kontrola
+     není uzavřená, je protokol označený jako předběžný.
+   - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
+     kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
+     Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
+   - **Znovu otevřít:** jen s uvedením důvodu, zapíše se do auditu.

@@ -68,7 +68,8 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
 - Dynamic equipment fields: definition stored on `equipment_type`, values in `item.field_values`
   JSONB, validated by the Zod schema built in `packages/shared` (same code on client, API, import).
 - Closed inspections are read-only; reopening is audited.
-- Infrastructure behind interfaces: `FileStorage`, `PdfRenderer`, `ImageProcessor`, `MetadataWriter`.
+- Infrastructure behind interfaces: `FileStorage`, `PdfRenderer`, `ImageProcessor`, `MetadataWriter`
+  (`apps/api/src/infra`); `registerApiRoutes` gets them injected (demo: PGlite files, no PDF).
 
 ## Commands
 
@@ -127,5 +128,10 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   draft defect photos), overlay of pending changes, service worker (prompted updates), sync badge
   with emergency ZIP export; e2e `e2e/field/offline.spec.ts`; web unit tests (`vitest.config.ts`,
   fake-indexeddb).
-- Next: M7 office inspections (close/reopen, next dates), PDF protocol built from the user's sample
-  layout with office settings (logo, header, texts with placeholders), exports.
+- M7 (part 1) – done: close (next dates per checked item) / reopen (reason, audit), organization
+  settings + logo (`settings.manage`), protocol HTML in shared (`renderProtocolHtml`, ADR-0016),
+  PDF via `PdfRenderer` (Chromium/playwright-core; `CHROMIUM_PATH`), office pages Kontroly and
+  Nastavení. The layout waits for the user's sample protocol.
+- Open: PR vitekdynka-debug/Revize#1 (Dokploy compose) needs the user's review; branch
+  `dokploy-review` has it merged with a fix (pg ignores `password` next to `connectionString`).
+- Next: M7 part 2 exports (XLSX/CSV results, photo ZIP with EXIF/IPTC), M8 history and filters.

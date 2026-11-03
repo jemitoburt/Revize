@@ -29,6 +29,7 @@ const demoConfig: Config = {
   LOG_LEVEL: 'warn',
   COOKIE_SECURE: false,
   SESSION_TTL_DAYS: 365,
+  LOGIN_RATE_LIMIT: 10,
   TRUSTED_ORIGINS: [],
   FILES_DIR: '',
   MIGRATIONS_DIR: '',

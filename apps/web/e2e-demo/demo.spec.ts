@@ -70,4 +70,13 @@ test('demo field mode: a technician records results and photos in the browser', 
   await (await chooser).setFiles('e2e/.generated/defect.jpg');
   await expect(page.getByText('Celkové fotky kontroly (1)')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Zobrazit fotku' }).locator('img')).toBeVisible();
+
+  // The protocol is rendered in the browser too (printed instead of a server PDF).
+  await page.goto('kontroly');
+  await page.getByRole('row', { name: /Provozovna Brno/ }).click();
+  await page.getByRole('button', { name: 'Protokol' }).click();
+  const preview = page.frameLocator('iframe[title="Náhled protokolu"]');
+  await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tisk / uložit jako PDF' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Stáhnout PDF' })).toHaveCount(0);
 });

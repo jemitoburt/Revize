@@ -24,6 +24,7 @@ import {
   FIELD_KINDS,
   FIELD_KIND_LABELS,
   fieldDefinitionsSchema,
+  PROTOCOL_PLACEHOLDERS,
   fillProtocolTemplate,
   type EquipmentType,
   type FieldDefinition,
@@ -44,15 +45,8 @@ interface DraftField extends FieldDefinition {
   keyTouched: boolean;
 }
 
-const PLACEHOLDERS = [
-  ['zakaznik', 'Zákazník'],
-  ['provozovna', 'Provozovna'],
-  ['datum_kontroly', 'Datum kontroly'],
-  ['technik', 'Technik'],
-  ['datum_pristi_kontroly', 'Příští kontrola'],
-] as const;
-
 const SAMPLE = {
+  firma: 'Revizní firma s.r.o.',
   zakaznik: 'Ukázkový sklad s.r.o.',
   provozovna: 'Provozovna Brno',
   datum_kontroly: new Date().toLocaleDateString('cs-CZ'),
@@ -380,7 +374,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
             <Text size="sm" c="dimmed">
               Vložit:
             </Text>
-            {PLACEHOLDERS.map(([key, label]) => (
+            {PROTOCOL_PLACEHOLDERS.map(([key, label]) => (
               <Button
                 key={key}
                 size="compact-xs"

@@ -18,8 +18,11 @@ import { CustomersPage } from './pages/CustomersPage.js';
 import { EquipmentTypePage } from './pages/EquipmentTypePage.js';
 import { EquipmentTypesPage } from './pages/EquipmentTypesPage.js';
 import { ImportPage } from './pages/ImportPage.js';
+import { InspectionDetailPage } from './pages/InspectionDetailPage.js';
+import { InspectionsPage } from './pages/InspectionsPage.js';
 import { ItemsPage } from './pages/ItemsPage.js';
 import { LoginPage } from './pages/LoginPage.js';
+import { SettingsPage } from './pages/SettingsPage.js';
 import { SitePage } from './pages/SitePage.js';
 import { UsersPage } from './pages/UsersPage.js';
 
@@ -121,6 +124,22 @@ const usersRoute = createRoute({
   path: '/uzivatele',
   component: UsersPage,
 });
+const inspectionsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/kontroly',
+  component: InspectionsPage,
+});
+export const inspectionDetailRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/kontroly/$inspectionId',
+  component: InspectionDetailPage,
+});
+const settingsRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/nastaveni',
+  component: SettingsPage,
+});
+
 const accountRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/ucet',
@@ -140,6 +159,9 @@ const routeTree = rootRoute.addChildren([
     itemsRoute,
     importRoute,
     usersRoute,
+    inspectionsRoute,
+    inspectionDetailRoute,
+    settingsRoute,
     accountRoute,
   ]),
 ]);

@@ -14,16 +14,6 @@ export const PROTOCOL_PLACEHOLDERS = [
 ] as const;
 export type ProtocolPlaceholder = (typeof PROTOCOL_PLACEHOLDERS)[number][0];
 
-/** Replaces `{{key}}` tokens; unknown tokens stay visible so that typos are noticed. */
-export function fillProtocolText(
-  template: string,
-  values: Partial<Record<ProtocolPlaceholder, string>>,
-): string {
-  return template.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (token, key: string) =>
-    key in values ? (values[key as ProtocolPlaceholder] ?? '') : token,
-  );
-}
-
 /** `2026-01-31` + 1 month = `2026-02-28` (the day is clamped to the end of the month). */
 export function addMonths(isoDate: string, months: number): string {
   const [y, m, d] = isoDate.split('-').map(Number) as [number, number, number];

@@ -31,6 +31,8 @@ const child = spawn('pnpm', ['exec', 'tsx', 'src/main.ts'], {
     ADMIN_PASSWORD: 'admin-heslo-123',
     SEED_DEMO: 'false',
     LOG_LEVEL: 'warn',
+    // The suite signs in many times a minute from one address.
+    LOGIN_RATE_LIMIT: '1000',
     FILES_DIR: mkdtempSync(join(tmpdir(), 'revize-e2e-files-')),
   },
 });

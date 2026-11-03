@@ -20,8 +20,8 @@ export const authRoutes: FastifyPluginAsyncZod<{ auth: AuthService; config: Conf
   app.post(
     '/auth/login',
     {
-      // Brute-force protection: 10 attempts per minute and IP.
-      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      // Brute-force protection: LOGIN_RATE_LIMIT attempts (default 10) per minute and IP.
+      config: { rateLimit: { max: config.LOGIN_RATE_LIMIT, timeWindow: '1 minute' } },
       schema: {
         tags,
         summary: 'Přihlášení e-mailem a heslem',

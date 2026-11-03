@@ -1,7 +1,7 @@
 import {
   LOCATION_SEPARATOR,
   displayFields,
-  fillProtocolText,
+  fillProtocolTemplate,
   nextInspectionDateOf,
   renderProtocolHtml,
   type ProtocolData,
@@ -82,7 +82,7 @@ export function createProtocolsService(
           inspection.nextInspectionDate ??
           nextInspectionDateOf(inspection.inspectionDate, type.defaultIntervalMonths, null);
         nextDates.push(next);
-        const text = fillProtocolText(type.protocolTemplate, {
+        const text = fillProtocolTemplate(type.protocolTemplate, {
           firma: org.name,
           zakaznik: inspection.customerName,
           provozovna: inspection.siteName,

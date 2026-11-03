@@ -1,21 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   addMonths,
-  fillProtocolText,
   nextInspectionDateOf,
   renderProtocolHtml,
   type ProtocolData,
 } from './protocol.js';
 
 describe('protocol text and dates', () => {
-  it('fills placeholders and keeps unknown ones visible', () => {
-    expect(
-      fillProtocolText('U {{zakaznik}} dne {{ datum_kontroly }}, {{neznamy}}.', {
-        zakaznik: 'Sklad s.r.o.',
-        datum_kontroly: '3. 11. 2026',
-      }),
-    ).toBe('U Sklad s.r.o. dne 3. 11. 2026, {{neznamy}}.');
-  });
   it('adds months and clamps the day to the end of the month', () => {
     expect(addMonths('2026-11-03', 12)).toBe('2027-11-03');
     expect(addMonths('2026-01-31', 1)).toBe('2026-02-28');

@@ -13,6 +13,8 @@ const envSchema = z.object({
   /** Send the session cookie only over HTTPS. Disable only for local development over http. */
   COOKIE_SECURE: bool.default(true),
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+  /** Login attempts per minute and IP address (brute-force protection). */
+  LOGIN_RATE_LIMIT: z.coerce.number().int().min(1).default(10),
   /** Extra origins allowed to send cookie-authenticated writes (comma separated). */
   TRUSTED_ORIGINS: z
     .string()

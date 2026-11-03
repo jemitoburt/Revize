@@ -15,6 +15,7 @@ import type {
   ItemStatus,
   importSuggestionSchema,
   Location,
+  Organization,
   Photo,
   PhotoOwner,
   RecordResultInput,
@@ -28,6 +29,8 @@ import type {
   createSiteSchema,
   createUserRequestSchema,
   bulkUpdateItemsSchema,
+  closeInspectionSchema,
+  updateOrganizationSchema,
   equipmentTypePresetSchema,
   listItemsQuerySchema,
   startInspectionSchema,
@@ -564,4 +567,57 @@ export function usePhotoUrl(id: string, variant: 'thumbnail' | 'original') {
 /** Number of field writes on this device not yet accepted by the server. */
 export function useOutbox(): OutboxRow[] {
   return useLiveQuery(() => localDb.outbox.orderBy('seq').toArray(), []) ?? [];
+}
+
+// ---------- office: closing inspections, protocol, settings (M7) ----------
+
+export const useCloseInspection = () =>
+  useApiMutation(
+    ({ id, ...body }: In<typeof closeInspectionSchema> & { id: string }) =>
+      api.post<Inspection>(`/inspections/${id}/close`, body),
+    [['inspections'], ['inspection-items'], ['items']],
+  );
+export const useReopenInspection = () =>
+  useApiMutation(
+    ({ id, reason }: { id: string; reason: string }) =>
+      api.post<Inspection>(`/inspections/${id}/reopen`, { reason }),
+    [['inspections'], ['inspection-items']],
+  );
+
+/** The protocol as HTML (preview in an iframe, printing in the demo). */
+export const useProtocolHtml = (inspectionId: string, enabled: boolean) =>
+  useQuery<string, ApiRequestError>({
+    queryKey: ['protocol', inspectionId],
+    queryFn: async () => (await fetchBlob(`/inspections/${inspectionId}/protocol.html`)).text(),
+    enabled,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+export const useOrganization = () =>
+  useQuery<Organization, ApiRequestError>({
+    queryKey: ['organization'],
+    queryFn: () => api.get('/organization'),
+  });
+export const useUpdateOrganization = () =>
+  useApiMutation(
+    (body: In<typeof updateOrganizationSchema>) => api.put<Organization>('/organization', body),
+    [['organization']],
+  );
+export const useUploadLogo = () =>
+  useApiMutation(
+    (file: File) => uploadFile<Organization>('/organization/logo', file, {}, { method: 'PUT' }),
+    [['organization'], ['organization-logo']],
+  );
+export const useDeleteLogo = () =>
+  useApiMutation(() => api.delete('/organization/logo'), [['organization'], ['organization-logo']]);
+
+/** Object URL of the company logo, or undefined when there is none. */
+export function useLogoUrl(hasLogo: boolean, version: string) {
+  return useQuery<string, ApiRequestError>({
+    queryKey: ['organization-logo', version],
+    queryFn: async () => URL.createObjectURL(await fetchBlob('/organization/logo')),
+    enabled: hasLogo,
+    staleTime: Infinity,
+  }).data;
 }

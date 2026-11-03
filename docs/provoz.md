@@ -6,7 +6,7 @@ HTTPS), `api` (Node.js) a `db` (PostgreSQL 16). Nepotřebuje žádný placený �
 ## Požadavky
 
 - Linux, x86-64 nebo ARM64 (ne 32bitový ARM).
-- 2 vCPU a 4 GB RAM (od PDF protokolů v M7 poběží na serveru Chromium).
+- 2 vCPU a 4 GB RAM (PDF protokoly vytváří na serveru Chromium).
 - Disk 40 GB a k tomu místo na fotky, zhruba 0,5 MB na fotku.
 - Docker Engine s Docker Compose v2 a git.
 - Adresa (sub)domény s platným HTTPS. Bez něj iPad nepustí kameru.
