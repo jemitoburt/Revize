@@ -667,15 +667,18 @@ export const useProtocolHtml = (
   enabled: boolean,
   /** Columns of the appendix (equipment list for the customer); empty = no appendix. */
   columns: readonly string[] = [],
+  /** The equipment table as Příloha 1 even when it fits on the first page. */
+  forceAppendix = false,
 ) =>
   useQuery<string, ApiRequestError>({
-    queryKey: ['protocol', inspectionId, equipmentTypeId, columns.join(',')],
+    queryKey: ['protocol', inspectionId, equipmentTypeId, columns.join(','), forceAppendix],
     queryFn: async () =>
       (
         await fetchBlob(
           `/inspections/${inspectionId}/protocol.html${queryString({
             equipmentTypeId,
             columns: columns.join(',') || undefined,
+            appendix: forceAppendix ? 'always' : undefined,
           })}`,
         )
       ).text(),

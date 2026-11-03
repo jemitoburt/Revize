@@ -89,3 +89,21 @@ kopíruje formulář firmy:
   RAM navíc.
 - Kdyby bylo potřeba víc šablon (jiné rozvržení pro různé zákazníky), přidá se volba šablony
   k typu vybavení nebo zákazníkovi.
+
+## Doplnění 2026-11-03: rozvržení s co nejméně stranami
+
+- `planProtocolLayout` (`packages/shared/src/protocol-layout.ts`) odhadne výšky z textu.
+  Konstanty jsou změřené v PDF z Chromia: Arial 9 pt, 3,75 mm na řádek, 1,6 mm na znak, karta
+  závady, nadpisy. Na tom rozhodnutí pracují HTML, PDF i Word stejně.
+  - **Tabulka na 1. straně, nebo Příloha 1:** když se řádky nevejdou, je v protokolu jen odkaz
+    a tabulka se vytiskne jako Příloha 1 (A4 na šířku, `@page appendix`, ve Wordu vlastní
+    oddíl). Sloupce jsou přednastavené (`DEFAULT_APPENDIX_COLUMNS`), v náhledu jdou změnit.
+    `?appendix=always` ji vynutí a `?part=appendix` vytiskne jen ji.
+  - **Fotky a sloupce:** zkouší výšky fotek 60 až 35 mm a jeden nebo dva sloupce (dva jen
+    při nejvýš jedné fotce na závadu). Vyhraje nejmenší počet stran, při shodě větší fotky
+    a jeden sloupec. Rezerva 8 mm na stranu chrání před kartou přetékající na další stranu.
+  - Varování s podpisy začíná na nové straně jen tehdy, když se nevejde pod tabulku. Závady
+    pokračují za texty. Nadpis zůstává vždy s první kartou.
+- Ověřeno na pěti modelových protokolech (A–E). Odhad „vejde se na 1. stranu“ se se
+  skutečností shodoval ve 29 z 30 případů. Jediná chyba byla v bezpečném směru (příloha
+  zbytečně, nikdy přetečení).

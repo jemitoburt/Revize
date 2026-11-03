@@ -7,6 +7,13 @@
  */
 
 import { formatDate } from './dates.js';
+import {
+  linesOf,
+  PAGE,
+  planProtocolLayout,
+  PHOTO_ASPECT,
+  type ProtocolLayout,
+} from './protocol-layout.js';
 import { SEVERITY_LABELS } from './inspection.js';
 
 export const PROTOCOL_PLACEHOLDERS = [
@@ -105,12 +112,18 @@ export interface ProtocolData {
    * landscape). `unsafe` rows (not fit for safe operation) are printed bold and red.
    */
   appendix?: { columns: string[]; rows: { cells: string[]; unsafe: boolean }[] } | null;
+  /** Příloha 1 even when the table would fit on the first page. */
+  forceAppendix?: boolean;
   generatedAt: string;
 }
 
-export const APPENDIX_TITLE = 'Příloha – seznam kontrolovaného technického vybavení';
+export const APPENDIX_TITLE = 'Příloha 1 – tabulka kontrolovaného vybavení';
+/** Printed instead of the equipment table when it does not fit on the first page. */
+export const APPENDIX_REFERENCE = `Kontrolované vybavení viz ${APPENDIX_TITLE}.`;
 
 export interface ProtocolHtmlOptions {
+  /** `appendix`: only Příloha 1 (printed on its own). */
+  part?: 'all' | 'appendix';
   /**
    * Print the page header and footer in the document itself (browser print, preview). The PDF
    * renderer passes false and prints `protocolPageHeader`/`protocolPageFooter` on every page.
@@ -240,6 +253,49 @@ export function protocolNoteLines(i: ProtocolItem): string[] {
   return [i.defectDescription ?? '', SEVERITY_LABELS[i.outcome].protocol].filter(Boolean);
 }
 
+/** The layout decisions for this protocol (table on page 1 or Příloha 1, photo size, columns). */
+export function protocolLayout(data: ProtocolData): ProtocolLayout & { useAppendix: boolean } {
+  const { serious, other } = protocolDefects(data);
+  const layout = planProtocolLayout(
+    data,
+    protocolNoteLines,
+    [serious, other],
+    (d) => ('typeName' in d ? String(d.typeName) : ''),
+    warningHeight(data),
+    data.forceAppendix,
+  );
+  const useAppendix = Boolean(
+    data.appendix?.columns.length && (data.forceAppendix || !layout.inlineTable),
+  );
+  return { ...layout, useAppendix };
+}
+
+/** Estimated height of the warning, signatures, statements and the types' texts (mm). */
+function warningHeight(data: ProtocolData): number {
+  const textBlocks = [...protocolTexts(data), data.company.footer].filter(Boolean);
+  const texts = textBlocks.reduce(
+    (sum, text) =>
+      sum +
+      parseProtocolText(text).reduce((h, b) => {
+        if (b.kind === 'h') return h + 6;
+        if (b.kind === 'p') return h + linesOf(b.text, PAGE.width) * 3.75 + 2;
+        return (
+          h +
+          b.items.reduce(
+            (n, i) =>
+              n +
+              linesOf(i.text, PAGE.width - 6) * 3.75 +
+              i.sub.reduce((m, t) => m + linesOf(t, PAGE.width - 14) * 3.75, 0),
+            0,
+          )
+        );
+      }, 0),
+    0,
+  );
+  const statements = PROTOCOL_STATEMENTS.reduce((h, t) => h + linesOf(t, PAGE.width - 6) * 3.75, 0);
+  return 26 + 44 + statements + 6 + (textBlocks.length ? 14 : 0) + texts;
+}
+
 /** Texts of the types in the protocol, each once (all racks share one text). */
 export const protocolTexts = (data: ProtocolData) => [
   ...new Set(data.sections.map((s) => s.text.trim()).filter(Boolean)),
@@ -334,13 +390,13 @@ td, th { border: 0.75pt solid #000; padding: 1.2mm 1.5mm; vertical-align: middle
 .where { font-size: 8pt; }
 .small { font-size: 8pt; margin: 1mm 0 0; }
 .draft { border: 1.5pt solid #000; padding: 2mm 3mm; margin: 3mm 0; font-weight: 700; text-align: center; }
-.warning { page-break-before: always; }
+.warning.new-page { page-break-before: always; }
 .warning h2 { margin-top: 2mm; text-transform: uppercase; font-size: 13pt; }
 .signatures { margin: 4mm 0 2mm; page-break-inside: avoid; }
 .signatures td { height: 20mm; vertical-align: middle; }
 .signatures td.grey { width: 47mm; }
 .statements { margin: 1mm 0 4mm; }
-.photo-pages { page-break-before: always; }
+.photo-pages { margin-top: 6mm; }
 .appendix { page: appendix; page-break-before: always; }
 .appendix h2 { font-size: 13pt; }
 .list { font-size: 8pt; table-layout: auto; }
@@ -351,7 +407,11 @@ td, th { border: 0.75pt solid #000; padding: 1.2mm 1.5mm; vertical-align: middle
 .photo-pages h2 { text-transform: none; }
 .defect { page-break-inside: avoid; border: 0.75pt solid #000; padding: 2mm; margin-bottom: 3mm; }
 .photos { display: flex; flex-wrap: wrap; gap: 2mm; margin-top: 2mm; }
-.photos img { width: 42mm; height: 32mm; object-fit: cover; border: 0.5pt solid #000; }
+.photos img { object-fit: cover; border: 0.5pt solid #000; }
+.keep { break-inside: avoid; page-break-inside: avoid; }
+.cards.two { display: flex; flex-wrap: wrap; gap: 0 3mm; }
+.cards.two .defect { width: calc(50% - 1.5mm); }
+.reference { margin: 6mm 0; font-weight: 700; }
 .frame-head { margin-bottom: 2mm; }
 .frame-foot { margin-top: 6mm; }
 ${HEADER_STYLE}
@@ -373,6 +433,10 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
   const c = data.company;
   const { serious, other } = protocolDefects(data);
   const defects = [...serious, ...other];
+  const layout = protocolLayout(data);
+  const photoStyle = `height:${layout.photoHeight}mm;width:${Math.round(layout.photoHeight * PHOTO_ASPECT)}mm`;
+  const photoTags = (photos: string[]) =>
+    photos.map((p) => `<img src="${p}" alt="" style="${photoStyle}">`).join('');
 
   const row = (i: ProtocolItem) => {
     // "nehodící se škrtněte": the answer that does not apply is struck through.
@@ -411,21 +475,59 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
   }</strong> – ${escape(d.typeName)}${d.location ? `, ${escape(d.location)}` : ''}
   <div>${escape(d.defectDescription ?? '')}</div>
   <div class="small">${escape(SEVERITY_LABELS[d.outcome].protocol)}</div>
-  ${d.photos.length ? `<div class="photos">${d.photos.map((p) => `<img src="${p}" alt="">`).join('')}</div>` : ''}
+  ${d.photos.length ? `<div class="photos">${photoTags(d.photos)}</div>` : ''}
 </div>`;
 
+  const cards = layout.defectColumns === 2 ? 'cards two' : 'cards';
+  // The heading stays with the first card (or the first row of two cards): never alone at the
+  // bottom of a page.
+  const defectSection = (title: string, list: typeof defects) => {
+    if (!list.length) return '';
+    const first = layout.defectColumns;
+    return `<div class="keep"><h2>${title}</h2><div class="${cards}">${list
+      .slice(0, first)
+      .map(defectCard)
+      .join('')}</div></div>${
+      list.length > first
+        ? `<div class="${cards}">${list.slice(first).map(defectCard).join('')}</div>`
+        : ''
+    }`;
+  };
+  const appendixHtml = data.appendix
+    ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><thead><tr>${data.appendix.columns
+        .map((h) => `<th class="grey">${escape(h)}</th>`)
+        .join('')}</tr></thead><tbody>${data.appendix.rows
+        .map(
+          (r) =>
+            `<tr${r.unsafe ? ' class="unsafe"' : ''}>${r.cells.map((v) => `<td>${escape(v)}</td>`).join('')}</tr>`,
+        )
+        .join('')}</tbody></table></div>`
+    : '';
   const photoPages =
     defects.length || data.overviewPhotos.length
       ? `<div class="photo-pages">
-${serious.length ? `<h2>Závažné závady (${serious.length})</h2>${serious.map(defectCard).join('')}` : ''}
-${other.length ? `<h2>Závady (${other.length})</h2>${other.map(defectCard).join('')}` : ''}
+${defectSection(`Závažné závady (${serious.length})`, serious)}
+${defectSection(`Závady (${other.length})`, other)}
 ${
   data.overviewPhotos.length
-    ? `<h2>Fotodokumentace</h2><div class="photos">${data.overviewPhotos.map((p) => `<img src="${p}" alt="">`).join('')}</div>`
+    ? `<h2>Fotodokumentace</h2><div class="photos">${photoTags(data.overviewPhotos)}</div>`
     : ''
 }
 </div>`
       : '';
+
+  if (options.part === 'appendix') {
+    // Příloha 1 on its own: landscape pages with the page header.
+    const margins = frame ? '12mm 14mm 14mm 14mm' : PDF_MARGIN_CSS;
+    return `<!doctype html>
+<html lang="cs"><head><meta charset="utf-8"><title>${APPENDIX_TITLE}</title>
+<style>${STYLE}@page { size: A4 landscape; margin: ${margins}; } .appendix { page-break-before: auto; }</style></head><body>
+${frame ? `<div class="frame-head">${pageHeader(c, null)}</div>` : ''}
+<p class="small">${escape(data.customer.name)}, ${escape(data.site.name)} – kontrola ${czechDate(data.inspectionDate)}</p>
+${appendixHtml}
+${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
+</body></html>`;
+  }
 
   const customer = [
     data.customer.name,
@@ -457,9 +559,12 @@ ${data.final ? '' : '<div class="draft">PŘEDBĚŽNÝ PROTOKOL – kontrola ješ
   <tr><td class="grey">Následnou kontrolu provést nejpozději do</td><td>${czechDate(data.nextInspectionDate)}</td></tr>
   ${data.note ? `<tr><td class="grey">Poznámka</td><td>${escape(data.note)}</td></tr>` : ''}
 </table>
-${tables}
-<p class="small">*nehodící se škrtněte</p>
-<div class="warning">
+${
+  layout.useAppendix
+    ? `<p class="reference">${APPENDIX_REFERENCE}</p>`
+    : `${tables}\n<p class="small">*nehodící se škrtněte</p>`
+}
+<div class="warning${layout.warningOnNewPage ? ' new-page' : ''}">
 <h2>Při výsledku kontroly nevyhovuje<br>musí být technické vybavení okamžitě vyřazeno z užívání</h2>
 <table class="signatures">
   <tr><td class="grey">Kontrolu provedl</td><td>${escape(data.leadInspector)}${
@@ -472,18 +577,7 @@ ${c.footer ? protocolTextHtml(c.footer) : ''}
 ${texts.length ? `<h2>Pokyny k provádění kontrol</h2>${texts.map(protocolTextHtml).join('')}` : ''}
 </div>
 ${photoPages}
-${
-  data.appendix?.columns.length
-    ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><thead><tr>${data.appendix.columns
-        .map((h) => `<th class="grey">${escape(h)}</th>`)
-        .join('')}</tr></thead><tbody>${data.appendix.rows
-        .map(
-          (r) =>
-            `<tr${r.unsafe ? ' class="unsafe"' : ''}>${r.cells.map((v) => `<td>${escape(v)}</td>`).join('')}</tr>`,
-        )
-        .join('')}</tbody></table></div>`
-    : ''
-}
+${layout.useAppendix ? appendixHtml : ''}
 ${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
 </body></html>`;
 }

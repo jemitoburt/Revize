@@ -44,20 +44,22 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
   await expect(preview.getByText('Revize Novák s.r.o.').first()).toBeVisible();
   await expect(preview.getByText('Osvědčení č. 42/2025')).toBeVisible();
-  // Appendix for the customer: an equipment list with the chosen columns.
-  await page
-    .getByLabel('Přiložit seznam vybavení pro zákazníka (příloha na konci protokolu)')
-    .check();
+  // Three items fit on page 1: the table is in the protocol. Forced, it becomes Příloha 1
+  // (A4 landscape, preset columns) and the protocol only refers to it.
   await expect(
-    preview.getByText('Příloha – seznam kontrolovaného technického vybavení'),
+    preview.getByText('Kontrolované technické vybavení – Žebřík (terén kancelář)'),
   ).toBeVisible();
+  await page.getByLabel('Tabulku vybavení vždy jako Přílohu 1').check();
+  await expect(preview.getByText('Kontrolované vybavení viz Příloha 1')).toBeVisible();
   await expect(preview.locator('.appendix th')).toHaveText([
     'Číslo TZ',
     'Označení',
     'Typ vybavení',
     'Umístění',
-    'Výsledek',
+    'Schopno bezpečného provozu',
+    'Poznámka (popis zjištění, závady, doporučení)',
   ]);
+  await page.getByLabel('Tabulku vybavení vždy jako Přílohu 1').uncheck();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Stáhnout', exact: true }).click();
   await page.getByRole('menuitem', { name: 'PDF (A4)' }).click();

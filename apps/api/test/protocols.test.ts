@@ -214,23 +214,30 @@ describe('organization settings and protocol', () => {
     const withList = (
       await api(
         'GET',
-        `/api/inspections/${id}/protocol.html?columns=itemNumber,field:manufacturer,result,unknown`,
+        `/api/inspections/${id}/protocol.html?appendix=always&columns=itemNumber,field:manufacturer,result,unknown`,
       )
     ).body;
-    expect(withList).toContain('Příloha – seznam kontrolovaného technického vybavení');
+    expect(withList).toContain('Příloha 1 – tabulka kontrolovaného vybavení');
+    expect(withList).toContain('Kontrolované vybavení viz Příloha 1');
     expect(withList).toContain('<th class="grey">Číslo TZ</th><th class="grey">Výrobce</th>');
-    expect(html).not.toContain('Příloha – seznam');
     // Not fit for safe operation (the red defect): bold and red.
     expect(withList).toContain('<tr class="unsafe"><td>');
-    const docxList = await api('GET', `/api/inspections/${id}/protocol.docx?columns=itemNumber`);
+    const docxList = await api(
+      'GET',
+      `/api/inspections/${id}/protocol.docx?appendix=always&columns=itemNumber`,
+    );
     const listXml = strFromU8(unzipSync(new Uint8Array(docxList.rawPayload))['word/document.xml']!);
     expect(listXml).toContain('Příloha');
     expect(listXml).toContain('w:orient="landscape"');
     expect(listXml).toContain('w:color w:val="E00000"');
     // The appendix pages of the PDF are A4 landscape, the protocol stays portrait.
     const listPdf = await PDFDocument.load(
-      (await api('GET', `/api/inspections/${id}/protocol.pdf?columns=itemNumber,result,defect`))
-        .rawPayload,
+      (
+        await api(
+          'GET',
+          `/api/inspections/${id}/protocol.pdf?appendix=always&columns=itemNumber,result,defect`,
+        )
+      ).rawPayload,
     );
     const widths = listPdf.getPages().map((p) => Math.round(p.getWidth()));
     expect(widths[0]).toBe(595);
@@ -239,6 +246,15 @@ describe('organization settings and protocol', () => {
       const fs = await import('node:fs');
       fs.writeFileSync(process.env.PROTOCOL_SAMPLE, await listPdf.save());
     }
+
+    // Příloha 1 on its own (landscape only, with the page header).
+    const alone = await api('GET', `/api/inspections/${id}/protocol.pdf?part=appendix`);
+    expect(alone.headers['content-disposition']).toContain('priloha-1-');
+    const alonePdf = await PDFDocument.load(alone.rawPayload);
+    expect(alonePdf.getPages().every((p) => Math.round(p.getWidth()) === 842)).toBe(true);
+    const aloneHtml = (await api('GET', `/api/inspections/${id}/protocol.html?part=appendix`)).body;
+    expect(aloneHtml).toContain('Příloha 1 – tabulka kontrolovaného vybavení');
+    expect(aloneHtml).not.toContain('PŘI VÝSLEDKU');
 
     // Two A4 pages on one landscape A4 sheet.
     const twoUp = await api('GET', `/api/inspections/${id}/protocol.pdf?layout=two-up`);

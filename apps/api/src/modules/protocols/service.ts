@@ -2,6 +2,7 @@ import {
   LOCATION_SEPARATOR,
   appendixColumns,
   appendixRow,
+  DEFAULT_APPENDIX_COLUMNS,
   displayFields,
   fileNamePart,
   fillProtocolTemplate,
@@ -59,9 +60,19 @@ function appendixOf(
     .map((key) => available.find((c) => c.key === key))
     .filter((c): c is NonNullable<typeof c> => c !== undefined);
   if (!chosen.length) return null;
+  // A minor defect left out of the protocol is printed as fit, without its note (as in the
+  // protocol table).
+  const printed = items.map((i) =>
+    i.result && i.result.outcome === 'defect' && !i.result.includeInProtocol
+      ? {
+          ...i,
+          result: { ...i.result, outcome: 'ok' as const, severity: null, defectDescription: null },
+        }
+      : i,
+  );
   return {
     columns: chosen.map((c) => c.label),
-    rows: items.map((i) => ({
+    rows: printed.map((i) => ({
       cells: appendixRow(
         chosen.map((c) => c.key),
         types,
@@ -89,8 +100,9 @@ export function createProtocolsService(
     auth: AuthContext,
     inspectionId: string,
     equipmentTypeId?: string,
-    /** Columns of the equipment list appended for the customer (none = no appendix). */
+    /** Columns of Příloha 1 (none = the preset columns). */
     columns: readonly string[] = [],
+    forceAppendix = false,
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of one equipment type contains only its items and its protocol text.
@@ -193,7 +205,8 @@ export function createProtocolsService(
       note: inspection.note,
       sections,
       overviewPhotos,
-      appendix: appendixOf(types, items, columns),
+      appendix: appendixOf(types, items, columns.length ? columns : DEFAULT_APPENDIX_COLUMNS),
+      forceAppendix,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -201,7 +214,14 @@ export function createProtocolsService(
   return {
     async html(auth: AuthContext, inspectionId: string, options: ProtocolOptions = {}) {
       return renderProtocolHtml(
-        await build(auth, inspectionId, options.equipmentTypeId, options.columns),
+        await build(
+          auth,
+          inspectionId,
+          options.equipmentTypeId,
+          options.columns,
+          options.forceAppendix,
+        ),
+        { part: options.part },
       );
     },
 
@@ -214,16 +234,25 @@ export function createProtocolsService(
       if (!pdf) {
         throw new AppError(501, 'pdf_unavailable', 'PDF se zde nevytváří, použijte tisk náhledu.');
       }
-      const data = await build(auth, inspectionId, options.equipmentTypeId, options.columns);
-      const bytes = await pdf.render(renderProtocolHtml(data, { pageFrame: false }), {
-        header: protocolPageHeader(data),
-        footer: protocolPageFooter(data),
-        margin: PROTOCOL_PDF_MARGINS,
-      });
+      const data = await build(
+        auth,
+        inspectionId,
+        options.equipmentTypeId,
+        options.columns,
+        options.forceAppendix,
+      );
+      const bytes = await pdf.render(
+        renderProtocolHtml(data, { pageFrame: false, part: options.part }),
+        {
+          header: protocolPageHeader(data),
+          footer: protocolPageFooter(data),
+          margin: PROTOCOL_PDF_MARGINS,
+        },
+      );
       const slug = fileNamePart(data.site.name);
       return {
         data: options.twoUp ? await twoPagesPerSheet(bytes) : bytes,
-        fileName: `protokol-${slug}-${data.inspectionDate}${options.twoUp ? '-2-na-list' : ''}.pdf`,
+        fileName: `${options.part === 'appendix' ? 'priloha-1' : 'protokol'}-${slug}-${data.inspectionDate}${options.twoUp ? '-2-na-list' : ''}.pdf`,
       };
     },
 
@@ -233,10 +262,16 @@ export function createProtocolsService(
       inspectionId: string,
       options: ProtocolOptions = {},
     ): Promise<{ data: Uint8Array; fileName: string }> {
-      const data = await build(auth, inspectionId, options.equipmentTypeId, options.columns);
+      const data = await build(
+        auth,
+        inspectionId,
+        options.equipmentTypeId,
+        options.columns,
+        options.forceAppendix,
+      );
       return {
-        data: await renderProtocolDocx(data),
-        fileName: `protokol-${fileNamePart(data.site.name)}-${data.inspectionDate}.docx`,
+        data: await renderProtocolDocx(data, options.part),
+        fileName: `${options.part === 'appendix' ? 'priloha-1' : 'protokol'}-${fileNamePart(data.site.name)}-${data.inspectionDate}.docx`,
       };
     },
 
@@ -252,10 +287,14 @@ export function createProtocolsService(
   };
 }
 
-/** Options of a protocol: one equipment type only, columns of the appendix. */
+/** Options of a protocol: one equipment type only, Příloha 1 columns and use, one part only. */
 export interface ProtocolOptions {
   equipmentTypeId?: string;
   columns?: string[];
+  /** Příloha 1 even when the table fits on the first page. */
+  forceAppendix?: boolean;
+  /** `appendix`: only Příloha 1. */
+  part?: 'all' | 'appendix';
 }
 
 export type ProtocolsService = ReturnType<typeof createProtocolsService>;

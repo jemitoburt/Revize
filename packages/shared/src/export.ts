@@ -262,7 +262,9 @@ const APPENDIX_FIXED: AppendixColumn[] = [
   { key: 'location', label: 'Umístění' },
   { key: 'qrCode', label: 'QR kód' },
   { key: 'result', label: 'Výsledek' },
+  { key: 'safe', label: 'Schopno bezpečného provozu' },
   { key: 'defect', label: 'Závada' },
+  { key: 'note', label: 'Poznámka (popis zjištění, závady, doporučení)' },
   { key: 'nextInspection', label: 'Příští kontrola' },
 ];
 
@@ -278,7 +280,15 @@ export function appendixColumns(types: readonly ExportType[]): AppendixColumn[] 
   return [...APPENDIX_FIXED, ...fields];
 }
 
-export const DEFAULT_APPENDIX_COLUMNS = ['itemNumber', 'designation', 'type', 'location', 'result'];
+/** Preset columns of Příloha 1 (the equipment table on A4 landscape). */
+export const DEFAULT_APPENDIX_COLUMNS = [
+  'itemNumber',
+  'designation',
+  'type',
+  'location',
+  'safe',
+  'note',
+];
 
 /** One row of the appendix: the chosen columns as text. */
 export function appendixRow(
@@ -308,6 +318,21 @@ export function appendixRow(
         return outcomeLabel(item.result);
       case 'defect':
         return item.result?.defectDescription ?? '';
+      case 'safe': {
+        // As in the protocol table: ok and green = ANO, yellow and red = NE.
+        if (!item.result) return '';
+        const severity = severityOf(item.result);
+        return !severity || severity === 'green' ? 'ANO' : 'NE';
+      }
+      case 'note': {
+        if (!item.result) return 'Nezkontrolováno';
+        const severity = severityOf(item.result);
+        return severity
+          ? [item.result.defectDescription, SEVERITY_LABELS[severity].protocol]
+              .filter(Boolean)
+              .join(' – ')
+          : '';
+      }
       case 'nextInspection':
         return formatDate(item.nextInspectionDate);
       default:

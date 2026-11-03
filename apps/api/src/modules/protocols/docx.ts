@@ -1,10 +1,13 @@
 import {
+  APPENDIX_REFERENCE,
   APPENDIX_TITLE,
+  PHOTO_ASPECT,
   PROTOCOL_STATEMENTS,
   companyLine,
   formatDate,
   parseProtocolText,
   protocolDefects,
+  protocolLayout,
   protocolNoteLines,
   protocolTexts,
   safeToOperate,
@@ -225,8 +228,12 @@ function pageFooter(data: ProtocolData, width: number) {
   });
 }
 
-const heading = (text: string, options: { size?: number; pageBreak?: boolean } = {}) =>
+const heading = (
+  text: string,
+  options: { size?: number; pageBreak?: boolean; keepNext?: boolean } = {},
+) =>
   new Paragraph({
+    keepNext: options.keepNext,
     alignment: AlignmentType.CENTER,
     spacing: { before: mm(3), after: mm(2) },
     children: [
@@ -332,9 +339,9 @@ function protocolText(text: string): Paragraph[] {
   });
 }
 
-function defectBlock(d: ProtocolDefect): Paragraph[] {
+function defectBlock(d: ProtocolDefect, photoHeight: number): Paragraph[] {
   const photos = d.photos
-    .map((p) => imageRun(p, 42, 32))
+    .map((p) => imageRun(p, photoHeight * PHOTO_ASPECT, photoHeight))
     .filter((r): r is ImageRun => r !== null)
     .flatMap((r) => [r, new TextRun({ text: '  ', font: FONT })]);
   return [
@@ -360,7 +367,34 @@ function defectBlock(d: ProtocolDefect): Paragraph[] {
   ];
 }
 
-export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array> {
+/** Defects in two columns (one photo each): a borderless two-column table. */
+function defectGrid(defects: ProtocolDefect[], photoHeight: number): Table {
+  const half = Math.floor(CONTENT_WIDTH / 2);
+  const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const rows: TableRow[] = [];
+  for (let i = 0; i < defects.length; i += 2) {
+    rows.push(
+      new TableRow({
+        cantSplit: true,
+        children: [defects[i], defects[i + 1]].map(
+          (d) =>
+            new TableCell({
+              children: d ? defectBlock(d, photoHeight) : [new Paragraph({ children: [] })],
+              borders: { top: none, bottom: none, left: none, right: none },
+              width: { size: half, type: WidthType.DXA },
+            }),
+        ),
+      }),
+    );
+  }
+  return table([half, half], rows);
+}
+
+export async function renderProtocolDocx(
+  data: ProtocolData,
+  part: 'all' | 'appendix' = 'all',
+): Promise<Uint8Array> {
+  const layout = protocolLayout(data);
   const { serious, other } = protocolDefects(data);
   const texts = protocolTexts(data);
   const c = data.company;
@@ -375,12 +409,21 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
         ]),
     heading('Protokol o kontrole technického vybavení'),
     infoTable(data),
-    ...data.sections.flatMap((s) => [
-      new Paragraph({ children: [] }),
-      itemsTable(s.typeName, s.items),
-    ]),
-    lines(['*nehodící se škrtněte'], { size: 8 }),
-    heading('PŘI VÝSLEDKU KONTROLY NEVYHOVUJE', { size: 13, pageBreak: true }),
+    ...(layout.useAppendix
+      ? [
+          new Paragraph({
+            spacing: { before: mm(6), after: mm(6) },
+            children: [run(APPENDIX_REFERENCE, { bold: true })],
+          }),
+        ]
+      : [
+          ...data.sections.flatMap((s) => [
+            new Paragraph({ children: [] }),
+            itemsTable(s.typeName, s.items),
+          ]),
+          lines(['*nehodící se škrtněte'], { size: 8 }),
+        ]),
+    heading('PŘI VÝSLEDKU KONTROLY NEVYHOVUJE', { size: 13, pageBreak: layout.warningOnNewPage }),
     heading('MUSÍ BÝT TECHNICKÉ VYBAVENÍ OKAMŽITĚ VYŘAZENO Z UŽÍVÁNÍ', { size: 13 }),
     table(
       [mm(47), CONTENT_WIDTH - mm(47)],
@@ -412,22 +455,21 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
   ];
   const defects = serious.length || other.length || data.overviewPhotos.length;
   if (defects) {
-    let first = true;
-    const section = (title: string) => {
-      const h = heading(title, { pageBreak: first });
-      first = false;
-      return h;
-    };
+    // The defects follow on the same page when there is room (fewer pages).
+    const section = (title: string) => heading(title, { keepNext: true });
+    const block = (list: ProtocolDefect[]) =>
+      layout.defectColumns === 2
+        ? [defectGrid(list, layout.photoHeight)]
+        : list.flatMap((d) => defectBlock(d, layout.photoHeight));
     if (serious.length)
-      children.push(section(`Závažné závady (${serious.length})`), ...serious.flatMap(defectBlock));
-    if (other.length)
-      children.push(section(`Závady (${other.length})`), ...other.flatMap(defectBlock));
+      children.push(section(`Závažné závady (${serious.length})`), ...block(serious));
+    if (other.length) children.push(section(`Závady (${other.length})`), ...block(other));
     if (data.overviewPhotos.length) {
       children.push(
         section('Fotodokumentace'),
         new Paragraph({
           children: data.overviewPhotos
-            .map((p) => imageRun(p, 42, 32))
+            .map((p) => imageRun(p, layout.photoHeight * PHOTO_ASPECT, layout.photoHeight))
             .filter((r): r is ImageRun => r !== null)
             .flatMap((r) => [r, new TextRun({ text: '  ', font: FONT })]),
         }),
@@ -437,7 +479,7 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
 
   // Appendix for the customer: its own landscape section (long texts in the last column).
   const appendix: (Paragraph | Table)[] = [];
-  if (data.appendix?.columns.length) {
+  if (data.appendix?.columns.length && (layout.useAppendix || part === 'appendix')) {
     const { columns, rows } = data.appendix;
     const last = columns.length > 1 ? Math.round(LANDSCAPE_WIDTH * 0.3) : LANDSCAPE_WIDTH;
     const other =
@@ -485,12 +527,16 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
     title: `Protokol ${data.number}`,
     styles: { default: { document: { run: { font: FONT, size: 18 } } } },
     sections: [
-      {
-        properties: { page: { size: { width: mm(210), height: mm(297) }, margin } },
-        headers,
-        footers: { default: new Footer({ children: [pageFooter(data, CONTENT_WIDTH)] }) },
-        children,
-      },
+      ...(part === 'appendix'
+        ? []
+        : [
+            {
+              properties: { page: { size: { width: mm(210), height: mm(297) }, margin } },
+              headers,
+              footers: { default: new Footer({ children: [pageFooter(data, CONTENT_WIDTH)] }) },
+              children,
+            },
+          ]),
       ...(appendix.length
         ? [
             {

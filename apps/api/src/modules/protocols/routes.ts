@@ -8,12 +8,23 @@ const params = z.object({ id: idSchema });
 /** Optional: the protocol of one equipment type only (its text and its items). */
 const querystring = z.object({
   equipmentTypeId: idSchema.optional(),
-  /** Appendix for the customer: chosen columns, comma separated (see protocol-columns). */
+  /** Columns of Příloha 1, comma separated (see protocol-columns); empty = preset columns. */
   columns: z.string().max(2000).optional(),
+  /** `always`: the equipment table as Příloha 1 even when it fits on the first page. */
+  appendix: z.enum(['auto', 'always']).default('auto'),
+  /** `appendix`: only Příloha 1 (printed on its own). */
+  part: z.enum(['all', 'appendix']).default('all'),
 });
-const optionsOf = (q: { equipmentTypeId?: string; columns?: string }) => ({
+const optionsOf = (q: {
+  equipmentTypeId?: string;
+  columns?: string;
+  appendix: 'auto' | 'always';
+  part: 'all' | 'appendix';
+}) => ({
   equipmentTypeId: q.equipmentTypeId,
   columns: q.columns ? q.columns.split(',').filter(Boolean) : [],
+  forceAppendix: q.appendix === 'always',
+  part: q.part,
 });
 const pdfQuery = querystring.extend({
   /** `two-up`: two A4 pages on one landscape A4 sheet. */

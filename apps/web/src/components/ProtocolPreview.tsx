@@ -9,6 +9,7 @@ import {
   Select,
   Stack,
   Switch,
+  Text,
 } from '@mantine/core';
 import { DEFAULT_APPENDIX_COLUMNS } from '@revize/shared';
 import { IconDownload, IconPrinter } from '@tabler/icons-react';
@@ -62,8 +63,7 @@ export function ProtocolPreview({
   const columnOptions = useProtocolColumns(inspectionId, opened);
   const [withList, setWithList] = useState(false);
   const [columns, setColumns] = useState<string[]>(loadColumns);
-  const chosen = withList ? columns : [];
-  const html = useProtocolHtml(inspectionId, typeId, opened, chosen);
+  const html = useProtocolHtml(inspectionId, typeId, opened, columns, withList);
   const frame = useRef<HTMLIFrameElement>(null);
   const [downloading, setDownloading] = useState(false);
   const base = fileName.replace(/\.pdf$/, '');
@@ -72,7 +72,8 @@ export function ProtocolPreview({
     downloadFile(
       `/inspections/${inspectionId}/${file}${queryString({
         equipmentTypeId: typeId,
-        columns: chosen.join(',') || undefined,
+        columns: columns.join(',') || undefined,
+        appendix: withList ? 'always' : undefined,
         ...query,
       })}`,
       name,
@@ -141,30 +142,59 @@ export function ProtocolPreview({
                 <Menu.Item onClick={() => download('protocol.docx', {}, `${base}.docx`)}>
                   Word (DOCX)
                 </Menu.Item>
+                <Menu.Divider />
+                <Menu.Label>Jen příloha 1 – tabulka vybavení</Menu.Label>
+                {!DEMO && (
+                  <Menu.Item
+                    onClick={() =>
+                      download(
+                        'protocol.pdf',
+                        { part: 'appendix' },
+                        `${base.replace(/^protokol/, 'priloha-1')}.pdf`,
+                      )
+                    }
+                  >
+                    Příloha 1 – PDF
+                  </Menu.Item>
+                )}
+                <Menu.Item
+                  onClick={() =>
+                    download(
+                      'protocol.docx',
+                      { part: 'appendix' },
+                      `${base.replace(/^protokol/, 'priloha-1')}.docx`,
+                    )
+                  }
+                >
+                  Příloha 1 – Word
+                </Menu.Item>
               </Menu.Dropdown>
             </Menu>
           </Group>
         </Group>
         <Stack gap={6}>
+          <Text size="sm" c="dimmed">
+            Když se tabulka vybavení nevejde na první stranu, protokol na ni jen odkáže a vytiskne
+            ji jako Přílohu 1 na A4 na šířku se zvolenými sloupci. Velikost fotek a počet sloupců
+            závad se volí tak, aby měl protokol co nejméně stran.
+          </Text>
           <Switch
-            label="Přiložit seznam vybavení pro zákazníka (příloha na konci protokolu)"
+            label="Tabulku vybavení vždy jako Přílohu 1"
             checked={withList}
             onChange={(e) => setWithList(e.currentTarget.checked)}
           />
-          {withList && (
-            <MultiSelect
-              label="Sloupce seznamu"
-              description="V pořadí, v jakém je vyberete. Výběr se zapamatuje."
-              data={(columnOptions.data ?? []).map((c) => ({ value: c.key, label: c.label }))}
-              value={columns}
-              onChange={(next) => {
-                setColumns(next);
-                saveColumns(next);
-              }}
-              searchable
-              clearable
-            />
-          )}
+          <MultiSelect
+            label="Sloupce přílohy 1"
+            description="V pořadí, v jakém je vyberete. Výběr se zapamatuje."
+            data={(columnOptions.data ?? []).map((c) => ({ value: c.key, label: c.label }))}
+            value={columns}
+            onChange={(next) => {
+              setColumns(next);
+              saveColumns(next);
+            }}
+            searchable
+            clearable
+          />
         </Stack>
         {html.isPending && <Loader m="xl" />}
         {html.error && <Alert color="red">{html.error.message}</Alert>}

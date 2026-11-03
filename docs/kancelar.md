@@ -83,13 +83,18 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
      dvěma stranami na list (A4 na šířku) a Word (DOCX, dá se dál upravovat). Dokud kontrola
      není uzavřená, je protokol označený jako předběžný.
-   - **Seznam vybavení pro zákazníka:** v náhledu protokolu zapněte _Přiložit seznam vybavení_
-     a vyberte sloupce (číslo TZ, označení, typ, umístění, pole typu, výsledek, závada, příští
-     kontrola). Seznam se přidá jako příloha na konec protokolu na stránky A4 na šířku, v PDF
-     i ve Wordu. Poslední sloupec je nejširší (delší texty). Vybavení, které není schopné
-     bezpečného provozu (žlutá a červená závada), je tučně a červeně. Výběr sloupců si
-     prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
-     až se odešlou (stav „Vše odesláno“).
+   - **Rozvržení protokolu** se volí samo, aby měl protokol co nejméně stran:
+     - Když se tabulka vybavení vejde na první stranu, je v protokolu. Když ne, protokol na ni
+       jen odkáže („Kontrolované vybavení viz Příloha 1 – tabulka kontrolovaného vybavení“)
+       a vytiskne ji na konci na A4 na šířku se zvolenými sloupci (číslo TZ, označení, typ,
+       umístění, schopno bezpečného provozu, poznámka…). Nezpůsobilé vybavení je tučně
+       a červeně. Přepínač _Tabulku vybavení vždy jako Přílohu 1_ ji tam dá vždy.
+     - Fotky závad mají výšku 6 cm a zmenší se (nejvýš na 3,5 cm), jen když se tím ušetří
+       strana. Má-li každá závada jednu fotku, mohou být závady ve dvou sloupcích.
+     - Varování a podpisy se vejdou-li, pokračují na první straně a závady na straně s texty.
+     - **Stáhnout → Jen příloha 1** vytiskne tabulku samostatně (PDF nebo Word).
+     - Výběr sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
+       až se odešlou (stav „Vše odesláno“).
    - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
      kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
      Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
