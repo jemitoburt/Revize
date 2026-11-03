@@ -26,6 +26,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # API tests render a real PDF protocol (playwright-core uses this Chromium).
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm check
       - run: pnpm run check:licenses
 
