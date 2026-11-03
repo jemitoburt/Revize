@@ -1,5 +1,6 @@
 import { LOCATION_SEPARATOR, newId, outcomeLabel, recordResultSchema } from '@revize/shared';
 import type {
+  ConversionSummary,
   CurrentUser,
   Customer,
   EquipmentType,
@@ -238,6 +239,12 @@ export const useCreateEquipmentType = () =>
       api.post<EquipmentType>('/equipment-types', body),
     [['equipment-types']],
   );
+/** What changing field kinds would do to the stored values (nothing is saved). */
+export const useConversionPreview = () =>
+  useMutation<ConversionSummary[], ApiRequestError, { id: string; fieldDefinitions: unknown }>({
+    mutationFn: ({ id, fieldDefinitions }) =>
+      api.post(`/equipment-types/${id}/conversion-preview`, { fieldDefinitions }),
+  });
 export const useUpdateEquipmentType = () =>
   useApiMutation(
     ({ id, ...body }: In<typeof updateEquipmentTypeSchema> & { id: string }) =>

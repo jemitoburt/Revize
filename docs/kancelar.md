@@ -15,8 +15,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      rollkontejnery, ostatní vybavení), viz [typy-vybaveni.md](typy-vybaveni.md).
    - _Prázdný typ:_ vlastní pole.
    - **Pole:** popisek (z něj vznikne klíč), druh, povinnost, jednotka, hodnoty číselníku
-     a nabízené hodnoty. Uložené pole nejde smazat ani mu změnit druh, jde jen archivovat,
-     aby se neztratila data.
+     a nabízené hodnoty. Uložené pole nejde smazat, jde jen archivovat, aby se neztratila data.
+   - **Druh pole** jde změnit i u uloženého pole a u typů z knihovny (např. text → číslo). Před
+     uložením se ukáže, kolik hodnot u artiklů se převede a které ne. Ty, které převést nejde,
+     zůstanou jako text k opravě a původní hodnoty jsou v auditu.
    - **Text protokolu** se zástupnými údaji (Zákazník, Datum kontroly…) a náhled.
 5. **Artikly:**
    - Filtrujte zákazníka a provozovnu, pak **Nový artikl**. Pole se nabídnou podle typu.

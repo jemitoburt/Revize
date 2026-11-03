@@ -2,6 +2,8 @@ import {
   apiErrorSchema,
   createEquipmentTypeSchema,
   equipmentTypePresetSchema,
+  conversionPreviewRequestSchema,
+  conversionSummarySchema,
   equipmentTypeSchema,
   idSchema,
   updateEquipmentTypeSchema,
@@ -91,5 +93,19 @@ export const equipmentTypesRoutes: FastifyPluginAsyncZod<{ types: EquipmentTypes
       },
     },
     (req) => types.update(authOf(req), req.params.id, req.body),
+  );
+  app.post(
+    '/equipment-types/:id/conversion-preview',
+    {
+      preHandler: write,
+      schema: {
+        tags,
+        summary: 'Náhled převodu hodnot při změně druhu polí (nic neukládá)',
+        params,
+        body: conversionPreviewRequestSchema,
+        response: { 200: conversionSummarySchema, ...errors },
+      },
+    },
+    (req) => types.conversionPreview(authOf(req), req.params.id, req.body.fieldDefinitions),
   );
 };

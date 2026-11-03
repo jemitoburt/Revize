@@ -5,6 +5,8 @@ import {
   Breadcrumbs,
   Button,
   Group,
+  List,
+  Modal,
   NumberInput,
   Paper,
   Select,
@@ -26,6 +28,8 @@ import {
   fieldDefinitionsSchema,
   PROTOCOL_PLACEHOLDERS,
   fillProtocolTemplate,
+  kindChanges,
+  type ConversionSummary,
   type EquipmentType,
   type FieldDefinition,
   type FieldKind,
@@ -33,14 +37,19 @@ import {
 import { useParams } from '@tanstack/react-router';
 import { useMemo, useRef, useState } from 'react';
 import { AnchorLink } from '../components/links.js';
-import { useEquipmentType, useMe, useUpdateEquipmentType } from '../api/hooks.js';
+import {
+  useConversionPreview,
+  useEquipmentType,
+  useMe,
+  useUpdateEquipmentType,
+} from '../api/hooks.js';
 import { DynamicFields } from '../components/DynamicFields.js';
 import { formatDate, slugKey } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
 interface DraftField extends FieldDefinition {
   uid: string;
-  /** Exists in the saved type: key and kind are locked, it can only be archived. */
+  /** Exists in the saved type: the key is locked, it can only be archived (not removed). */
   saved: boolean;
   keyTouched: boolean;
 }
@@ -112,7 +121,21 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
     requestAnimationFrame(() => el?.focus());
   };
 
+  const [conversion, setConversion] = useState<ConversionSummary[] | null>(null);
+  const preview = useConversionPreview();
+
+  /** With changed field kinds: show first what happens to the stored values. */
+  const requestSave = () => {
+    const changed = kindChanges(type.fieldDefinitions, definitions);
+    if (!changed.length || type.itemCount === 0) return save();
+    preview.mutate(
+      { id: type.id, fieldDefinitions: definitions },
+      { onSuccess: setConversion, onError: notifyError },
+    );
+  };
+
   const save = () => {
+    setConversion(null);
     const parsed = fieldDefinitionsSchema.safeParse(definitions);
     if (!parsed.success) {
       const next: Record<string, string> = {};
@@ -178,12 +201,58 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
             <Button variant="subtle" color="gray" onClick={toggleArchive}>
               {type.archived ? 'Obnovit' : 'Archivovat'}
             </Button>
-            <Button onClick={save} loading={update.isPending}>
+            <Button onClick={requestSave} loading={update.isPending || preview.isPending}>
               Uložit změny
             </Button>
           </Group>
         )}
       </Group>
+      <Modal
+        opened={conversion !== null}
+        onClose={() => setConversion(null)}
+        title="Změna druhu polí"
+        size="lg"
+      >
+        <Stack>
+          {conversion?.map((c) => (
+            <Stack key={c.key} gap={4} data-testid={`conversion-${c.key}`}>
+              <Text fw={600}>
+                {c.label}: {FIELD_KIND_LABELS[c.from as FieldKind]} →{' '}
+                {FIELD_KIND_LABELS[c.to as FieldKind]}
+              </Text>
+              <Text size="sm">
+                Hodnot u artiklů: {c.total}, převede se bez výhrad: {c.converted}.
+              </Text>
+              {c.problems.length > 0 && (
+                <>
+                  <Text size="sm">
+                    Tyto hodnoty se uloží upravené nebo zůstanou jako text (u artiklu je pak potřeba
+                    je opravit):
+                  </Text>
+                  <List size="sm">
+                    {c.problems.slice(0, 20).map((p) => (
+                      <List.Item key={p.value}>
+                        {p.warning} ({p.count}×)
+                      </List.Item>
+                    ))}
+                  </List>
+                </>
+              )}
+            </Stack>
+          ))}
+          <Text size="sm" c="dimmed">
+            Původní hodnoty zůstanou v auditu každého artiklu.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setConversion(null)}>
+              Zpět
+            </Button>
+            <Button onClick={save} loading={update.isPending}>
+              Převést a uložit
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Paper withBorder p="md">
         <SimpleGrid cols={{ base: 1, sm: 2 }}>
@@ -281,7 +350,13 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
                         label="Druh"
                         data={kindOptions}
                         allowDeselect={false}
-                        disabled={!canWrite || f.saved}
+                        description={
+                          f.saved &&
+                          f.kind !== type.fieldDefinitions.find((d) => d.key === f.key)?.kind
+                            ? 'Uložené hodnoty se převedou'
+                            : undefined
+                        }
+                        disabled={!canWrite}
                         value={f.kind}
                         error={err('kind')}
                         onChange={(v) => patch(f.uid, { kind: (v as FieldKind) ?? 'text' })}

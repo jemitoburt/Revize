@@ -1,17 +1,22 @@
 import {
   EQUIPMENT_TYPE_PRESETS,
+  convertItemValues,
   equipmentTypePreset,
+  fieldDefinitionsSchema,
+  kindChanges,
   newId,
+  summarizeConversion,
+  type ConversionSummary,
   type EquipmentType,
   type FieldDefinition,
   type createEquipmentTypeSchema,
   type updateEquipmentTypeSchema,
 } from '@revize/shared';
 import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
+import { auditLog, equipmentType, item } from '../../db/schema.js';
 import type { z } from 'zod';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db, DbOrTx } from '../../db/client.js';
-import { equipmentType } from '../../db/schema.js';
 import { AppError, notFound, validationError, versionConflict, type Issue } from '../../errors.js';
 import { recordAudit } from '../audit/service.js';
 
@@ -36,7 +41,7 @@ function toDto(row: Row, count: number): EquipmentType {
 
 /**
  * Stored item values must stay readable when a type changes (ADR-0006): field keys can only be
- * archived, never removed, and the kind of an existing field cannot change.
+ * archived, never removed. A changed kind converts the stored values (`convertItemValues`).
  */
 export function checkDefinitionChange(
   before: FieldDefinition[],
@@ -50,11 +55,6 @@ export function checkDefinitionChange(
       issues.push({
         path: ['fieldDefinitions'],
         message: `Pole „${old.label}“ nelze odstranit – data artiklů by se ztratila. Archivujte ho.`,
-      });
-    } else if (found.field.kind !== old.kind) {
-      issues.push({
-        path: ['fieldDefinitions', found.index, 'kind'],
-        message: `U pole „${old.label}“ nelze změnit druh. Založte nové pole a staré archivujte.`,
       });
     }
   }
@@ -91,6 +91,28 @@ export function createEquipmentTypesService(db: Db) {
   }
 
   return {
+    /** What saving these definitions would do to the stored values of changed-kind fields. */
+    async conversionPreview(
+      auth: AuthContext,
+      id: string,
+      definitions: unknown,
+    ): Promise<ConversionSummary[]> {
+      const current = await getRow(db, auth, id);
+      const parsed = fieldDefinitionsSchema.safeParse(definitions);
+      if (!parsed.success) {
+        throw validationError([{ path: ['fieldDefinitions'], message: 'Neplatná definice polí' }]);
+      }
+      const items = await db
+        .select({ fieldValues: item.fieldValues })
+        .from(item)
+        .where(eq(item.equipmentTypeId, id));
+      return summarizeConversion(
+        current.fieldDefinitions,
+        parsed.data,
+        items.map((i) => i.fieldValues),
+      );
+    },
+
     getRow: (auth: AuthContext, id: string) => getRow(db, auth, id),
 
     presets() {
@@ -189,6 +211,44 @@ export function createEquipmentTypesService(db: Db) {
         }
 
         const { version, archived, ...changes } = input;
+        // Changed field kinds: convert the stored values of all items of the type (ADR-0006).
+        const converted = definitionsChanged
+          ? kindChanges(current.fieldDefinitions, input.fieldDefinitions!)
+          : [];
+        if (converted.length) {
+          const definitions = input.fieldDefinitions!.map((f) => ({ ...f }));
+          const items = await tx
+            .select({ id: item.id, fieldValues: item.fieldValues, version: item.version })
+            .from(item)
+            .where(eq(item.equipmentTypeId, id));
+          const audits: (typeof auditLog.$inferInsert)[] = [];
+          for (const row of items) {
+            const done = convertItemValues(converted, definitions, row.fieldValues);
+            for (const [key, options] of Object.entries(done.newOptions)) {
+              const field = definitions.find((f) => f.key === key)!;
+              field.options = [...new Set([...field.options, ...options])];
+            }
+            if (!done.changed.length) continue;
+            await tx
+              .update(item)
+              .set({ fieldValues: done.values, version: row.version + 1, updatedAt: new Date() })
+              .where(eq(item.id, row.id));
+            audits.push({
+              id: newId(),
+              organizationId: auth.organizationId,
+              actorUserId: auth.userId,
+              action: 'item.field_kind_conversion',
+              entityType: 'item',
+              entityId: row.id,
+              before: { fieldValues: row.fieldValues },
+              after: { fieldValues: done.values, changed: done.changed },
+            });
+          }
+          for (let i = 0; i < audits.length; i += 500) {
+            await tx.insert(auditLog).values(audits.slice(i, i + 500));
+          }
+          changes.fieldDefinitions = definitions;
+        }
         const [row] = await tx
           .update(equipmentType)
           .set({

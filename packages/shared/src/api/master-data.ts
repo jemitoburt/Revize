@@ -171,6 +171,24 @@ export const updateEquipmentTypeSchema = z
   .partial()
   .extend({ version });
 
+/** `POST /equipment-types/:id/conversion-preview`: what changing field kinds would do. */
+export const conversionPreviewRequestSchema = z.object({
+  fieldDefinitions: z.array(z.unknown()),
+});
+export const conversionSummarySchema = z.array(
+  z.object({
+    key: z.string(),
+    label: z.string(),
+    from: z.string(),
+    to: z.string(),
+    total: z.number().int(),
+    converted: z.number().int(),
+    problems: z.array(
+      z.object({ value: z.string(), warning: z.string(), count: z.number().int() }),
+    ),
+  }),
+);
+
 export const equipmentTypePresetSchema = z.object({
   key: z.string(),
   name: z.string(),

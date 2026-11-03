@@ -19,3 +19,11 @@ unit, archived}`, kde kind je `text | number | integer | date | boolean | select
 ## Důsledky
 
 - Silná typová kontrola vlastních polí je jen za běhu, ne při kompilaci. Pro tento účel je to přijatelné.
+
+## Změna 2026-11-03: druh uloženého pole jde změnit
+
+Na přání uživatele (i u typů z knihovny). Při uložení se hodnoty všech artiklů typu převedou
+stejně jako buňky importu (`convertItemValues`, tolerantně). Hodnota, která se nevejde, zůstane
+jako text, takže se nic neztratí. U každého artiklu se zapíše audit
+`item.field_kind_conversion` s původní hodnotou. Kancelář nejdřív uvidí náhled převodu
+(`POST /equipment-types/:id/conversion-preview`). Nové hodnoty číselníku se přidají do pole.

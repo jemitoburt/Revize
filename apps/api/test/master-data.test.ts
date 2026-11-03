@@ -184,18 +184,6 @@ describe('equipment types', () => {
     expect(removed.statusCode).toBe(400);
     expect(removed.json().message).toContain('Archivujte');
 
-    const kindChanged = rack.fieldDefinitions.map((f: { key: string }) =>
-      f.key === 'height_mm' ? { ...f, kind: 'text' } : f,
-    );
-    expect(
-      (
-        await api('PATCH', `/api/equipment-types/${rack.id}`, {
-          fieldDefinitions: kindChanged,
-          version: 1,
-        })
-      ).statusCode,
-    ).toBe(400);
-
     const archivedField = rack.fieldDefinitions.map((f: { key: string }) =>
       f.key === 'height_mm' ? { ...f, archived: true } : f,
     );
@@ -204,6 +192,50 @@ describe('equipment types', () => {
       version: 1,
     });
     expect(ok.json()).toMatchObject({ schemaVersion: 2, version: 2 });
+  });
+
+  it('changes the kind of a saved field and converts the stored values', async () => {
+    const { site, ladder } = await setup();
+    const base = { siteId: site.id, locationId: null, equipmentTypeId: ladder.id };
+    const values = { manufacturer: 'Alve', ladder_type: 'Opěrný', rungs: 8 };
+    const one = (
+      await api('POST', '/api/items', { ...base, fieldValues: { ...values, model: '150 kg' } })
+    ).json();
+    const two = (
+      await api('POST', '/api/items', { ...base, fieldValues: { ...values, model: 'neznámý' } })
+    ).json();
+    const type = (await api('GET', `/api/equipment-types/${ladder.id}`)).json();
+    const definitions = type.fieldDefinitions.map((f: { key: string }) =>
+      f.key === 'model' ? { ...f, kind: 'integer' } : f,
+    );
+
+    const preview = (
+      await api('POST', `/api/equipment-types/${ladder.id}/conversion-preview`, {
+        fieldDefinitions: definitions,
+      })
+    ).json();
+    expect(preview).toEqual([
+      expect.objectContaining({
+        key: 'model',
+        from: 'text',
+        to: 'integer',
+        total: 2,
+        converted: 0,
+      }),
+    ]);
+    expect(preview[0].problems.map((p: { value: string }) => p.value).sort()).toEqual([
+      '150 kg',
+      'neznámý',
+    ]);
+
+    const saved = await api('PATCH', `/api/equipment-types/${ladder.id}`, {
+      fieldDefinitions: definitions,
+      version: type.version,
+    });
+    expect(saved.statusCode).toBe(200);
+    expect((await api('GET', `/api/items/${one.id}`)).json().fieldValues.model).toBe(150);
+    // What does not fit stays as text (nothing is lost).
+    expect((await api('GET', `/api/items/${two.id}`)).json().fieldValues.model).toBe('neznámý');
   });
 
   it('creates a custom type', async () => {
