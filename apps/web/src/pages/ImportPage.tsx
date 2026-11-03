@@ -38,6 +38,7 @@ import {
   useUploadImport,
   useValidateImport,
 } from '../api/hooks.js';
+import { downloadFile } from '../api/client.js';
 import { ButtonLink } from '../components/links.js';
 import { notifyError } from '../lib/notify.js';
 
@@ -251,7 +252,16 @@ export function ImportPage() {
             {typeId && (
               <Text size="sm">
                 Nemáte vlastní seznam?{' '}
-                <Anchor href={`/api/equipment-types/${typeId}/import-template`} download>
+                <Anchor
+                  component="button"
+                  type="button"
+                  onClick={() =>
+                    downloadFile(
+                      `/equipment-types/${typeId}/import-template`,
+                      `import-${type?.name ?? 'sablona'}.xlsx`,
+                    ).catch(notifyError)
+                  }
+                >
                   Stáhnout šablonu XLSX pro typ {type?.name}
                 </Anchor>{' '}
                 – po vyplnění se sloupce namapují samy.

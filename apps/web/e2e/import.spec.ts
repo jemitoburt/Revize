@@ -26,7 +26,7 @@ test('admin imports items from CSV: mapping, per-row report, skip bad rows', asy
   await choose('Zákazník', 'Import s.r.o.');
   await choose('Provozovna', 'Sklad Ostrava');
   await choose('Typ vybavení', 'Žebřík (import)');
-  await expect(page.getByRole('link', { name: /Stáhnout šablonu XLSX/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Stáhnout šablonu XLSX/ })).toBeVisible();
 
   const csv = [
     'Číslo;Hala;Řada;Výrobce;Typ žebříku;Počet příček',

@@ -1,4 +1,5 @@
 import type { ApiError } from '@revize/shared';
+import { send } from './transport.js';
 
 /** Error returned by the API: machine code, Czech message, optional per-field issues. */
 export class ApiRequestError extends Error {
@@ -26,11 +27,14 @@ export class ApiRequestError extends Error {
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+/** True in the GitHub Pages build, where the API runs inside the browser (ADR-0015). */
+export const DEMO = import.meta.env.VITE_DEMO === 'true';
+
 /** Same-origin JSON requests; the session cookie authenticates (ADR-0005). */
 export async function request<T>(method: Method, path: string, body?: unknown): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, {
+    response = await send(path, {
       method,
       credentials: 'same-origin',
       headers: body === undefined ? {} : { 'content-type': 'application/json' },
@@ -65,7 +69,7 @@ export async function uploadFile<T>(
   form.append('file', file, file.name);
   let response: Response;
   try {
-    response = await fetch(`/api${path}`, {
+    response = await send(path, {
       method: 'POST',
       credentials: 'same-origin',
       body: form,
@@ -86,6 +90,34 @@ export async function uploadFile<T>(
     );
   }
   return data as T;
+}
+
+/** Downloads a file the API generates (e.g. an import template) under the given name. */
+export async function downloadFile(path: string, fileName: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await send(path, { method: 'GET', credentials: 'same-origin' });
+  } catch {
+    throw new ApiRequestError(0, {
+      error: 'network',
+      message: 'Server není dostupný. Zkontrolujte připojení.',
+    });
+  }
+  if (!response.ok) {
+    const data: unknown = await response.json().catch(() => null);
+    throw new ApiRequestError(
+      response.status,
+      data && typeof data === 'object' && 'error' in data
+        ? (data as ApiError)
+        : { error: `http_${response.status}`, message: `Chyba serveru (${response.status}).` },
+    );
+  }
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
 export const api = {

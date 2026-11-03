@@ -10,7 +10,9 @@ import {
 } from '@mantine/core';
 import { useRouter, useSearch } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
+import { DEMO } from '../api/client.js';
 import { useLogin } from '../api/hooks.js';
+import { DemoLoginHint } from '../demo/DemoParts.js';
 
 export function LoginPage() {
   const login = useLogin();
@@ -42,6 +44,14 @@ export function LoginPage() {
         <form onSubmit={submit}>
           <Stack>
             <Title order={2}>Revize – přihlášení</Title>
+            {DEMO && (
+              <DemoLoginHint
+                onPick={(demoEmail, demoPassword) => {
+                  setEmail(demoEmail);
+                  setPassword(demoPassword);
+                }}
+              />
+            )}
             {login.error && <Alert color="red">{login.error.message}</Alert>}
             <TextInput
               label="E-mail"

@@ -1,15 +1,18 @@
-# Deploys the QR spike (apps/spike-qr) to GitHub Pages so it can be tested on a real iPad over HTTPS.
+# GitHub Pages: the QR spike at / and the office/field app demo at /app/ (API running in the
+# browser on PGlite, ADR-0015), both testable on a real iPad over HTTPS.
 # One-time setup: repository Settings → Pages → Source: "GitHub Actions".
-name: Deploy QR spike to Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'apps/spike-qr/**'
+      - 'apps/web/**'
+      - 'apps/api/**'
       - 'packages/**'
       - 'pnpm-lock.yaml'
-      - '.github/workflows/pages-spike.yml'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -35,9 +38,20 @@ jobs:
       - run: pnpm spike:build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+      - run: pnpm --filter @revize/web build:demo
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/app/
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          cp -r apps/spike-qr/dist/. site/
+          cp -r apps/web/dist-demo site/app
+          # Pages answers unknown paths with the root 404.html: let the app's router handle
+          # deep links such as /app/artikly.
+          cp site/app/index.html site/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/spike-qr/dist
+          path: site
 
   deploy:
     needs: build

@@ -5,6 +5,7 @@ import {
   Loader,
   Menu,
   NavLink,
+  Stack,
   Text,
   UnstyledButton,
 } from '@mantine/core';
@@ -21,7 +22,9 @@ import {
 } from '@tabler/icons-react';
 import { ROLE_LABELS, type Permission } from '@revize/shared';
 import { Link, Navigate, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
+import { DEMO } from '../api/client.js';
 import { useLogout, useMe } from '../api/hooks.js';
+import { DemoBadge, DemoResetItem } from '../demo/DemoParts.js';
 
 const NAV: { to: string; label: string; icon: typeof IconUser; permission: Permission }[] = [
   {
@@ -47,9 +50,10 @@ export function Layout() {
 
   if (me.isPending) {
     return (
-      <Group justify="center" mt="xl">
+      <Stack align="center" mt="xl">
         <Loader />
-      </Group>
+        {DEMO && <Text c="dimmed">Spouštím ukázkovou databázi v prohlížeči…</Text>}
+      </Stack>
     );
   }
   if (!me.data) {
@@ -73,6 +77,7 @@ export function Layout() {
             <Text fw={700} size="lg">
               Revize
             </Text>
+            {DEMO && <DemoBadge />}
           </Group>
           <Menu position="bottom-end" withinPortal>
             <Menu.Target>
@@ -103,6 +108,7 @@ export function Layout() {
               >
                 Odhlásit
               </Menu.Item>
+              {DEMO && <DemoResetItem />}
             </Menu.Dropdown>
           </Menu>
         </Group>

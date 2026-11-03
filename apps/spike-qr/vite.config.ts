@@ -34,6 +34,9 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,wasm,png,svg}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // On GitHub Pages the office demo lives at /app/ inside this scope; never serve the spike
+        // shell for it.
+        navigateFallbackDenylist: [/\/app\//],
       },
     }),
   ],

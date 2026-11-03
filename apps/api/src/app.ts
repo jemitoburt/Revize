@@ -6,8 +6,6 @@ import swaggerUi from '@fastify/swagger-ui';
 import { useCzechValidationMessages } from '@revize/shared';
 import Fastify, { type FastifyError, type FastifyServerOptions } from 'fastify';
 import {
-  hasZodFastifySchemaValidationErrors,
-  isResponseSerializationError,
   jsonSchemaTransform,
   serializerCompiler,
   validatorCompiler,
@@ -16,23 +14,8 @@ import {
 import { authPlugin } from './auth/plugin.js';
 import type { Config } from './config.js';
 import type { Db } from './db/client.js';
-import { AppError } from './errors.js';
-import { auditRoutes } from './modules/audit/routes.js';
-import { authRoutes } from './modules/auth/routes.js';
-import { createAuthService } from './modules/auth/service.js';
-import { customersRoutes } from './modules/customers/routes.js';
-import { createCustomersService } from './modules/customers/service.js';
-import { equipmentTypesRoutes } from './modules/equipment-types/routes.js';
-import { createEquipmentTypesService } from './modules/equipment-types/service.js';
-import { healthRoutes } from './modules/health/routes.js';
-import { importsRoutes } from './modules/imports/routes.js';
-import { createImportsService } from './modules/imports/service.js';
-import { itemsRoutes } from './modules/items/routes.js';
-import { createItemsService } from './modules/items/service.js';
-import { locationsRoutes } from './modules/locations/routes.js';
-import { createLocationsService } from './modules/locations/service.js';
-import { usersRoutes } from './modules/users/routes.js';
-import { createUsersService } from './modules/users/service.js';
+import { errorResponse } from './error-response.js';
+import { registerApiRoutes } from './routes.js';
 
 export interface AppDeps {
   config: Config;
@@ -53,36 +36,10 @@ export async function buildApp({ config, db, logger }: AppDeps) {
   app.setValidatorCompiler(validatorCompiler);
   app.setSerializerCompiler(serializerCompiler);
   app.setErrorHandler((error: FastifyError, request, reply) => {
-    if (hasZodFastifySchemaValidationErrors(error)) {
-      return reply.code(400).send({
-        error: 'validation',
-        message: 'Zadané údaje nejsou platné.',
-        issues: error.validation.map((v) => ({
-          path: v.instancePath.split('/').filter(Boolean),
-          message: v.message ?? 'Neplatná hodnota',
-        })),
-      });
-    }
-    if (error instanceof AppError) {
-      return reply.code(error.statusCode).send({
-        error: error.code,
-        message: error.message,
-        ...(error.issues ? { issues: error.issues } : {}),
-      });
-    }
-    if (error.statusCode === 429) {
-      return reply
-        .code(429)
-        .send({ error: 'rate_limited', message: 'Příliš mnoho pokusů. Zkuste to za chvíli.' });
-    }
-    if (isResponseSerializationError(error)) {
-      request.log.error({ issues: error.cause.issues }, 'response does not match schema');
-    } else if ((error.statusCode ?? 500) < 500) {
-      return reply.code(error.statusCode!).send({ error: 'bad_request', message: error.message });
-    } else {
-      request.log.error(error);
-    }
-    return reply.code(500).send({ error: 'internal', message: 'Neočekávaná chyba serveru.' });
+    const { statusCode, body } = errorResponse(error, (detail, message) =>
+      request.log.error(detail, message),
+    );
+    return reply.code(statusCode).send(body);
   });
 
   await app.register(cookie);
@@ -110,22 +67,7 @@ export async function buildApp({ config, db, logger }: AppDeps) {
   await app.register(swaggerUi, { routePrefix: '/api/docs' });
   await app.register(authPlugin, { db, config });
 
-  const auth = createAuthService(db, config);
-  const users = createUsersService(db);
-  await app.register(
-    async (api) => {
-      await api.register(healthRoutes, { db });
-      await api.register(authRoutes, { auth, config });
-      await api.register(usersRoutes, { users });
-      await api.register(auditRoutes, { db });
-      await api.register(customersRoutes, { customers: createCustomersService(db) });
-      await api.register(locationsRoutes, { locations: createLocationsService(db) });
-      await api.register(equipmentTypesRoutes, { types: createEquipmentTypesService(db) });
-      await api.register(itemsRoutes, { items: createItemsService(db) });
-      await api.register(importsRoutes, { imports: createImportsService(db), db });
-    },
-    { prefix: '/api' },
-  );
+  await app.register((api) => registerApiRoutes(api, { db, config }), { prefix: '/api' });
 
   return app;
 }

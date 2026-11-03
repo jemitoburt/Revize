@@ -6,6 +6,8 @@ RUN corepack enable
 WORKDIR /repo
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY apps/web/package.json apps/web/
+# Workspace dependency of the web app (only its demo build uses it, see ADR-0015).
+COPY apps/api/package.json apps/api/
 COPY apps/spike-qr/package.json apps/spike-qr/
 COPY packages/shared/package.json packages/shared/
 COPY packages/scanner/package.json packages/scanner/

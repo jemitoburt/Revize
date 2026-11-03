@@ -24,7 +24,8 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
 - `packages/shared` – domain types, Zod schemas, domain rules. Platform-agnostic: no DOM, no Node APIs.
 - `packages/scanner` – framework-agnostic QR scanning core (camera, decode worker, dedupe,
   keyboard-wedge scanner). Used by the spike now and by `apps/web` later.
-- `apps/spike-qr` – milestone M1 QR spike (static PWA, deployed to GitHub Pages).
+- `apps/spike-qr` – milestone M1 QR spike (static PWA). GitHub Pages: spike at `/`, app demo at
+  `/app/` (`.github/workflows/pages.yml`).
 - `apps/api` – Fastify 5 + Zod type provider, Drizzle + node-postgres.
   - `src/modules/<domain>/{routes,service,repository}.ts`; routes validate with schemas from
     `@revize/shared` (they also generate the OpenAPI doc at `/api/docs`).
@@ -35,6 +36,10 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
   - Every change in a service goes with `recordAudit(tx, …)` in the same transaction.
   - `src/bootstrap.ts` creates org + first admin on an empty DB; `src/seed/demo.ts` demo data.
   - Tests in `test/` hit a real PostgreSQL (fresh database per run, `TEST_DATABASE_URL`).
+  - `src/routes.ts` registers every module (server and demo); `src/error-response.ts` maps errors.
+  - `src/demo/` runs the same routes on PGlite in the browser for the GitHub Pages demo
+    (ADR-0015): a minimal Fastify stand-in (`router.ts`); keep new modules within what it supports
+    (routes, onRequest, preHandler, zod schemas, cookies, single-file multipart).
   - Correlated subqueries in `sql` use qualified names (`"customer"."id"`): drizzle renders
     column references without the table, which inside a subquery binds to the inner table.
 - `apps/web` – office UI: React 19, Vite, Mantine 9, TanStack Query + Router (code-based routes in
@@ -43,6 +48,8 @@ inspections on iPad (PWA), office administration and exports. Self-hosted, free,
   (camera, scanner, files, storage, feedback) only through `src/platform/` adapters.
   - Mantine components as router links via `components/links.tsx` (`AnchorLink`, `ButtonLink`).
   - Forms with custom validation use `noValidate`, so every error shows on its field in Czech.
+  - Requests go through `src/api/transport.ts`; `vite build --mode demo` swaps it for
+    `src/demo/transport.ts` and aliases Node modules to `src/demo/shims` (ADR-0015).
   - e2e (`apps/web/e2e`) runs the real API on a fresh database (`e2e/start-api.mjs`); Mantine
     selects have the `combobox` role.
 - `deploy/` – Caddyfile and the web image (office app at `/`, QR spike at `/spike/`, proxies `/api`).
@@ -70,6 +77,8 @@ pnpm db:test          # throwaway PostgreSQL 16 in Docker on :5432 (db:test:stop
 pnpm api:dev          # API with reload on :3000 (apps/api/.env from .env.example)
 pnpm --filter @revize/web dev   # office UI on :5173, proxies /api to :3000
 pnpm --filter @revize/web e2e   # office e2e: real API on a fresh DB + built UI (needs db:test)
+pnpm --filter @revize/web build:demo   # GitHub Pages demo (API in the browser) into dist-demo
+pnpm --filter @revize/web e2e:demo     # e2e of the demo build
 pnpm typecheck
 pnpm lint
 pnpm run check:licenses   # dependency license policy (docs/licenses.md)

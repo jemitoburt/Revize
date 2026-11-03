@@ -69,6 +69,10 @@ jobs:
       - run: pnpm --filter @revize/web e2e
         env:
           CI: 'true'
+      # The GitHub Pages demo build: the API running in the browser on PGlite (ADR-0015).
+      - run: pnpm --filter @revize/web e2e:demo
+        env:
+          CI: 'true'
 
   docker:
     # Acceptance criterion 7: the whole system starts with `docker compose up`.

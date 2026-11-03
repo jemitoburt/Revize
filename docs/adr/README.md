@@ -19,3 +19,4 @@ Každé rozhodnutí, které se později těžko mění, má vlastní soubor `NNN
 | [0012](0012-item-numbers.md)                   | Čísla artiklů: číselné řady 1–8 číslic, úvodní nuly bez významu | přijato                         |
 | [0013](0013-equipment-type-library.md)         | Knihovna typů vybavení podle norem                              | přijato                         |
 | [0014](0014-import.md)                         | Import artiklů z XLSX/CSV                                       | přijato                         |
+| [0015](0015-demo-in-browser.md)                | Ukázková verze na GitHub Pages – API běží v prohlížeči          | přijato                         |
