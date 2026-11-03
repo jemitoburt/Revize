@@ -22,6 +22,7 @@ import {
   Packer,
   PageBreak,
   PageNumber,
+  PageOrientation,
   Paragraph,
   ShadingType,
   Table,
@@ -48,6 +49,8 @@ const GREY = 'F2F2F2';
 const FONT = 'Arial';
 /** A4 portrait minus 14 mm margins. */
 const CONTENT_WIDTH = mm(210 - 28);
+/** A4 landscape minus margins (the appendix). */
+const LANDSCAPE_WIDTH = mm(297 - 28);
 
 const border = { style: BorderStyle.SINGLE, size: 6, color: '000000' };
 const borders = { top: border, bottom: border, left: border, right: border };
@@ -200,10 +203,10 @@ function pageHeader(data: ProtocolData) {
   ]);
 }
 
-function pageFooter(data: ProtocolData) {
+function pageFooter(data: ProtocolData, width: number) {
   return new Paragraph({
     border: { top: { style: BorderStyle.SINGLE, size: 4, color: '000000', space: 2 } },
-    tabStops: [{ type: TabStopType.RIGHT, position: CONTENT_WIDTH }],
+    tabStops: [{ type: TabStopType.RIGHT, position: width }],
     children: [
       run(data.company.pageFooter, { bold: true, size: 7 }),
       ...(data.company.web
@@ -432,29 +435,50 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
     }
   }
 
+  // Appendix for the customer: its own landscape section (long texts in the last column).
+  const appendix: (Paragraph | Table)[] = [];
   if (data.appendix?.columns.length) {
     const { columns, rows } = data.appendix;
-    const width = Math.floor(CONTENT_WIDTH / columns.length);
-    children.push(
-      heading(APPENDIX_TITLE, { size: 13, pageBreak: true }),
-      table(
-        columns.map(() => width),
-        [
-          new TableRow({
-            tableHeader: true,
-            children: columns.map((h) => cell(lines([h], { bold: true, size: 8 }), { grey: true })),
-          }),
-          ...rows.map(
-            (r) =>
-              new TableRow({
-                cantSplit: true,
-                children: r.map((v) => cell(lines([v], { size: 8 }))),
-              }),
-          ),
-        ],
-      ),
+    const last = columns.length > 1 ? Math.round(LANDSCAPE_WIDTH * 0.3) : LANDSCAPE_WIDTH;
+    const other =
+      columns.length > 1 ? Math.floor((LANDSCAPE_WIDTH - last) / (columns.length - 1)) : 0;
+    const widths = columns.map((_, i) => (i === columns.length - 1 ? last : other));
+    appendix.push(
+      heading(APPENDIX_TITLE, { size: 13 }),
+      table(widths, [
+        new TableRow({
+          tableHeader: true,
+          children: columns.map((h) => cell(lines([h], { bold: true, size: 8 }), { grey: true })),
+        }),
+        ...rows.map(
+          (row) =>
+            new TableRow({
+              cantSplit: true,
+              children: row.cells.map((v) =>
+                cell(
+                  lines([v], {
+                    size: 8,
+                    // Not fit for safe operation: bold and red.
+                    ...(row.unsafe ? { bold: true, color: RED } : {}),
+                  }),
+                ),
+              ),
+            }),
+        ),
+      ]),
     );
   }
+  const margin = {
+    top: mm(10),
+    bottom: mm(12),
+    left: mm(14),
+    right: mm(14),
+    header: mm(8),
+    footer: mm(8),
+  };
+  const headers = {
+    default: new Header({ children: [pageHeader(data), new Paragraph({ children: [] })] }),
+  };
 
   const document = new Document({
     creator: c.name,
@@ -462,25 +486,31 @@ export async function renderProtocolDocx(data: ProtocolData): Promise<Uint8Array
     styles: { default: { document: { run: { font: FONT, size: 18 } } } },
     sections: [
       {
-        properties: {
-          page: {
-            size: { width: mm(210), height: mm(297) },
-            margin: {
-              top: mm(10),
-              bottom: mm(12),
-              left: mm(14),
-              right: mm(14),
-              header: mm(8),
-              footer: mm(8),
-            },
-          },
-        },
-        headers: {
-          default: new Header({ children: [pageHeader(data), new Paragraph({ children: [] })] }),
-        },
-        footers: { default: new Footer({ children: [pageFooter(data)] }) },
+        properties: { page: { size: { width: mm(210), height: mm(297) }, margin } },
+        headers,
+        footers: { default: new Footer({ children: [pageFooter(data, CONTENT_WIDTH)] }) },
         children,
       },
+      ...(appendix.length
+        ? [
+            {
+              properties: {
+                page: {
+                  // docx swaps width and height itself for landscape.
+                  size: {
+                    width: mm(210),
+                    height: mm(297),
+                    orientation: PageOrientation.LANDSCAPE,
+                  },
+                  margin,
+                },
+              },
+              headers,
+              footers: { default: new Footer({ children: [pageFooter(data, LANDSCAPE_WIDTH)] }) },
+              children: appendix,
+            },
+          ]
+        : []),
     ],
   });
   return new Uint8Array(await Packer.toArrayBuffer(document));

@@ -45,8 +45,9 @@ export class ChromiumPdfRenderer implements PdfRenderer {
         headerTemplate: options.header,
         footerTemplate: options.footer,
         margin: options.margin,
-        // The page's own @page margins would override the ones the header and footer need.
-        preferCSSPageSize: false,
+        // The document's @page rules decide the size (the appendix is landscape); they carry the
+        // same margins as `margin`, which the header and footer templates live in.
+        preferCSSPageSize: true,
       });
     } finally {
       await page.close();

@@ -85,8 +85,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      není uzavřená, je protokol označený jako předběžný.
    - **Seznam vybavení pro zákazníka:** v náhledu protokolu zapněte _Přiložit seznam vybavení_
      a vyberte sloupce (číslo TZ, označení, typ, umístění, pole typu, výsledek, závada, příští
-     kontrola). Seznam se přidá jako příloha na konec protokolu, v PDF i ve Wordu. Výběr
-     sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
+     kontrola). Seznam se přidá jako příloha na konec protokolu na stránky A4 na šířku, v PDF
+     i ve Wordu. Poslední sloupec je nejširší (delší texty). Vybavení, které není schopné
+     bezpečného provozu (žlutá a červená závada), je tučně a červeně. Výběr sloupců si
+     prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
      až se odešlou (stav „Vše odesláno“).
    - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
      kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).

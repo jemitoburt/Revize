@@ -61,13 +61,15 @@ function appendixOf(
   if (!chosen.length) return null;
   return {
     columns: chosen.map((c) => c.label),
-    rows: items.map((i) =>
-      appendixRow(
+    rows: items.map((i) => ({
+      cells: appendixRow(
         chosen.map((c) => c.key),
         types,
         i,
       ),
-    ),
+      // ANO/NE as in the protocol table: yellow and red are not fit for safe operation.
+      unsafe: i.result !== null && ['amber', 'red'].includes(severityOf(i.result) ?? ''),
+    })),
   };
 }
 

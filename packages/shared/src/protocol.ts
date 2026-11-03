@@ -100,8 +100,11 @@ export interface ProtocolData {
   sections: ProtocolSection[];
   /** data: URLs of photos of the inspection as a whole. */
   overviewPhotos: string[];
-  /** Equipment list for the customer with the columns chosen in the office (last pages). */
-  appendix?: { columns: string[]; rows: string[][] } | null;
+  /**
+   * Equipment list for the customer with the columns chosen in the office (last pages, A4
+   * landscape). `unsafe` rows (not fit for safe operation) are printed bold and red.
+   */
+  appendix?: { columns: string[]; rows: { cells: string[]; unsafe: boolean }[] } | null;
   generatedAt: string;
 }
 
@@ -303,6 +306,8 @@ export function protocolPageFooter(data: ProtocolData): string {
 
 /** Margins of the PDF pages: the header and footer templates live in them. */
 export const PROTOCOL_PDF_MARGINS = { top: '29mm', bottom: '20mm', left: '14mm', right: '14mm' };
+/** The same margins for `@page` (the PDF uses the CSS page sizes: portrait and landscape). */
+const PDF_MARGIN_CSS = `${PROTOCOL_PDF_MARGINS.top} ${PROTOCOL_PDF_MARGINS.right} ${PROTOCOL_PDF_MARGINS.bottom} ${PROTOCOL_PDF_MARGINS.left}`;
 
 const STYLE = `
 * { box-sizing: border-box; }
@@ -336,9 +341,11 @@ td, th { border: 0.75pt solid #000; padding: 1.2mm 1.5mm; vertical-align: middle
 .signatures td.grey { width: 47mm; }
 .statements { margin: 1mm 0 4mm; }
 .photo-pages { page-break-before: always; }
-.appendix { page-break-before: always; }
+.appendix { page: appendix; page-break-before: always; }
 .appendix h2 { font-size: 13pt; }
-.list { font-size: 8pt; }
+.list { font-size: 8pt; table-layout: auto; }
+.list td:last-child { min-width: 70mm; }
+.list tr.unsafe td { font-weight: 700; color: #e00000; }
 .list th, .list td { padding: 0.8mm 1.2mm; }
 .list tr { page-break-inside: avoid; }
 .photo-pages h2 { text-transform: none; }
@@ -435,7 +442,9 @@ ${
 <html lang="cs"><head><meta charset="utf-8"><title>Protokol ${escape(data.number)}</title>
 <style>${STYLE}${
     // Browser print sets its own margins; the PDF renderer passes them with the header/footer.
-    frame ? '@page { size: A4; margin: 12mm 14mm 14mm 14mm; }' : '@page { size: A4; }'
+    frame
+      ? '@page { size: A4; margin: 12mm 14mm 14mm 14mm; } @page appendix { size: A4 landscape; }'
+      : `@page { size: A4; margin: ${PDF_MARGIN_CSS}; } @page appendix { size: A4 landscape; margin: ${PDF_MARGIN_CSS}; }`
   }</style></head><body>
 ${frame ? `<div class="frame-head">${pageHeader(c, null)}</div>` : ''}
 ${data.final ? '' : '<div class="draft">PŘEDBĚŽNÝ PROTOKOL – kontrola ještě není uzavřena, údaje se mohou změnit.</div>'}
@@ -468,7 +477,10 @@ ${
     ? `<div class="appendix"><h2>${APPENDIX_TITLE}</h2><table class="list"><thead><tr>${data.appendix.columns
         .map((h) => `<th class="grey">${escape(h)}</th>`)
         .join('')}</tr></thead><tbody>${data.appendix.rows
-        .map((r) => `<tr>${r.map((v) => `<td>${escape(v)}</td>`).join('')}</tr>`)
+        .map(
+          (r) =>
+            `<tr${r.unsafe ? ' class="unsafe"' : ''}>${r.cells.map((v) => `<td>${escape(v)}</td>`).join('')}</tr>`,
+        )
         .join('')}</tbody></table></div>`
     : ''
 }

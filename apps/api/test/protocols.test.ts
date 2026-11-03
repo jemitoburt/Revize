@@ -220,10 +220,25 @@ describe('organization settings and protocol', () => {
     expect(withList).toContain('Příloha – seznam kontrolovaného technického vybavení');
     expect(withList).toContain('<th class="grey">Číslo TZ</th><th class="grey">Výrobce</th>');
     expect(html).not.toContain('Příloha – seznam');
+    // Not fit for safe operation (the red defect): bold and red.
+    expect(withList).toContain('<tr class="unsafe"><td>');
     const docxList = await api('GET', `/api/inspections/${id}/protocol.docx?columns=itemNumber`);
-    expect(
-      strFromU8(unzipSync(new Uint8Array(docxList.rawPayload))['word/document.xml']!),
-    ).toContain('Příloha');
+    const listXml = strFromU8(unzipSync(new Uint8Array(docxList.rawPayload))['word/document.xml']!);
+    expect(listXml).toContain('Příloha');
+    expect(listXml).toContain('w:orient="landscape"');
+    expect(listXml).toContain('w:color w:val="E00000"');
+    // The appendix pages of the PDF are A4 landscape, the protocol stays portrait.
+    const listPdf = await PDFDocument.load(
+      (await api('GET', `/api/inspections/${id}/protocol.pdf?columns=itemNumber,result,defect`))
+        .rawPayload,
+    );
+    const widths = listPdf.getPages().map((p) => Math.round(p.getWidth()));
+    expect(widths[0]).toBe(595);
+    expect(widths.at(-1)).toBe(842);
+    if (process.env.PROTOCOL_SAMPLE) {
+      const fs = await import('node:fs');
+      fs.writeFileSync(process.env.PROTOCOL_SAMPLE, await listPdf.save());
+    }
 
     // Two A4 pages on one landscape A4 sheet.
     const twoUp = await api('GET', `/api/inspections/${id}/protocol.pdf?layout=two-up`);
