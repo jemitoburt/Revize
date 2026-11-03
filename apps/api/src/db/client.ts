@@ -19,7 +19,12 @@ export function parsePostgresConfig(url: string, password?: string): pg.PoolConf
     host: parsed.hostname || undefined,
     port: parsed.port ? Number(parsed.port) : undefined,
     user: parsed.username ? decodeURIComponent(parsed.username) : undefined,
-    password: password !== undefined ? password : (parsed.password ? decodeURIComponent(parsed.password) : undefined),
+    password:
+      password !== undefined
+        ? password
+        : parsed.password
+          ? decodeURIComponent(parsed.password)
+          : undefined,
     database: parsed.pathname ? parsed.pathname.replace(/^\//, '') : undefined,
     max: 10,
   };
