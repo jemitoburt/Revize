@@ -39,7 +39,7 @@ export async function insertLocation(
   auth: AuthContext,
   siteId: string,
   parent: LocationRow | null,
-  values: { id: string; name: string; sortOrder: number },
+  values: { id: string; name: string; sortOrder: number; inspectionIntervalMonths?: number | null },
 ) {
   const path = locationPath(parent, values.id, values.sortOrder);
   const [row] = await tx
@@ -127,6 +127,7 @@ export function createLocationsService(db: Db) {
       sortOrder: r.sortOrder,
       pathNames: pathNamesOf(r.pathIds, names),
       depth: r.pathIds.length - 1,
+      inspectionIntervalMonths: r.inspectionIntervalMonths,
       archived: r.archivedAt !== null,
       itemCount: r.itemCount,
       version: r.version,
@@ -165,7 +166,12 @@ export function createLocationsService(db: Db) {
         if (existing) return existing; // repeated request with the same client id
         const parent = await parentOf(tx, auth, siteId, input.parentId);
         const sortOrder = input.sortOrder ?? (await nextSortOrder(tx, siteId, input.parentId));
-        return insertLocation(tx, auth, siteId, parent, { id, name: input.name, sortOrder });
+        return insertLocation(tx, auth, siteId, parent, {
+          id,
+          name: input.name,
+          sortOrder,
+          inspectionIntervalMonths: input.inspectionIntervalMonths ?? null,
+        });
       });
       return (await toDtos(db, [{ ...row, itemCount: 0 }]))[0]!;
     },
@@ -243,6 +249,7 @@ export function createLocationsService(db: Db) {
             name: input.name,
             sortOrder,
             parentId,
+            inspectionIntervalMonths: input.inspectionIntervalMonths,
             ...(path ?? {}),
             archivedAt:
               input.archived === undefined

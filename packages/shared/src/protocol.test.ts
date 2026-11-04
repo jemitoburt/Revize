@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EQUIPMENT_TYPE_PRESETS } from './equipment-presets.js';
 import {
   addMonths,
+  inspectionIntervalOf,
   nextInspectionDateOf,
   placeOf,
   protocolPageHeader,
@@ -20,6 +21,13 @@ describe('protocol text and dates', () => {
   it('uses the inspection-wide next date, otherwise the type interval', () => {
     expect(nextInspectionDateOf('2026-11-03', 12, null)).toBe('2027-11-03');
     expect(nextInspectionDateOf('2026-11-03', 12, '2027-06-30')).toBe('2027-06-30');
+  });
+
+  it('takes the interval of the item, else the nearest location, the site, the type', () => {
+    expect(inspectionIntervalOf(6, [3, 9], 24, 12)).toBe(6);
+    expect(inspectionIntervalOf(null, [null, 9], 24, 12)).toBe(9);
+    expect(inspectionIntervalOf(null, [], 24, 12)).toBe(24);
+    expect(inspectionIntervalOf(undefined, [null], null, 12)).toBe(12);
   });
 });
 

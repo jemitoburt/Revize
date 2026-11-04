@@ -47,6 +47,7 @@ function toSite(row: SiteRow, itemCount: number): Site {
     name: row.name,
     address: row.address,
     note: row.note,
+    inspectionIntervalMonths: row.inspectionIntervalMonths,
     archived: row.archivedAt !== null,
     itemCount,
     version: row.version,

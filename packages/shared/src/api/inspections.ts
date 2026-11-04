@@ -97,6 +97,8 @@ export const inspectionItemSchema = z.object({
   nextInspectionDate: z.string().nullable(),
   /** Photos of the item itself (nameplate, overview), kept across inspections. */
   itemPhotoCount: z.number().int(),
+  /** The interval that applies (item → location → site → type, `inspectionIntervalOf`). */
+  intervalMonths: z.number().int(),
   result: inspectionResultSchema.nullable(),
 });
 export type InspectionItem = z.infer<typeof inspectionItemSchema>;

@@ -122,6 +122,8 @@ export const site = pgTable(
     name: text('name').notNull(),
     address: text('address'),
     note: text('note'),
+    /** Own inspection interval of the site (months); null = from the equipment type. */
+    inspectionIntervalMonths: integer('inspection_interval_months'),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     ...timestamps,
     ...version,
@@ -145,6 +147,8 @@ export const location = pgTable(
     parentId: uuid('parent_id').references((): AnyPgColumn => location.id),
     name: text('name').notNull(),
     sortOrder: integer('sort_order').notNull().default(0),
+    /** Own inspection interval of the location (hall, row…); null = inherited from above. */
+    inspectionIntervalMonths: integer('inspection_interval_months'),
     pathIds: uuid('path_ids').array().notNull(),
     sortPath: text('sort_path').notNull(),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
@@ -212,6 +216,8 @@ export const item = pgTable(
     fieldValues: jsonb('field_values').$type<Record<string, unknown>>().notNull().default({}),
     status: text('status').notNull().default('in_service'),
     nextInspectionDate: date('next_inspection_date'),
+    /** Own inspection interval of the item (months); null = from location, site or type. */
+    inspectionIntervalMonths: integer('inspection_interval_months'),
     retiredAt: timestamp('retired_at', { withTimezone: true }),
     createdBy: uuid('created_by').references(() => appUser.id),
     ...timestamps,

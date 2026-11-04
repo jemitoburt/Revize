@@ -60,12 +60,24 @@ export const updateCustomerSchema = z
 
 // ---------- sites ----------
 
+/**
+ * Inspection interval in months set on a site, a location (hall…) or an item. Null = inherited:
+ * item → nearest location → site → equipment type (`inspectionIntervalOf`).
+ */
+export const intervalOverrideSchema = z
+  .number()
+  .int()
+  .min(1, 'Interval je 1 až 120 měsíců')
+  .max(120, 'Interval je 1 až 120 měsíců')
+  .nullable();
+
 export const siteSchema = z.object({
   id: idSchema,
   customerId: idSchema,
   name: z.string(),
   address: z.string().nullable(),
   note: z.string().nullable(),
+  inspectionIntervalMonths: z.number().int().nullable(),
   archived: z.boolean(),
   itemCount: z.number().int(),
   version: z.number().int(),
@@ -76,6 +88,7 @@ const siteFields = {
   name: z.string().trim().min(1, 'Zadejte název').max(200),
   address: optionalText(300),
   note: optionalText(2000),
+  inspectionIntervalMonths: intervalOverrideSchema.optional(),
 };
 export const createSiteSchema = z.object({ id: idSchema.optional(), ...siteFields });
 export const updateSiteSchema = z
@@ -94,6 +107,8 @@ export const locationSchema = z.object({
   /** Names from the root, e.g. ["Hala A", "Řada 3", "Pozice 12"]. */
   pathNames: z.array(z.string()),
   depth: z.number().int(),
+  /** Own interval of the location (hall, row…); null = inherited from above. */
+  inspectionIntervalMonths: z.number().int().nullable(),
   archived: z.boolean(),
   itemCount: z.number().int().describe('Items directly in this location'),
   version: z.number().int(),
@@ -110,6 +125,7 @@ export const createLocationSchema = z.object({
   name: z.string().trim().min(1, 'Zadejte název').max(100),
   /** Defaults to the next position after the last sibling. */
   sortOrder: sortOrder.optional(),
+  inspectionIntervalMonths: intervalOverrideSchema.optional(),
 });
 
 /** "Pozice 1" … "Pozice 20" under one parent in one step. */
@@ -132,6 +148,7 @@ export const updateLocationSchema = z
     /** Moves the location with its whole subtree (null = top level). */
     parentId: idSchema.nullable(),
     archived: archivedFlag,
+    inspectionIntervalMonths: intervalOverrideSchema,
   })
   .partial()
   .extend({ version });
@@ -229,6 +246,8 @@ export const itemSchema = z.object({
   fieldValues: z.record(z.string(), z.unknown()),
   status: z.enum(ITEM_STATUSES),
   nextInspectionDate: z.string().nullable(),
+  /** Own interval of the item; null = from its location, site or type. */
+  inspectionIntervalMonths: z.number().int().nullable(),
   retired: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -246,6 +265,7 @@ const itemFields = {
   qrCode: optionalText(200),
   fieldValues: z.record(z.string(), z.unknown()),
   nextInspectionDate: isoDate.nullable(),
+  inspectionIntervalMonths: intervalOverrideSchema.optional(),
 };
 
 export const createItemSchema = z.object({

@@ -581,6 +581,8 @@ export function InspectionPage() {
                   status: 'in_service',
                   nextInspectionDate: body.nextInspectionDate ?? null,
                   itemPhotoCount: 0,
+                  // Shown only until the server has the item (it computes the real one).
+                  intervalMonths: typeById.get(body.equipmentTypeId)?.defaultIntervalMonths ?? 12,
                   result: null,
                 },
               });

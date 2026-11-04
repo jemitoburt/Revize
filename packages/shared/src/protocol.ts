@@ -41,6 +41,21 @@ export function addMonths(isoDate: string, months: number): string {
  * Next inspection date of an item checked in an inspection (ADR-0011): the date set for the
  * whole inspection, otherwise the inspection date plus the equipment type's interval.
  */
+/**
+ * The interval that applies to an item: its own, else the nearest location's (row, then hall…),
+ * else the site's, else the equipment type's default.
+ */
+export function inspectionIntervalOf(
+  own: number | null | undefined,
+  /** Intervals of the item's locations, nearest first. */
+  locations: readonly (number | null | undefined)[],
+  site: number | null | undefined,
+  typeDefault: number,
+): number {
+  for (const value of [own, ...locations, site]) if (value) return value;
+  return typeDefault;
+}
+
 export function nextInspectionDateOf(
   inspectionDate: string,
   intervalMonths: number,

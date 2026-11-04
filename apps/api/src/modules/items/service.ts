@@ -85,6 +85,7 @@ export function createItemsService(db: Db) {
       fieldValues: row.fieldValues,
       status: row.status as ItemStatus,
       nextInspectionDate: row.nextInspectionDate,
+      inspectionIntervalMonths: row.inspectionIntervalMonths,
       retired: row.retiredAt !== null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -333,6 +334,7 @@ export function createItemsService(db: Db) {
         fieldValues,
         status: input.status,
         nextInspectionDate: input.nextInspectionDate,
+        inspectionIntervalMonths: input.inspectionIntervalMonths,
         retiredAt:
           input.retired === undefined
             ? undefined
@@ -437,6 +439,7 @@ export function createItemsService(db: Db) {
             qrCode: input.qrCode ?? null,
             fieldValues,
             nextInspectionDate: input.nextInspectionDate ?? null,
+            inspectionIntervalMonths: input.inspectionIntervalMonths ?? null,
             createdBy: auth.userId,
           })
           .returning()

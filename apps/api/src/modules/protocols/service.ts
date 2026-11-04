@@ -186,9 +186,18 @@ export function createProtocolsService(
     const sections = types
       .sort((a, b) => a.name.localeCompare(b.name, 'cs'))
       .map((type) => {
+        // Before closing: the earliest next date of the type's items (each by its interval:
+        // item → location → site → type).
+        const intervals = items
+          .filter((i) => i.equipmentTypeId === type.id)
+          .map((i) => i.intervalMonths);
         const next =
           inspection.nextInspectionDate ??
-          nextInspectionDateOf(inspection.inspectionDate, type.defaultIntervalMonths, null);
+          nextInspectionDateOf(
+            inspection.inspectionDate,
+            intervals.length ? Math.min(...intervals) : type.defaultIntervalMonths,
+            null,
+          );
         nextDates.push(next);
         const text = fillProtocolTemplate(type.protocolTemplate, {
           firma: org.name,

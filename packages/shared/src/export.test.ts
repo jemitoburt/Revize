@@ -49,6 +49,7 @@ const item = (over: Partial<InspectionItem> = {}): InspectionItem => ({
   status: 'in_service',
   nextInspectionDate: '2027-11-03',
   itemPhotoCount: 0,
+  intervalMonths: 12,
   result: null,
   ...over,
 });

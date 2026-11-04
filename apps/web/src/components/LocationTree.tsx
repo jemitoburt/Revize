@@ -16,6 +16,7 @@ import {
 import { modals } from '@mantine/modals';
 import { IconArrowDown, IconArrowUp, IconDots, IconPlus } from '@tabler/icons-react';
 import { LOCATION_SEPARATOR, type Location } from '@revize/shared';
+import { IntervalField } from './IntervalField.js';
 import { useState, type FormEvent } from 'react';
 import {
   useCreateLocation,
@@ -143,10 +144,11 @@ function SeriesForm({
 function RenameForm({ location, onDone }: { location: Location; onDone: () => void }) {
   const update = useUpdateLocation();
   const [name, setName] = useState(location.name);
+  const [interval, setInterval] = useState<number | null>(location.inspectionIntervalMonths);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     update.mutate(
-      { id: location.id, version: location.version, name },
+      { id: location.id, version: location.version, name, inspectionIntervalMonths: interval },
       { onSuccess: () => (notifySaved(), onDone()), onError: notifyError },
     );
   };
@@ -159,6 +161,11 @@ function RenameForm({ location, onDone }: { location: Location; onDone: () => vo
           data-autofocus
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
+        />
+        <IntervalField
+          value={interval}
+          onChange={setInterval}
+          inherited="z nadřazeného umístění, provozovny nebo typu vybavení (platí pro artikly v tomto umístění)"
         />
         <Group justify="flex-end">
           <Button type="submit" loading={update.isPending}>
@@ -352,7 +359,7 @@ export function LocationTree({ siteId, canWrite }: { siteId: string; canWrite: b
                       Přidat řadu podřízených…
                     </Menu.Item>
                     <Menu.Item onClick={() => setDialog({ kind: 'rename', location: l })}>
-                      Přejmenovat…
+                      Upravit (název, interval)…
                     </Menu.Item>
                     <Menu.Item onClick={() => setDialog({ kind: 'move', location: l })}>
                       Přesunout…
@@ -377,7 +384,7 @@ export function LocationTree({ siteId, canWrite }: { siteId: string; canWrite: b
             : dialog?.kind === 'series'
               ? 'Řada umístění'
               : dialog?.kind === 'rename'
-                ? 'Přejmenovat umístění'
+                ? 'Upravit umístění'
                 : 'Přesunout umístění'
         }
       >

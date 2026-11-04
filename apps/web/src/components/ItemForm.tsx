@@ -34,6 +34,7 @@ import {
 } from '../api/hooks.js';
 import { DynamicFields, fieldValueErrors } from './DynamicFields.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
+import { IntervalField } from './IntervalField.js';
 import { DateField } from './DateField.js';
 import { NewLocationForm } from './NewLocationForm.js';
 
@@ -98,6 +99,7 @@ export function ItemForm({
   // Client id of a new item: a repeated save (e.g. after a timeout) cannot create it twice.
   const [createId] = useState(newId);
   const [nextInspection, setNextInspection] = useState(item?.nextInspectionDate ?? '');
+  const [interval, setInterval] = useState<number | null>(item?.inspectionIntervalMonths ?? null);
   const [values, setValues] = useState<Record<string, unknown>>(item?.fieldValues ?? {});
   const [status, setStatus] = useState<ItemStatus>(item?.status ?? 'in_service');
   const [reason, setReason] = useState('');
@@ -180,6 +182,7 @@ export function ItemForm({
       designation,
       fieldValues: parsed.data,
       nextInspectionDate: nextInspection || null,
+      inspectionIntervalMonths: interval,
     };
     if (item) {
       update.mutate(
@@ -306,6 +309,12 @@ export function ItemForm({
             value={nextInspection ?? ''}
             error={errors.nextInspectionDate}
             onChange={setNextInspection}
+          />
+          <IntervalField
+            value={interval}
+            onChange={setInterval}
+            error={errors.inspectionIntervalMonths}
+            inherited="z umístění (hala), provozovny nebo typu vybavení"
           />
         </SimpleGrid>
 

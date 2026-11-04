@@ -144,4 +144,7 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
 - Risk levels only for racks (ADR-0018): `equipment_type.risk_levels`; other types fit / unfit
   (unfit stored as red); `inspection_result.photos_in_protocol` (field + office checkbox).
   Photos can be turned/cropped right after capture (`field/PhotoEditor.tsx`).
-- Next: M8 history and filters, export of the whole database.
+- Intervals (ADR-0019): `inspection_interval_months` on site, location and item; item → nearest
+  location → site → type (`inspectionIntervalOf`, API `effectiveIntervals`); close uses it.
+  Technician authorization per user (`app_user.certification`); database export with history.
+- Next: M8 history and filters.

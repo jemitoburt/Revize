@@ -703,6 +703,7 @@ export function useCreateFieldLocation(siteId: string, inspectionId: string) {
         sortOrder: 9999,
         pathNames: [...(parent?.pathNames ?? []), name],
         depth: parent ? parent.depth + 1 : 0,
+        inspectionIntervalMonths: null,
         archived: false,
         itemCount: 0,
         version: 1,

@@ -67,7 +67,8 @@ function CloseForm({
 }) {
   const close = useCloseInspection();
   const preview = useClosePreview(inspectionId);
-  const [date, setDate] = useState(defaultNext);
+  // Empty: every item by its own interval; a date: the same date for all.
+  const [date, setDate] = useState('');
   const [note, setNote] = useState('');
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -103,8 +104,9 @@ function CloseForm({
           </Alert>
         )}
         <DateField
-          label="Příští kontrola"
-          description="Předvyplněno podle intervalu typů vybavení (datum kontroly + obvykle 12 měsíců). Vymazáním se použije interval každého typu zvlášť."
+          label="Příští kontrola pro všechny artikly (nepovinné)"
+          description={`Prázdné = každý artikl podle svého intervalu (artikl, hala, provozovna, typ vybavení) – nejbližší ${formatDate(defaultNext)}. Vyplněné datum platí pro všechny.`}
+          placeholder={formatDate(defaultNext)}
           value={date}
           onChange={setDate}
         />
@@ -202,10 +204,8 @@ export function InspectionDetailPage() {
   );
   const p = data.progress;
   const open = data.status === 'open';
-  const usedTypes = new Set((items.data ?? []).map((i) => i.equipmentTypeId));
-  const interval = Math.min(
-    ...(types.data ?? []).filter((t) => usedTypes.has(t.id)).map((t) => t.defaultIntervalMonths),
-  );
+  // The earliest next inspection by the items' intervals (item → location → site → type).
+  const interval = Math.min(...(items.data ?? []).map((i) => i.intervalMonths));
   const defaultNext = addMonths(data.inspectionDate, Number.isFinite(interval) ? interval : 12);
 
   return (
@@ -267,7 +267,12 @@ export function InspectionDetailPage() {
           ['V pořádku', p.ok],
           ['Se závadou', p.defect - p.outOfService],
           ['Vyřazeno z provozu', p.outOfService],
-          ['Příští kontrola', formatDate(data.nextInspectionDate)],
+          [
+            'Příští kontrola',
+            data.nextInspectionDate
+              ? formatDate(data.nextInspectionDate)
+              : `${formatDate(defaultNext)} (podle intervalu)`,
+          ],
         ].map(([label, value]) => (
           <Paper key={label} withBorder p="sm">
             <Text size="xs" c="dimmed">

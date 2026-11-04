@@ -1,5 +1,6 @@
 import {
   type ClosePreview,
+  inspectionIntervalOf,
   nextInspectionDateOf,
   shouldApplyResult,
   type closeInspectionSchema,
@@ -77,6 +78,60 @@ function inScope(row: InspectionRow, types: string[]): SQL {
     isNull(item.retiredAt),
     types.length > 0 ? inArray(item.equipmentTypeId, types) : undefined,
   )!;
+}
+
+/**
+ * The interval that applies to each item (months): its own, else the nearest location's
+ * (`path_ids` runs from the top level down to the item's location), else the site's, else the
+ * type's default (`inspectionIntervalOf`).
+ */
+export async function effectiveIntervals(
+  tx: DbOrTx,
+  items: readonly {
+    id: string;
+    siteId: string;
+    equipmentTypeId: string;
+    inspectionIntervalMonths: number | null;
+    pathIds: readonly string[] | null;
+  }[],
+): Promise<Map<string, number>> {
+  const locationIds = [...new Set(items.flatMap((i) => i.pathIds ?? []))];
+  const siteIds = [...new Set(items.map((i) => i.siteId))];
+  const typeIds = [...new Set(items.map((i) => i.equipmentTypeId))];
+  const [locations, sites, types] = await Promise.all([
+    locationIds.length
+      ? tx
+          .select({ id: location.id, months: location.inspectionIntervalMonths })
+          .from(location)
+          .where(inArray(location.id, locationIds))
+      : [],
+    siteIds.length
+      ? tx
+          .select({ id: site.id, months: site.inspectionIntervalMonths })
+          .from(site)
+          .where(inArray(site.id, siteIds))
+      : [],
+    typeIds.length
+      ? tx
+          .select({ id: equipmentType.id, months: equipmentType.defaultIntervalMonths })
+          .from(equipmentType)
+          .where(inArray(equipmentType.id, typeIds))
+      : [],
+  ]);
+  const byLocation = new Map(locations.map((l) => [l.id, l.months]));
+  const bySite = new Map(sites.map((x) => [x.id, x.months]));
+  const byType = new Map(types.map((t) => [t.id, t.months]));
+  return new Map(
+    items.map((i) => [
+      i.id,
+      inspectionIntervalOf(
+        i.inspectionIntervalMonths,
+        [...(i.pathIds ?? [])].reverse().map((id) => byLocation.get(id)),
+        bySite.get(i.siteId),
+        byType.get(i.equipmentTypeId) ?? 12,
+      ),
+    ]),
+  );
 }
 
 export function createInspectionsService(db: Db, files?: FileStorage) {
@@ -392,6 +447,10 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
         db,
         rows.flatMap((r) => r.pathIds ?? []),
       );
+      const intervals = await effectiveIntervals(
+        db,
+        rows.map((r) => ({ ...r.item, pathIds: r.pathIds })),
+      );
       return rows.map((r) => ({
         id: r.item.id,
         itemNumber: r.item.itemNumber,
@@ -404,6 +463,7 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
         status: r.item.status as ItemStatus,
         nextInspectionDate: r.item.nextInspectionDate,
         itemPhotoCount: r.itemPhotos,
+        intervalMonths: intervals.get(r.item.id) ?? 12,
         result: r.result
           ? {
               id: r.result.id,
@@ -609,13 +669,19 @@ export function createInspectionsService(db: Db, files?: FileStorage) {
           }
         }
         const checked = await tx
-          .select({ item, interval: equipmentType.defaultIntervalMonths })
+          .select({ item, pathIds: location.pathIds })
           .from(inspectionResult)
           .innerJoin(item, eq(item.id, inspectionResult.itemId))
-          .innerJoin(equipmentType, eq(equipmentType.id, item.equipmentTypeId))
+          .leftJoin(location, eq(location.id, item.locationId))
           .where(eq(inspectionResult.inspectionId, id));
+        // Each item by its own interval (item → location → site → type).
+        const intervals = await effectiveIntervals(
+          tx,
+          checked.map((c) => ({ ...c.item, pathIds: c.pathIds })),
+        );
         const dates: string[] = [];
-        for (const { item: target, interval } of checked) {
+        for (const { item: target } of checked) {
+          const interval = intervals.get(target.id) ?? 12;
           const next = nextInspectionDateOf(row.inspectionDate, interval, input.nextInspectionDate);
           dates.push(next);
           if (target.nextInspectionDate === next) continue;

@@ -17,6 +17,7 @@ import { useParams } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { AnchorLink, ButtonLink } from '../components/links.js';
 import { useCustomer, useMe, useSite, useUpdateSite } from '../api/hooks.js';
+import { IntervalField } from '../components/IntervalField.js';
 import { LocationTree } from '../components/LocationTree.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
@@ -25,10 +26,18 @@ function EditSite({ site, onDone }: { site: Site; onDone: () => void }) {
   const [name, setName] = useState(site.name);
   const [address, setAddress] = useState(site.address ?? '');
   const [note, setNote] = useState(site.note ?? '');
+  const [interval, setInterval] = useState<number | null>(site.inspectionIntervalMonths);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     update.mutate(
-      { id: site.id, version: site.version, name, address, note },
+      {
+        id: site.id,
+        version: site.version,
+        name,
+        address,
+        note,
+        inspectionIntervalMonths: interval,
+      },
       { onSuccess: () => (notifySaved(), onDone()), onError: notifyError },
     );
   };
@@ -47,6 +56,11 @@ function EditSite({ site, onDone }: { site: Site; onDone: () => void }) {
           onChange={(e) => setAddress(e.currentTarget.value)}
         />
         <Textarea label="Poznámka" value={note} onChange={(e) => setNote(e.currentTarget.value)} />
+        <IntervalField
+          value={interval}
+          onChange={setInterval}
+          inherited="podle typu vybavení (platí pro artikly celé provozovny, pokud je nemá hala nebo artikl jinak)"
+        />
         <Group justify="flex-end">
           <Button type="submit" loading={update.isPending}>
             Uložit

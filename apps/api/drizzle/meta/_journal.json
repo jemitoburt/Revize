@@ -92,6 +92,13 @@
       "when": 1793785013540,
       "tag": "0012_user_certification",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793787162811,
+      "tag": "0013_inspection_intervals",
+      "breakpoints": true
     }
   ]
 }
