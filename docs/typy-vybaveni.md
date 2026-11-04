@@ -14,6 +14,7 @@ jak jsou, a jde je archivovat.
 | **Pevný žebřík**          | ČSN 74 3282 (stavby), ČSN EN ISO 14122-4 (strojní zařízení)                                                                                                               | 12 měs.  | účel, výška výstupu, materiál, ochrana proti pádu (koš / zachycovač / bez), odpočívadla, madla na výstupu, zabezpečení proti nepovolaným                                                                                                                                                                                         |
 | **Regál** (všechny druhy) | ČSN EN 15635, 15512, 15620, 15629, ČSN 26 9030                                                                                                                            | 12 měs.  | **typ regálu** (paletový, policový, konzolový, vjezdový, průjezdný, spádový, pojízdný, mezaninový), výrobce, systém, uspořádání, rozměry, počet polí a úrovní/polic, nosnost úrovně a pole, u konzolových délka ramene a nosnost sloupu, u vjezdových palety do hloubky a vodicí lišty, štítek nosnosti, kotvení, ochrana stojin |
 | **Vázací prostředky**     | ČSN EN 1492-1 (ploché vázací pásy), 1492-2 (kruhové smyce), 1492-4 (lana z vláken), ČSN EN 818-4 (řetězové úvazky), ČSN EN 13414-1 (ocelová lana), ČSN EN 1677 (součásti) | 12 měs.  | výrobce, druh (plochý pás, kruhová smyce, textilní lano, řetězový úvazek, ocelové lano), nosnost WLL v t, barva podle nosnosti, užitná délka, šířka pásu, materiál (PES, PA, PP, ocel), počet větví, zakončení, štítek čitelný, výrobní číslo, rok                                                                               |
+| **Ocelové konstrukce**    | ČSN 73 2604 (kontrola a údržba), ČSN EN 1090-1, -2 (provádění), ČSN EN 1993 (navrhování), ČSN EN ISO 12944 (protikorozní ochrana)                                         | 12 měs.  | druh (nosná konstrukce haly, plošina/lávka, schodiště, zábradlí, mezanin, jeřábová dráha, přístřešek…), výrobce, třída následků CC1–CC3, materiál, protikorozní ochrana, užitné zatížení v kN/m², rozměry, označení únosnosti, dokumentace, rok                                                                                  |
 
 Nabídka výrobců: žebříky Alve, Krause, Hailo, Zarges, Hymer, Günzburger Steigtechnik, Svelt,
 Facal, Werner a Drabest. Regály Mecalux, Jungheinrich, Stow, Dexion, Kasten, Nedcon, META,
@@ -71,7 +72,24 @@ rešerše neměla k dispozici). 12 měsíců je běžná praxe. Vyřazovací kri
 (nečitelný štítek, prořezy, tepelné a chemické poškození, obnažené jádro smyce…) odpovídají
 obvyklým pokynům výrobců. Ověřte prosím podle ČSN EN 1492 a návodu výrobce.
 
+## Ocelové konstrukce (rešerše 2026-11-04)
+
+- Kontrolu a údržbu upravuje **ČSN 73 2604**. Zná prohlídky výchozí, běžné, podrobné,
+  mimořádné a prohlídku použitelnosti (deformace, kmitání, příslušenství, bezpečnostní prvky).
+- **Intervaly podle třídy následků** (podle odborného článku, text normy rešerše neměla):
+  CC1 a CC2 běžná prohlídka jednou za 5 let a podrobná nejméně jednou za 10 let; CC3 a výrazně
+  dynamicky namáhané konstrukce běžná jednou za rok a podrobná jednou za 5 let.
+- Typ má výchozí interval 12 měsíců. U konstrukcí CC1/CC2 nastavte delší interval u provozovny,
+  haly nebo artiklu (Interval kontrol).
+- Výsledek je Vyhovuje / Závada – provoz možný / Nevyhovuje. Text do protokolu je návrh ve stylu
+  formuláře.
+
+**Neověřeno:** platné vydání ČSN 73 2604 (zdroje uvádějí vydání 2012, účinnost od 12/2024
+i novou normu 2026) a přesné intervaly. Ověřte prosím v aktuálním textu normy.
+
 ## Zdroje
+
+- TZB-info: [Kontrola ocelových konstrukcí](https://www.tzb-info.cz/revize-a-kontroly/22904-kontrola-ocelovych-konstrukci), [Prohlídky ocelových konstrukcí a BOZP](https://www.tzb-info.cz/revize-a-kontroly/27872-prohlidky-ocelovych-konstrukci-z-pohledu-zajisteni-bezpecnosti-a-ochrany-zdravi-osob), [ČSN 73 2604](https://www.tzb-info.cz/normy/csn-73-2604-2026-07)
 
 - Dolezych: [Textile lifting equipment](https://www.dolezych.de/en/products/textile-lifting-equipment/)
 - pewag: [Lifting Solutions](https://www.pewag.com/?p=22858)

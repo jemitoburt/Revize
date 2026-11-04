@@ -49,6 +49,21 @@ describe('equipment type presets', () => {
     ).toMatchObject({ wll_t: 2, label_ok: true });
   });
 
+  it('describes steel structures (fit / unfit, consequence class)', () => {
+    const steel = EQUIPMENT_TYPE_PRESETS.find((p) => p.key === 'steel_structure')!;
+    expect(steel.riskLevels).toBeFalsy();
+    expect(steel.standards).toContain('ČSN 73 2604');
+    expect(
+      buildFieldValuesSchema(steel.fieldDefinitions).parse({
+        structure_type: 'Plošina / pochozí lávka',
+        consequence_class: 'CC2',
+        corrosion_protection: 'Žárové zinkování',
+        imposed_load: 3.5,
+        load_sign: true,
+      }),
+    ).toMatchObject({ imposed_load: 3.5 });
+  });
+
   it('fills protocol placeholders', () => {
     expect(
       fillProtocolTemplate('Dne {{datum_kontroly}} u {{ zakaznik }}, {{neznamy}}', {

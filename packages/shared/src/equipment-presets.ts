@@ -155,6 +155,17 @@ const SLING_PROTOCOL = `# Vázací prostředky
   • kontrolu ok a kovových součástí (háky, třmeny, koncovky: deformace, trhliny, koroze, opotřebení, pojistky háků),
   • kontrolu způsobu skladování a používání (ochrana hran, přetěžování, nosnost podle způsobu vázání).`;
 
+/** Draft in the style of the form (the form has no text for steel structures). */
+const STEEL_PROTOCOL = `# Ocelové konstrukce
+• Kontrola ocelových konstrukcí je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací konstrukce (projektem, návodem výrobce) a ČSN 73 2604, popř. ČSN EN 1090-2 a ČSN EN ISO 12944.
+• Kontrola ocelových konstrukcí zahrnuje:
+  • vizuální kontrolu nosných prvků (deformace, ohnutí, trhliny, poškození nárazem),
+  • kontrolu spojů (šroubové spoje – úplnost a dotažení šroubů, svary – trhliny, nýty),
+  • kontrolu kotvení a uložení (kotevní šrouby, patky, podlití, styk s podkladem),
+  • kontrolu protikorozní ochrany (koroze, poškození nátěru nebo zinkování, místa se zadržováním vody),
+  • kontrolu pochozích ploch, schodišť a zábradlí (pevnost, úplnost, kluznost, okopové lišty),
+  • kontrolu označení únosnosti a způsobu používání (přetěžování, dodatečné úpravy a zásahy do konstrukce).`;
+
 const SECTIONAL_DOOR_PROTOCOL = `# Sekční vrata
 • Kontrola sekčních vrat je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací sekčních vrat (návodem výrobce).
 • Kontrola sekčních vrat zahrnuje:
@@ -572,6 +583,83 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       { ...common.note(12) },
     ]),
     protocolTemplate: SLING_PROTOCOL,
+  },
+  {
+    key: 'steel_structure',
+    name: 'Ocelové konstrukce',
+    description:
+      'Ocelové nosné konstrukce, plošiny a lávky, schodiště, zábradlí, mezaniny, přístřešky.',
+    standards: ['ČSN 73 2604', 'ČSN EN 1090-1', 'ČSN EN 1090-2', 'ČSN EN 1993', 'ČSN EN ISO 12944'],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: fields([
+      {
+        key: 'structure_type',
+        label: 'Druh konstrukce',
+        kind: 'select',
+        required: true,
+        options: [
+          'Nosná konstrukce haly',
+          'Plošina / pochozí lávka',
+          'Schodiště',
+          'Zábradlí',
+          'Mezanin',
+          'Jeřábová dráha',
+          'Přístřešek / stříška',
+          'Stožár / nosník',
+          'Jiná',
+        ],
+        order: 0,
+      },
+      { key: 'manufacturer', label: 'Výrobce / dodavatel', kind: 'text', order: 1 },
+      {
+        key: 'consequence_class',
+        label: 'Třída následků',
+        kind: 'select',
+        options: ['CC1', 'CC2', 'CC3'],
+        help: 'Podle ČSN EN 1990; určuje interval prohlídek podle ČSN 73 2604 (u CC3 a dynamicky namáhaných konstrukcí častěji).',
+        order: 2,
+      },
+      {
+        key: 'material',
+        label: 'Materiál',
+        kind: 'select',
+        options: ['S235', 'S275', 'S355', 'Nerezová ocel', 'Jiný'],
+        order: 3,
+      },
+      {
+        key: 'corrosion_protection',
+        label: 'Protikorozní ochrana',
+        kind: 'select',
+        options: ['Žárové zinkování', 'Nátěr', 'Duplex (zinek + nátěr)', 'Bez ochrany'],
+        order: 4,
+      },
+      {
+        key: 'imposed_load',
+        label: 'Užitné zatížení',
+        kind: 'number',
+        unit: 'kN/m²',
+        help: 'U plošin, lávek a mezaninů podle projektu nebo štítku.',
+        order: 5,
+      },
+      { key: 'dimensions', label: 'Rozměry', kind: 'text', order: 6 },
+      {
+        key: 'load_sign',
+        label: 'Označení únosnosti',
+        kind: 'boolean',
+        help: 'Štítek s dovoleným zatížením je umístěn a čitelný.',
+        order: 7,
+      },
+      {
+        key: 'documentation',
+        label: 'Dokumentace k dispozici',
+        kind: 'boolean',
+        help: 'Projekt, statický výpočet nebo návod výrobce.',
+        order: 8,
+      },
+      { ...common.year(9) },
+      { ...common.note(10) },
+    ]),
+    protocolTemplate: STEEL_PROTOCOL,
   },
   {
     key: 'sectional_door',
