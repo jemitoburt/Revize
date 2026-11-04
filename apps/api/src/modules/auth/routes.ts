@@ -2,6 +2,7 @@ import {
   apiErrorSchema,
   changePasswordRequestSchema,
   currentUserSchema,
+  updateProfileRequestSchema,
   loginRequestSchema,
   loginResponseSchema,
 } from '@revize/shared';
@@ -67,6 +68,20 @@ export const authRoutes: FastifyPluginAsyncZod<{ auth: AuthService; config: Conf
       },
     },
     (request) => auth.me(authOf(request)),
+  );
+
+  app.patch(
+    '/auth/me',
+    {
+      preHandler: requireAuth,
+      schema: {
+        tags,
+        summary: 'Úprava vlastního profilu (oprávnění technika do protokolu)',
+        body: updateProfileRequestSchema,
+        response: { 200: currentUserSchema, 400: apiErrorSchema, 401: apiErrorSchema },
+      },
+    },
+    (request) => auth.updateProfile(authOf(request), request.body),
   );
 
   app.post(

@@ -14,9 +14,13 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await page.getByRole('navigation').getByRole('link', { name: 'Nastavení' }).click();
   await page.getByLabel('Název firmy').fill('Revize Novák s.r.o.');
   await page.getByLabel('IČO').fill('87654321');
-  await page.getByLabel('Oprávnění technika').fill('Osvědčení č. 42/2025');
   await page.getByRole('button', { name: 'Uložit' }).click();
   await expect(page.getByText('Uloženo')).toBeVisible();
+  // The technician's authorization is in their own profile (Můj účet).
+  await page.goto('/ucet');
+  await page.getByLabel('Oprávnění technika').fill('Osvědčení č. 42/2025');
+  await page.getByRole('button', { name: 'Uložit', exact: true }).click();
+  await expect(page.getByText('Uloženo').first()).toBeVisible();
 
   // An inspection with one OK and one defect, recorded through the API.
   const inspectionId = '0190e8a0-0000-7000-8000-0000000c0001';

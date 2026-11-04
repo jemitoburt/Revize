@@ -80,6 +80,15 @@ function useApiMutation<TVars, TResult>(
 
 // ---------- auth ----------
 
+/** Own profile (Můj účet): the authorization printed in protocols. */
+export function useUpdateProfile() {
+  const client = useQueryClient();
+  return useMutation<CurrentUser, ApiRequestError, { certification: string }>({
+    mutationFn: (body) => api.patch<CurrentUser>('/auth/me', body),
+    onSuccess: (me) => client.setQueryData(['me'], me),
+  });
+}
+
 export function useMe() {
   return useQuery<CurrentUser | null, ApiRequestError>({
     queryKey: ['me'],

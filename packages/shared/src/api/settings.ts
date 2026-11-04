@@ -10,8 +10,6 @@ export const organizationSettingsSchema = z.object({
   phone: text(50),
   email: text(200),
   web: text(200),
-  /** Printed under the technician's signature line, e.g. "Osvědčení č. 123/2024". */
-  certification: text(300),
   /** Document control of the protocol form, printed in the page header ("Datum vydání", "Verze"). */
   protocolIssueDate: text(30),
   protocolVersion: text(30),

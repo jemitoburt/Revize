@@ -60,9 +60,12 @@ export interface ProtocolCompany {
   logo: string | null;
   /** Additional text after the standard statements at the end of the protocol. */
   footer: string;
-  /** E.g. "Osvědčení č. 123/2024" – printed with the technician's name. */
+  /** The lead technician's authorization (their profile), printed with their name. */
   certification: string;
-  /** Document control of the form ("Datum vydání", "Verze") in the page header. */
+  /**
+   * "Datum vydání", "Verze" in the page header: from Nastavení, otherwise the closing date of
+   * the inspection and 1 + the number of reopenings.
+   */
   issueDate: string;
   version: string;
   /** Bottom left of every page, e.g. "BOZP • PO • REVIZE". */

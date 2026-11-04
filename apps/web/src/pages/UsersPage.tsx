@@ -32,6 +32,7 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
   const [displayName, setDisplayName] = useState(user?.displayName ?? '');
   const [role, setRole] = useState<Role>(user?.role ?? 'inspector');
   const [active, setActive] = useState(user?.active ?? true);
+  const [certification, setCertification] = useState(user?.certification ?? '');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -50,12 +51,13 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           displayName,
           role,
           active,
+          certification,
           ...(password ? { password } : {}),
         },
         done,
       );
     } else {
-      create.mutate({ email, displayName, role, password }, done);
+      create.mutate({ email, displayName, role, password, certification }, done);
     }
   };
 
@@ -77,6 +79,13 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           value={displayName}
           error={errors.displayName}
           onChange={(e) => setDisplayName(e.currentTarget.value)}
+        />
+        <TextInput
+          label="Oprávnění technika"
+          description="Tiskne se v protokolu u podpisu, např. „Osvědčení č. 42/2025“"
+          value={certification}
+          error={errors.certification}
+          onChange={(e) => setCertification(e.currentTarget.value)}
         />
         <Select
           label="Role"

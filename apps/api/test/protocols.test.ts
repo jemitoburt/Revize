@@ -1,4 +1,4 @@
-import { newId } from '@revize/shared';
+import { formatDate, newId } from '@revize/shared';
 import { eq } from 'drizzle-orm';
 import { strFromU8, unzipSync } from 'fflate';
 import { PDFDocument } from 'pdf-lib';
@@ -138,7 +138,6 @@ describe('organization settings and protocol', () => {
         phone: '+420 777 000 111',
         email: 'kancelar@revize-novak.cz',
         web: '',
-        certification: 'Osvědčení č. 42/2025',
         protocolIssueDate: '01.10.2026',
         protocolVersion: '1',
         pageFooter: 'BOZP • PO • REVIZE',
@@ -191,6 +190,18 @@ describe('organization settings and protocol', () => {
     ).body;
     expect(onlyRacks).not.toContain('Prasklá příčka');
     expect(onlyRacks).not.toContain('<h3>Žebříky a schůdky</h3>');
+  });
+
+  it("prints the lead technician's own authorization from the profile", async () => {
+    const saved = await api('PATCH', '/api/auth/me', { certification: 'Osvědčení č. 42/2025' });
+    expect(saved.json()).toMatchObject({ certification: 'Osvědčení č. 42/2025' });
+    const { id } = await inspectionWithResults();
+    const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
+    expect(html).toContain('Osvědčení č. 42/2025');
+    // Each user has their own; an administrator sets it in Uživatelé too.
+    expect((await api('GET', '/api/auth/me', undefined, technik)).json()).toMatchObject({
+      certification: '',
+    });
   });
 
   it('rates types without risk levels as fit / unfit; office leaves photos out', async () => {
@@ -271,6 +282,10 @@ describe('organization settings and protocol', () => {
     const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
     expect(html).toContain('Protokol o kontrole technického vybavení');
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
+    // Header filled without settings: today as the issue date, version 1.
+    const today = new Date().toISOString();
+    expect(html).toContain(`<td class="center">${formatDate(today)}</td>`);
+    expect(html).toContain('<td class="center">1</td>');
     expect(html).toContain('Ukázkový sklad s.r.o.');
     expect(html).toContain('Prasklá příčka');
     // The defect card under its risk level (explained once in the group heading).

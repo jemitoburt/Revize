@@ -28,6 +28,13 @@ export const currentUserSchema = z.object({
   role: z.enum(ROLES),
   organizationId: idSchema,
   permissions: z.array(z.enum(PERMISSIONS)),
+  /** The own authorization, printed under the signature in the protocol. */
+  certification: z.string(),
+});
+
+/** `PATCH /auth/me`: the own profile (Můj účet). */
+export const updateProfileRequestSchema = z.object({
+  certification: z.string().trim().max(300),
 });
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 

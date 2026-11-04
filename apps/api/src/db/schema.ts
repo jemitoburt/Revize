@@ -54,6 +54,8 @@ export const appUser = pgTable(
     role: text('role').notNull(),
     active: boolean('active').notNull().default(true),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+    /** The technician's authorization, e.g. "Osvědčení č. 123/2024" (under the protocol signature). */
+    certification: text('certification').notNull().default(''),
     /**
      * Deleted by an administrator: hidden, cannot sign in, the e-mail is freed. The row stays
      * so that inspections, results and the audit keep the name (no hard delete).

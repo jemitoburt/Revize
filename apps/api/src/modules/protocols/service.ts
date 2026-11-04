@@ -25,7 +25,15 @@ import {
 import { eq, inArray } from 'drizzle-orm';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db } from '../../db/client.js';
-import { customer, equipmentType, inspectionResult, photo, site } from '../../db/schema.js';
+import {
+  appUser,
+  customer,
+  equipmentType,
+  inspection as inspectionTable,
+  inspectionResult,
+  photo,
+  site,
+} from '../../db/schema.js';
 import { AppError } from '../../errors.js';
 import type { FileStorage } from '../../infra/file-storage.js';
 import type { ImageProcessor } from '../../infra/image-processor.js';
@@ -210,6 +218,21 @@ export function createProtocolsService(
         return { typeName: type.name, text, items: rows };
       });
 
+    // Issue date and version of this protocol (page header) unless fixed in Nastavení: closing
+    // date (today for a draft) and 1 + reopenings; the lead technician's own authorization.
+    const [issued] = await db
+      .select({
+        closedAt: inspectionTable.closedAt,
+        reopenedCount: inspectionTable.reopenedCount,
+        certification: appUser.certification,
+      })
+      .from(inspectionTable)
+      .innerJoin(appUser, eq(appUser.id, inspectionTable.leadInspectorId))
+      .where(eq(inspectionTable.id, inspection.id));
+    const issueDate =
+      settings.protocolIssueDate || czechDate((issued?.closedAt ?? new Date()).toISOString());
+    const version = settings.protocolVersion || String((issued?.reopenedCount ?? 0) + 1);
+
     const data: ProtocolData = {
       number: `${inspection.inspectionDate}/${inspection.id.slice(-8)}`,
       final: inspection.status === 'closed',
@@ -222,9 +245,9 @@ export function createProtocolsService(
         web: settings.web,
         logo: await dataUrl(org.logoKey, org.logoMimeType ?? 'image/png'),
         footer: settings.protocolFooter,
-        certification: settings.certification,
-        issueDate: settings.protocolIssueDate,
-        version: settings.protocolVersion,
+        certification: issued?.certification ?? '',
+        issueDate,
+        version,
         pageFooter: settings.pageFooter,
       },
       customer: {

@@ -85,6 +85,13 @@
       "when": 1793778327208,
       "tag": "0011_risk_levels",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793785013540,
+      "tag": "0012_user_certification",
+      "breakpoints": true
     }
   ]
 }

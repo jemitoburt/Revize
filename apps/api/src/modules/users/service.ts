@@ -22,6 +22,7 @@ export function toUserDto(row: UserRow): User {
     role: row.role as Role,
     active: row.active,
     lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
+    certification: row.certification,
     createdAt: row.createdAt.toISOString(),
     version: row.version,
   };
@@ -55,6 +56,7 @@ export function createUsersService(db: Db) {
           email: input.email,
           displayName: input.displayName,
           role: input.role,
+          certification: input.certification,
           passwordHash: await hashPassword(input.password),
         });
         await recordAudit(tx, {

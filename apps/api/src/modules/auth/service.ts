@@ -4,6 +4,7 @@ import {
   type Role,
   type changePasswordRequestSchema,
   type loginRequestSchema,
+  type updateProfileRequestSchema,
 } from '@revize/shared';
 import { eq } from 'drizzle-orm';
 import type { z } from 'zod';
@@ -29,6 +30,7 @@ export function toCurrentUser(row: UserRow): CurrentUser {
     role,
     organizationId: row.organizationId,
     permissions: [...permissionsOf(role)],
+    certification: row.certification,
   };
 }
 
@@ -81,6 +83,37 @@ export function createAuthService(db: Db, config: Config) {
       const user = await usersRepository.findById(db, auth.organizationId, auth.userId);
       if (!user) throw unauthorized();
       return toCurrentUser(user);
+    },
+
+    /** The own profile: the authorization printed under the protocol signature (audited). */
+    async updateProfile(
+      auth: AuthContext,
+      input: z.output<typeof updateProfileRequestSchema>,
+    ): Promise<CurrentUser> {
+      const user = await usersRepository.findById(db, auth.organizationId, auth.userId);
+      if (!user) throw unauthorized();
+      const updated = await db.transaction(async (tx) => {
+        const [row] = await tx
+          .update(appUser)
+          .set({
+            certification: input.certification,
+            updatedAt: new Date(),
+            version: user.version + 1,
+          })
+          .where(eq(appUser.id, user.id))
+          .returning();
+        await recordAudit(tx, {
+          organizationId: user.organizationId,
+          actorUserId: user.id,
+          action: 'user.profile',
+          entityType: 'user',
+          entityId: user.id,
+          before: { certification: user.certification },
+          after: { certification: input.certification },
+        });
+        return row!;
+      });
+      return toCurrentUser(updated);
     },
 
     /** Changes the own password and signs out all other devices. */

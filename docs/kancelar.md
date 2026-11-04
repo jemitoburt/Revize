@@ -76,7 +76,12 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      umístění se založí, artikly bez čísla dostanou další volná čísla. Každý artikl má záznam
      v auditu.
 8. **Nastavení** (administrátor):
-   - Název firmy, IČO, adresa, kontakty a oprávnění technika (tiskne se pod podpisem).
+   - Název firmy, IČO, adresa a kontakty.
+   - **Datum vydání** a **Verze** v hlavičce stránek: prázdné = datum uzavření kontroly
+     (u předběžného protokolu dnešní) a verze 1, po každém znovuotevření o 1 víc. Vyplněné
+     hodnoty platí pro všechny protokoly.
+   - **Oprávnění technika** má každý uživatel ve svém profilu (**Můj účet → Profil technika**,
+     administrátor i v Uživatelé). Pod podpisem se tiskne oprávnění vedoucího technika kontroly.
    - Logo (PNG/JPEG), datum vydání a verze formuláře (hlavička stránek), text v zápatí stránek
      a doplňující text na konec protokolu.
    - Text o rozsahu kontroly je u každého typu vybavení v **Typy vybavení → Text protokolu**.

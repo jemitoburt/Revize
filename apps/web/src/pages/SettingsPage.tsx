@@ -39,16 +39,15 @@ const FIELDS: { key: TextSetting; label: string; description?: string }[] = [
   { key: 'email', label: 'E-mail' },
   { key: 'web', label: 'Web' },
   {
-    key: 'certification',
-    label: 'Oprávnění technika',
-    description: 'Tiskne se u podpisu, např. „Osvědčení č. 42/2025“',
+    key: 'protocolIssueDate',
+    label: 'Datum vydání (pevné)',
+    description: 'Prázdné = datum uzavření kontroly (u předběžného protokolu dnešní)',
   },
   {
-    key: 'protocolIssueDate',
-    label: 'Datum vydání formuláře',
-    description: 'V hlavičce každé stránky, např. „01.10.2026“',
+    key: 'protocolVersion',
+    label: 'Verze (pevná)',
+    description: 'Prázdné = 1, po každém znovuotevření kontroly o 1 víc',
   },
-  { key: 'protocolVersion', label: 'Verze formuláře', description: 'V hlavičce, např. „1“' },
   {
     key: 'pageFooter',
     label: 'Text v zápatí stránek',
