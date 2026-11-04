@@ -313,6 +313,8 @@ describe('organization settings and protocol', () => {
     const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
     expect(html).toContain('Protokol o kontrole technického vybavení');
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
+    // The preview has one header: the page count is the layout's estimate.
+    expect(html).toMatch(/Stránka<br>1 z [1-9]\d*</);
     // Header filled without settings: today as the issue date, version 1.
     const today = new Date().toISOString();
     expect(html).toContain(`<td class="center">${formatDate(today)}</td>`);
@@ -364,6 +366,7 @@ describe('organization settings and protocol', () => {
     ).body;
     expect(withList).toContain('Příloha 1 – tabulka kontrolovaného vybavení');
     expect(withList).toContain('Kontrolované vybavení viz Příloha 1');
+    expect(withList).toContain('která je nedílnou součástí tohoto protokolu');
     expect(withList).toContain('<th class="grey">Číslo TZ</th><th class="grey">Výrobce</th>');
     // Not fit for safe operation (the red defect): bold and red.
     expect(withList).toContain('<tr class="unsafe"><td>');

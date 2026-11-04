@@ -8,6 +8,7 @@
 
 import { formatDate } from './dates.js';
 import {
+  appendixPages,
   linesOf,
   PAGE,
   photoBox,
@@ -144,7 +145,7 @@ export interface ProtocolData {
 
 export const APPENDIX_TITLE = 'Příloha 1 – tabulka kontrolovaného vybavení';
 /** Printed instead of the equipment table when it does not fit on the first page. */
-export const APPENDIX_REFERENCE = `Kontrolované vybavení viz ${APPENDIX_TITLE}.`;
+export const APPENDIX_REFERENCE = `Kontrolované vybavení viz ${APPENDIX_TITLE}, která je nedílnou součástí tohoto protokolu.`;
 
 export interface ProtocolHtmlOptions {
   /** `appendix`: only Příloha 1 (printed on its own). */
@@ -562,6 +563,16 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
   const { serious, other } = protocolDefects(data);
   const defects = [...serious, ...other];
   const layout = protocolLayout(data);
+  // The preview and its printing have one header at the top (the PDF numbers every page itself):
+  // the page count there is the layout's estimate.
+  const framePages = {
+    page: '1',
+    pages: String(
+      options.part === 'appendix' && data.appendix
+        ? appendixPages(data.appendix.rows)
+        : Math.max(1, layout.pages),
+    ),
+  };
   const photoTags = (photos: string[], columns: 1 | 2 | 3 = 1) => {
     const { width } = photoBox(columns, layout.photoHeight, photos.length);
     const style = `height:${layout.photoHeight}mm;width:${width}mm`;
@@ -648,7 +659,7 @@ ${
     return `<!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><title>${APPENDIX_TITLE}</title>
 <style>${STYLE}@page { size: A4 landscape; margin: ${margins}; } .appendix { page-break-before: auto; }</style></head><body>
-${frame ? `<div class="frame-head">${pageHeader(c, null)}</div>` : ''}
+${frame ? `<div class="frame-head">${pageHeader(c, framePages)}</div>` : ''}
 <p class="small">${escape(data.customer.name)}, ${escape(data.site.name)} – kontrola ${czechDate(data.inspectionDate)}</p>
 ${appendixHtml}
 ${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
@@ -674,7 +685,7 @@ ${frame ? `<div class="frame-foot">${pageFooter(c)}</div>` : ''}
       ? '@page { size: A4; margin: 12mm 14mm 14mm 14mm; } @page appendix { size: A4 landscape; }'
       : `@page { size: A4; margin: ${PDF_MARGIN_CSS}; } @page appendix { size: A4 landscape; margin: ${PDF_MARGIN_CSS}; }`
   }</style></head><body>
-${frame ? `<div class="frame-head">${pageHeader(c, null)}</div>` : ''}
+${frame ? `<div class="frame-head">${pageHeader(c, framePages)}</div>` : ''}
 ${data.final ? '' : '<div class="draft">PŘEDBĚŽNÝ PROTOKOL – kontrola ještě není uzavřena, údaje se mohou změnit.</div>'}
 <h1>Protokol o kontrole technického vybavení</h1>
 <table class="info">
