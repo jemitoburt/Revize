@@ -37,6 +37,13 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      písmen, mezery a pomlčky se při porovnání nepočítají. Hledat jde podle obojího.
    - Kliknutím na řádek artikl upravíte. Změna stavu (vyřazen z provozu ↔ v provozu) vyžaduje
      důvod a zapíše se do auditu.
+   - **Filtry podle kontrol:** _Příští kontrola_ (po termínu, do 30 / 60 / 90 dní) a _Poslední
+     kontrola → Nezkontrolované v poslední kontrole_ (artikl existoval při poslední uzavřené
+     kontrole své provozovny, která zahrnovala jeho typ, ale nemá v ní výsledek). Filtry platí
+     i pro Export evidence.
+   - **Historie kontrol** v detailu artiklu (i v detailu kontroly): každá kontrola provozovny,
+     která artikl zahrnovala, s výsledkem, závadou, kdo zapsal a počtem fotek, nebo
+     „Nezkontrolován“. Datum otevře kontrolu.
    - **Export evidence**: artikly podle zvoleného filtru (bez filtru celá databáze, včetně
      artiklů vyřazených z evidence).
      - Excel: list _Vše_ a list pro každý typ vybavení – zákazník, provozovna, číslo TZ,

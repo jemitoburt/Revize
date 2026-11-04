@@ -147,4 +147,8 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
 - Intervals (ADR-0019): `inspection_interval_months` on site, location and item; item → nearest
   location → site → type (`inspectionIntervalOf`, API `effectiveIntervals`); close uses it.
   Technician authorization per user (`app_user.certification`); database export with history.
-- Next: M8 history and filters.
+- M8 history and filters – done: `GET /items/:id/history` (inspections of the site that covered
+  the item, result or not checked), item list and database export filters `due`
+  (overdue/30/60/90) and `lastInspection=unchecked` (`itemStateFilters`), history in the item
+  drawers; merging equipment types (`POST /equipment-types/merge`, `planTypeMerge`).
+- Next: audit view in the office (optional); M1 decision PWA vs Capacitor.

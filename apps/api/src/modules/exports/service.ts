@@ -17,6 +17,7 @@ import {
   type DatabaseItem,
   type ExportType,
   type HistoryRow,
+  type ItemDueFilter,
   type Inspection,
   type InspectionItem,
 } from '@revize/shared';
@@ -40,6 +41,7 @@ import { locationNames, pathNamesOf } from '../locations/service.js';
 import type { FileStorage } from '../../infra/file-storage.js';
 import type { MetadataWriter } from '../../infra/metadata-writer.js';
 import type { InspectionsService } from '../inspections/service.js';
+import { itemStateFilters } from '../items/service.js';
 import { organizationOf } from '../organization/service.js';
 
 interface ExportPhoto {
@@ -60,6 +62,9 @@ export interface DatabaseQuery {
   siteId?: string;
   equipmentTypeId?: string;
   includeRetired?: boolean;
+  status?: 'in_service' | 'out_of_service';
+  due?: ItemDueFilter;
+  lastInspection?: 'unchecked';
 }
 
 export interface ExportFile<T> {
@@ -174,6 +179,9 @@ export function createExportsService(
     if (query.siteId) filters.push(eq(item.siteId, query.siteId));
     if (query.equipmentTypeId) filters.push(eq(item.equipmentTypeId, query.equipmentTypeId));
     if (!query.includeRetired) filters.push(isNull(item.retiredAt));
+    if (query.status) filters.push(eq(item.status, query.status));
+    // The same filters as the list of items (Artikly).
+    filters.push(...itemStateFilters(query));
     const rows = await db
       .select({
         item,

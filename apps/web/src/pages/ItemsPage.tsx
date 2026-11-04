@@ -34,6 +34,7 @@ import { notifyError, notifySaved } from '../lib/notify.js';
 import { itemsRoute, type ItemsSearch } from '../router.js';
 import { DateField } from '../components/DateField.js';
 import { DatabaseExportMenu } from '../components/DatabaseExportMenu.js';
+import { ItemHistory } from '../components/ItemHistory.js';
 
 const PAGE_SIZE = 100;
 
@@ -167,6 +168,8 @@ export function ItemsPage() {
     equipmentTypeId: search.equipmentTypeId,
     locationId: search.locationId,
     status: search.status,
+    due: search.due,
+    lastInspection: search.lastInspection,
     q: search.q,
     sort: search.sort ?? 'location',
     limit: PAGE_SIZE,
@@ -215,6 +218,9 @@ export function ItemsPage() {
               customerId: search.customerId,
               siteId: search.siteId,
               equipmentTypeId: search.equipmentTypeId,
+              status: search.status,
+              due: search.due,
+              lastInspection: search.lastInspection,
             }}
           />
           {canWrite && <Button onClick={() => openItem(null)}>Nový artikl</Button>}
@@ -276,6 +282,31 @@ export function ItemsPage() {
             data={Object.entries(ITEM_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
             value={search.status ?? null}
             onChange={(v) => setSearch({ status: (v as ItemStatus) ?? undefined })}
+          />
+          <Select
+            label="Příští kontrola"
+            placeholder="Kdykoli"
+            clearable
+            w={170}
+            data={[
+              { value: 'overdue', label: 'Po termínu' },
+              { value: '30', label: 'Do 30 dní' },
+              { value: '60', label: 'Do 60 dní' },
+              { value: '90', label: 'Do 90 dní' },
+            ]}
+            value={search.due ?? null}
+            onChange={(v) => setSearch({ due: (v as ItemsSearch['due']) ?? undefined })}
+          />
+          <Select
+            label="Poslední kontrola"
+            placeholder="Všechny"
+            clearable
+            w={230}
+            data={[{ value: 'unchecked', label: 'Nezkontrolované v poslední kontrole' }]}
+            value={search.lastInspection ?? null}
+            onChange={(v) =>
+              setSearch({ lastInspection: (v as ItemsSearch['lastInspection']) ?? undefined })
+            }
           />
           <TextInput
             label="Hledat"
@@ -414,6 +445,12 @@ export function ItemsPage() {
           }}
           onDone={drawer.close}
         />
+        {editing && (
+          <ItemHistory
+            itemId={editing.id}
+            riskLevels={types.data?.find((t) => t.id === editing.equipmentTypeId)?.riskLevels}
+          />
+        )}
       </Drawer>
       <Modal
         opened={bulkAction !== null}

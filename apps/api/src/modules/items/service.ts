@@ -9,6 +9,8 @@ import {
   type ItemStatus,
   type bulkUpdateItemsSchema,
   type createItemSchema,
+  type ItemDueFilter,
+  type ItemHistoryEntry,
   type listItemsQuerySchema,
   type updateItemSchema,
 } from '@revize/shared';
@@ -63,6 +65,43 @@ function mapUniqueViolation(error: unknown): never {
   if (constraint === 'item_site_designation_key') throw designationTaken();
   if (constraint === 'item_org_qr_key') throw qrTaken();
   throw error;
+}
+
+/**
+ * Filters by the inspection state (also used by the database export): next inspection overdue
+ * or due within N days, and not checked in the last closed inspection of its site.
+ */
+export function itemStateFilters(query: {
+  due?: ItemDueFilter | undefined;
+  lastInspection?: 'unchecked' | undefined;
+}): SQL[] {
+  const filters: SQL[] = [];
+  if (query.due === 'overdue') {
+    filters.push(sql`${item.nextInspectionDate} < current_date`);
+  } else if (query.due) {
+    filters.push(sql`${item.nextInspectionDate} <= current_date + ${Number(query.due)}::int`);
+  }
+  if (query.lastInspection === 'unchecked') {
+    // The last closed inspection of the item's site that covered its type (no scope = all
+    // types) and was closed after the item was created – without a result for the item.
+    // Qualified names on purpose (see CLAUDE.md: correlated subqueries).
+    filters.push(sql`exists (
+      select 1 from (
+        select i.id from inspection i
+        where i.site_id = "item"."site_id" and i.status = 'closed'
+          and i.closed_at >= "item"."created_at"
+          and (not exists (select 1 from inspection_type_scope s where s.inspection_id = i.id)
+            or exists (select 1 from inspection_type_scope s
+              where s.inspection_id = i.id and s.equipment_type_id = "item"."equipment_type_id"))
+        order by i.inspection_date desc, i.closed_at desc
+        limit 1
+      ) last
+      where not exists (
+        select 1 from inspection_result r where r.inspection_id = last.id and r.item_id = "item"."id"
+      )
+    )`);
+  }
+  return filters;
 }
 
 export function createItemsService(db: Db) {
@@ -358,6 +397,61 @@ export function createItemsService(db: Db) {
   }
 
   return {
+    /**
+     * The item's history: every inspection of its site that covered its type since the item
+     * exists (or that has a result for it), newest first, with the result or "not checked".
+     */
+    async history(auth: AuthContext, id: string): Promise<ItemHistoryEntry[]> {
+      const [target] = await db
+        .select()
+        .from(item)
+        .where(and(eq(item.organizationId, auth.organizationId), eq(item.id, id)));
+      if (!target) throw notFound('Artikl neexistuje.');
+      const rows = await db.execute<{
+        inspection_id: string;
+        inspection_date: string;
+        status: 'open' | 'closed';
+        outcome: 'ok' | 'defect' | null;
+        severity: 'green' | 'amber' | 'red' | null;
+        taken_out_of_service: boolean | null;
+        defect_description: string | null;
+        recorded_by_name: string | null;
+        recorded_at: Date | string | null;
+        photo_count: number | null;
+      }>(sql`
+        select i.id as inspection_id, i.inspection_date::text as inspection_date, i.status,
+          r.outcome, r.severity, r.taken_out_of_service, r.defect_description,
+          u.display_name as recorded_by_name, r.recorded_at,
+          (select count(*)::int from photo p where p.inspection_result_id = r.id) as photo_count
+        from inspection i
+        left join inspection_result r on r.inspection_id = i.id and r.item_id = ${id}
+        left join app_user u on u.id = r.recorded_by
+        where i.organization_id = ${auth.organizationId}
+          and (r.id is not null or (
+            i.site_id = ${target.siteId}
+            and i.created_at >= ${target.createdAt.toISOString()}::timestamptz
+            and (not exists (select 1 from inspection_type_scope s where s.inspection_id = i.id)
+              or exists (select 1 from inspection_type_scope s
+                where s.inspection_id = i.id and s.equipment_type_id = ${target.equipmentTypeId}))))
+        order by i.inspection_date desc, i.created_at desc`);
+      return rows.rows.map((r) => ({
+        inspectionId: r.inspection_id,
+        inspectionDate: r.inspection_date,
+        inspectionStatus: r.status,
+        result: r.outcome
+          ? {
+              outcome: r.outcome,
+              severity: r.severity,
+              takenOutOfService: r.taken_out_of_service ?? false,
+              defectDescription: r.defect_description,
+              recordedByName: r.recorded_by_name ?? '?',
+              recordedAt: new Date(r.recorded_at!).toISOString(),
+              photoCount: r.photo_count ?? 0,
+            }
+          : null,
+      }));
+    },
+
     async list(
       auth: AuthContext,
       query: z.output<typeof listItemsQuerySchema>,
@@ -368,6 +462,7 @@ export function createItemsService(db: Db) {
       if (query.equipmentTypeId) filters.push(eq(item.equipmentTypeId, query.equipmentTypeId));
       if (query.status) filters.push(eq(item.status, query.status));
       if (!query.includeRetired) filters.push(isNull(item.retiredAt));
+      filters.push(...itemStateFilters(query));
       if (query.locationId)
         filters.push(sql`${location.pathIds} @> array[${query.locationId}]::uuid[]`);
       if (query.q) {

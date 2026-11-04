@@ -6,13 +6,20 @@ import { notifyError } from '../lib/notify.js';
 
 export interface DatabaseExportMenuProps {
   /** The list filters: empty = the whole database. */
-  filters: { customerId?: string; siteId?: string; equipmentTypeId?: string };
+  filters: {
+    customerId?: string;
+    siteId?: string;
+    equipmentTypeId?: string;
+    status?: string;
+    due?: string;
+    lastInspection?: string;
+  };
 }
 
 /** Export of the records (items with fields and the last inspection) as XLSX or CSV. */
 export function DatabaseExportMenu({ filters }: DatabaseExportMenuProps) {
   const [busy, setBusy] = useState(false);
-  const filtered = Boolean(filters.customerId || filters.equipmentTypeId);
+  const filtered = Object.values(filters).some(Boolean);
   // The whole database: also the items removed from the records.
   const query = queryString({ ...filters, includeRetired: 'true' });
   const download = (file: string, name: string) => {

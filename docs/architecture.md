@@ -207,7 +207,9 @@ v hlavičce `Authorization` – API podporuje obojí. CSRF: SameSite + kontrola 
 - **M7 – Kontrola v kanceláři a exporty:** přehled kontrol, uzavření/znovuotevření s auditem,
   XLSX+CSV, ZIP fotek (názvy `12345_01.jpg`, EXIF/IPTC, sidecar CSV), PDF protokol s gridem závad. (AK 5)
 - **M8 – Historie a filtrovaný export:** historie artiklu, filtry „nezkontrolované v poslední kontrole",
-  „blížící se kontrola", export celé DB / filtrovaný vč. historie. (AK 6)
+  „blížící se kontrola", export celé DB / filtrovaný vč. historie. (AK 6) – **hotovo** (2026-11-04):
+  `GET /items/:id/history`, filtry `due` a `lastInspection` v seznamu artiklů i v exportu evidence
+  (`itemStateFilters`), list Historie kontrol v XLSX a `GET /exports/history.csv`.
 - **M9 – Provoz:** profily přístupu, `scripts/backup.sh` + `restore.sh` (pg_dump -Fc + rsync snapshoty,
   rotace, cron), **automatický test obnovy** do čisté instance, provozní příručka. (AK 7)
 

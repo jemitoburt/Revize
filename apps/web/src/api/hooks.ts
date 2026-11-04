@@ -13,6 +13,7 @@ import type {
   InspectionResult,
   InspectionStatus,
   Item,
+  ItemHistoryEntry,
   ItemStatus,
   importSuggestionSchema,
   Location,
@@ -285,6 +286,8 @@ export type ItemQuery = {
   equipmentTypeId?: string;
   locationId?: string;
   status?: ItemStatus;
+  due?: 'overdue' | '30' | '60' | '90';
+  lastInspection?: 'unchecked';
   q?: string;
   includeRetired?: boolean;
   sort?: z.output<typeof listItemsQuerySchema>['sort'];
@@ -320,6 +323,11 @@ export const useServerStatus = () =>
   useQuery<ServerStatus, ApiRequestError>({
     queryKey: ['server-status'],
     queryFn: () => api.get('/server-status'),
+  });
+export const useItemHistory = (id: string) =>
+  useQuery<ItemHistoryEntry[], ApiRequestError>({
+    queryKey: ['items', 'history', id],
+    queryFn: () => api.get(`/items/${id}/history`),
   });
 export const useItem = (id: string | null) =>
   useQuery<Item, ApiRequestError>({

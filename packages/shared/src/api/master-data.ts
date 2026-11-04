@@ -292,6 +292,9 @@ export const updateItemSchema = z
 
 export const ITEM_SORTS = ['location', 'itemNumber', 'type', 'nextInspection', 'updated'] as const;
 
+export const ITEM_DUE_FILTERS = ['overdue', '30', '60', '90'] as const;
+export type ItemDueFilter = (typeof ITEM_DUE_FILTERS)[number];
+
 export const listItemsQuerySchema = z.object({
   customerId: idSchema.optional(),
   siteId: idSchema.optional(),
@@ -305,10 +308,34 @@ export const listItemsQuerySchema = z.object({
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),
+  /** Next inspection: overdue, or due within 30 / 60 / 90 days (overdue included). */
+  due: z.enum(ITEM_DUE_FILTERS).optional(),
+  /** `unchecked`: not checked in the last closed inspection of its site (that covered its type). */
+  lastInspection: z.enum(['unchecked']).optional(),
   sort: z.enum(ITEM_SORTS).default('location'),
   limit: z.coerce.number().int().min(1).max(1000).default(200),
   offset: z.coerce.number().int().min(0).default(0),
 });
+
+/** `GET /items/:id/history`: the inspections of the item's site that covered it. */
+export const itemHistoryEntrySchema = z.object({
+  inspectionId: idSchema,
+  inspectionDate: z.string(),
+  inspectionStatus: z.enum(['open', 'closed']),
+  /** Null: the item was not checked in that inspection. */
+  result: z
+    .object({
+      outcome: z.enum(['ok', 'defect']),
+      severity: z.enum(['green', 'amber', 'red']).nullable(),
+      takenOutOfService: z.boolean(),
+      defectDescription: z.string().nullable(),
+      recordedByName: z.string(),
+      recordedAt: z.string(),
+      photoCount: z.number().int(),
+    })
+    .nullable(),
+});
+export type ItemHistoryEntry = z.infer<typeof itemHistoryEntrySchema>;
 
 export const itemListSchema = z.object({ items: z.array(itemSchema), total: z.number().int() });
 

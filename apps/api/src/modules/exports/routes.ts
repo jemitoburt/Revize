@@ -1,4 +1,4 @@
-import { idSchema } from '@revize/shared';
+import { ITEM_DUE_FILTERS, ITEM_STATUSES, idSchema } from '@revize/shared';
 import type { FastifyReply } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -84,6 +84,9 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
       .enum(['true', 'false'])
       .transform((v) => v === 'true')
       .optional(),
+    status: z.enum(ITEM_STATUSES).optional(),
+    due: z.enum(ITEM_DUE_FILTERS).optional(),
+    lastInspection: z.enum(['unchecked']).optional(),
   });
   const records = requirePermission('export.read');
   app.get(

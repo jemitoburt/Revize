@@ -39,6 +39,7 @@ import { formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { ItemForm } from './ItemForm.js';
+import { ItemHistory } from './ItemHistory.js';
 
 /** Result as chosen in the office: OK or a defect level (fit / unfit types: only red). */
 type Choice = 'ok' | Severity;
@@ -199,6 +200,7 @@ function Body({
 
       <Divider label="Artikl" labelPosition="left" />
       <ItemSection itemId={item.id} inspectionId={inspectionId} />
+      <ItemHistory itemId={item.id} riskLevels={riskLevels} />
     </Stack>
   );
 }

@@ -102,6 +102,8 @@ export const itemsSearchSchema = z.object({
   equipmentTypeId: z.string().optional(),
   locationId: z.string().optional(),
   status: z.enum(['in_service', 'out_of_service']).optional(),
+  due: z.enum(['overdue', '30', '60', '90']).optional(),
+  lastInspection: z.enum(['unchecked']).optional(),
   q: z.string().optional(),
   sort: z.enum(['location', 'itemNumber', 'type', 'nextInspection', 'updated']).optional(),
   page: z.number().int().min(1).optional(),

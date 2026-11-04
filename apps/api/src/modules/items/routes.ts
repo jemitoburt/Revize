@@ -1,4 +1,5 @@
 import {
+  itemHistoryEntrySchema,
   apiErrorSchema,
   bulkUpdateItemsSchema,
   createItemSchema,
@@ -44,6 +45,19 @@ export const itemsRoutes: FastifyPluginAsyncZod<{ items: ItemsService }> = async
       schema: { tags, summary: 'Detail artiklu', params, response: { 200: itemSchema, ...errors } },
     },
     (req) => items.get(authOf(req), req.params.id),
+  );
+  app.get(
+    '/items/:id/history',
+    {
+      preHandler: read,
+      schema: {
+        tags,
+        summary: 'Historie kontrol artiklu (i kontroly, ve kterých nebyl zkontrolován)',
+        params,
+        response: { 200: z.array(itemHistoryEntrySchema), ...errors },
+      },
+    },
+    (req) => items.history(authOf(req), req.params.id),
   );
   app.post(
     '/items',
