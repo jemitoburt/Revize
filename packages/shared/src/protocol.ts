@@ -114,6 +114,8 @@ export interface ProtocolData {
   appendix?: { columns: string[]; rows: { cells: string[]; unsafe: boolean }[] } | null;
   /** Příloha 1 even when the table would fit on the first page. */
   forceAppendix?: boolean;
+  /** "Co nejkratší protokol": the fewest pages (minimal photos, more columns), even within 8. */
+  shortest?: boolean;
   /**
    * Risk levels whose defects get a card with photos (default all); the table lists all. Unfit
    * items of types without risk levels always get one.

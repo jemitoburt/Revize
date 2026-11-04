@@ -211,6 +211,8 @@ export function choosePhotoLayout(
   overviewPhotos = 0,
   startUsed = 0,
   totalOf: (defectPages: number) => number = (n) => n,
+  /** "Co nejkratší protokol": the fewest pages with the minimal sizes, even within 8 pages. */
+  shortest = false,
 ): PhotoLayout & { total: number } {
   const options: (PhotoLayout & { total: number })[] = [];
   for (const photoHeight of PHOTO_HEIGHTS) {
@@ -220,7 +222,7 @@ export function choosePhotoLayout(
       options.push({ photoHeight, columns, pages, total: totalOf(pages) });
     }
   }
-  const within = options.filter((o) => o.total <= TARGET_PAGES);
+  const within = shortest ? [] : options.filter((o) => o.total <= TARGET_PAGES);
   const pick = within.length
     ? within.sort(
         (a, b) =>
@@ -296,8 +298,12 @@ export function planProtocolLayout(
     ),
   );
   const hasPhotoPages = groups.some((g) => g.some((p) => p.length)) || data.overviewPhotos.length;
-  const photos = choosePhotoLayout(groups, data.overviewPhotos.length, afterWarning, (pages) =>
-    hasPhotoPages ? startPage + pages - 1 + appendix : startPage + appendix,
+  const photos = choosePhotoLayout(
+    groups,
+    data.overviewPhotos.length,
+    afterWarning,
+    (pages) => (hasPhotoPages ? startPage + pages - 1 + appendix : startPage + appendix),
+    data.shortest,
   );
   return {
     inlineTable,

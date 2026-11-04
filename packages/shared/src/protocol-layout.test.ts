@@ -41,6 +41,14 @@ describe('protocol layout', () => {
     ).toBeLessThan(50);
   });
 
+  it('"Co nejkratší protokol" takes the fewest pages even within 8', () => {
+    const forty = one(Array.from({ length: 40 }, () => card(1)));
+    const normal = choosePhotoLayout(forty);
+    const shortest = choosePhotoLayout(forty, 0, 0, (n) => n, true);
+    expect(shortest.photoHeight).toBe(35);
+    expect(shortest.total).toBeLessThan(normal.total);
+  });
+
   it('counts the headings of severities and workplaces', () => {
     const cards = Array.from({ length: 6 }, () => card(1));
     const grouped = [[cards.slice(0, 2), cards.slice(2, 4)], [cards.slice(4)]];

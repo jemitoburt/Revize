@@ -32,6 +32,24 @@ function loadColumns(): string[] {
   return [...DEFAULT_APPENDIX_COLUMNS];
 }
 
+const SHORTEST_KEY = 'revize.protocol.shortest';
+
+function loadShortest(): boolean {
+  try {
+    return localStorage.getItem(SHORTEST_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function saveShortest(value: boolean) {
+  try {
+    localStorage.setItem(SHORTEST_KEY, value ? '1' : '0');
+  } catch {
+    // Not remembered, nothing else depends on it.
+  }
+}
+
 function saveColumns(columns: string[]) {
   try {
     localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
@@ -44,7 +62,8 @@ export interface ProtocolPreviewProps {
   inspectionId: string;
   fileName: string;
   /** Equipment types of the inspection: a protocol can be made for one type only. */
-  types: { id: string; name: string }[];
+  /** `riskLevels`: the type rates defects green/yellow/red (racks). */
+  types: { id: string; name: string; riskLevels?: boolean }[];
   opened: boolean;
   onClose: () => void;
 }
@@ -66,7 +85,19 @@ export function ProtocolPreview({
   /** Defects with cards and photos: all, red and yellow, or only red. */
   const [defects, setDefects] = useState<'all' | 'red-amber' | 'red'>('all');
   const [columns, setColumns] = useState<string[]>(loadColumns);
-  const html = useProtocolHtml(inspectionId, typeId, opened, columns, withList, defects);
+  const [shortest, setShortest] = useState(loadShortest);
+  // The choice of red / yellow defects only applies to types with risk levels (racks).
+  const hasRiskLevels = types.some((t) => (!typeId || t.id === typeId) && t.riskLevels);
+  const shownDefects = hasRiskLevels ? defects : 'all';
+  const html = useProtocolHtml(
+    inspectionId,
+    typeId,
+    opened,
+    columns,
+    withList,
+    shownDefects,
+    shortest,
+  );
   const frame = useRef<HTMLIFrameElement>(null);
   const [downloading, setDownloading] = useState(false);
   const base = fileName.replace(/\.pdf$/, '');
@@ -77,7 +108,8 @@ export function ProtocolPreview({
         equipmentTypeId: typeId,
         columns: columns.join(',') || undefined,
         appendix: withList ? 'always' : undefined,
-        defects: defects === 'all' ? undefined : defects,
+        defects: shownDefects === 'all' ? undefined : shownDefects,
+        size: shortest ? 'shortest' : undefined,
         ...query,
       })}`,
       name,
@@ -179,19 +211,30 @@ export function ProtocolPreview({
         <Stack gap={6}>
           <Text size="sm" c="dimmed">
             Když se tabulka vybavení nevejde na první stranu, protokol na ni jen odkáže a vytiskne
-            ji jako Přílohu 1 na A4 na šířku se zvolenými sloupci. Velikost fotek a počet sloupců
-            závad se volí tak, aby měl protokol co nejméně stran.
+            ji jako Přílohu 1 na A4 na šířku se zvolenými sloupci. Fotky mají kolem 5 cm, dokud má
+            protokol nejvýš 8 stran, jinak se zmenší.
           </Text>
-          <SegmentedControl
-            aria-label="Závady s fotkami v protokolu"
-            data={[
-              { value: 'all', label: 'Všechny závady' },
-              { value: 'red-amber', label: 'Červené a žluté' },
-              { value: 'red', label: 'Jen červené' },
-            ]}
-            value={defects}
-            onChange={(v) => setDefects(v as typeof defects)}
+          <Switch
+            label="Co nejkratší protokol"
+            description="Nejmenší fotky (3,5 cm) a víc sloupců závad, i když by se protokol vešel do 8 stran."
+            checked={shortest}
+            onChange={(e) => {
+              setShortest(e.currentTarget.checked);
+              saveShortest(e.currentTarget.checked);
+            }}
           />
+          {hasRiskLevels && (
+            <SegmentedControl
+              aria-label="Závady regálů s fotkami v protokolu"
+              data={[
+                { value: 'all', label: 'Všechny závady' },
+                { value: 'red-amber', label: 'Červené a žluté' },
+                { value: 'red', label: 'Jen červené' },
+              ]}
+              value={defects}
+              onChange={(v) => setDefects(v as typeof defects)}
+            />
+          )}
           <Switch
             label="Tabulku vybavení vždy jako Přílohu 1"
             checked={withList}

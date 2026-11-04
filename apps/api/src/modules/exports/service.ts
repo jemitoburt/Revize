@@ -19,7 +19,7 @@ import {
 } from '@revize/shared';
 import { and, asc, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
-import { Zip, ZipPassThrough, strToU8 } from 'fflate';
+import { Zip, ZipDeflate, strToU8 } from 'fflate';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db } from '../../db/client.js';
 import {
@@ -420,7 +420,10 @@ export function createExportsService(
           ]),
         ]);
       const add = (zip: Zip, name: string, bytes: Uint8Array) => {
-        const entry = new ZipPassThrough(name);
+        // Deflate, not "stored": a streamed entry has its sizes only after the data, which the
+        // macOS Archive Utility cannot handle for stored entries (it extracts empty files).
+        // Level 0 for JPEGs (already compressed), so it costs nothing.
+        const entry = new ZipDeflate(name, { level: name.endsWith('.csv') ? 6 : 0 });
         zip.add(entry);
         entry.push(bytes, true);
       };

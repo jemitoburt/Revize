@@ -136,7 +136,11 @@ describe('inspection exports', () => {
     const res = await api('GET', `/api/inspections/${id}/photos.zip`);
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('application/zip');
-    const zip = unzipSync(new Uint8Array(res.rawPayload));
+    const raw = new Uint8Array(res.rawPayload);
+    // Every entry deflated: a streamed "stored" entry (sizes only after the data) is extracted
+    // empty by the macOS Archive Utility. Method of the first local header:
+    expect(raw[8]! | (raw[9]! << 8)).toBe(8);
+    const zip = unzipSync(raw);
     const number = items[1]!.itemNumber;
     // Item photos (nameplate, overview) go in too, named apart from the defect photos.
     expect(Object.keys(zip).sort()).toEqual(

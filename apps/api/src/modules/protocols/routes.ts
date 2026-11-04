@@ -16,6 +16,8 @@ const querystring = z.object({
   part: z.enum(['all', 'appendix']).default('all'),
   /** Defects with cards and photos: only red, red and yellow, or all (default). */
   defects: z.enum(['red', 'red-amber', 'all']).default('all'),
+  /** `shortest`: the fewest pages (smallest photos, more columns) even within 8 pages. */
+  size: z.enum(['auto', 'shortest']).default('auto'),
 });
 const SEVERITIES_OF = {
   red: ['red'],
@@ -28,7 +30,9 @@ const optionsOf = (q: {
   appendix: 'auto' | 'always';
   part: 'all' | 'appendix';
   defects: keyof typeof SEVERITIES_OF;
+  size: 'auto' | 'shortest';
 }) => ({
+  shortest: q.size === 'shortest',
   severities: [...SEVERITIES_OF[q.defects]],
   equipmentTypeId: q.equipmentTypeId,
   columns: q.columns ? q.columns.split(',').filter(Boolean) : [],

@@ -741,6 +741,8 @@ export const useProtocolHtml = (
   forceAppendix = false,
   /** Defects with cards and photos. */
   defects: 'all' | 'red-amber' | 'red' = 'all',
+  /** The fewest pages (smallest photos, more columns). */
+  shortest = false,
 ) =>
   useQuery<string, ApiRequestError>({
     queryKey: [
@@ -750,6 +752,7 @@ export const useProtocolHtml = (
       columns.join(','),
       forceAppendix,
       defects,
+      shortest,
     ],
     queryFn: async () =>
       (
@@ -759,6 +762,7 @@ export const useProtocolHtml = (
             columns: columns.join(',') || undefined,
             appendix: forceAppendix ? 'always' : undefined,
             defects: defects === 'all' ? undefined : defects,
+            size: shortest ? 'shortest' : undefined,
           })}`,
         )
       ).text(),

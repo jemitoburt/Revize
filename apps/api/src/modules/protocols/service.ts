@@ -130,6 +130,7 @@ export function createProtocolsService(
     columns: readonly string[] = [],
     forceAppendix = false,
     defectSeverities?: ProtocolData['defectSeverities'],
+    shortest = false,
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
     // A protocol of one equipment type contains only its items and its protocol text.
@@ -243,6 +244,7 @@ export function createProtocolsService(
       appendix: appendixOf(types, items, columns.length ? columns : DEFAULT_APPENDIX_COLUMNS),
       forceAppendix,
       defectSeverities,
+      shortest,
       generatedAt: new Date().toISOString(),
     };
     return resolvePhotos(data, refs);
@@ -306,6 +308,7 @@ export function createProtocolsService(
           options.columns,
           options.forceAppendix,
           options.severities,
+          options.shortest,
         ),
         { part: options.part },
       );
@@ -327,6 +330,7 @@ export function createProtocolsService(
         options.columns,
         options.forceAppendix,
         options.severities,
+        options.shortest,
       );
       const bytes = await pdf.render(
         renderProtocolHtml(data, { pageFrame: false, part: options.part }),
@@ -356,6 +360,7 @@ export function createProtocolsService(
         options.columns,
         options.forceAppendix,
         options.severities,
+        options.shortest,
       );
       return {
         data: await renderProtocolDocx(data, options.part),
@@ -385,6 +390,8 @@ export interface ProtocolOptions {
   part?: 'all' | 'appendix';
   /** Risk levels whose defects get cards with photos (default all). */
   severities?: ('red' | 'amber' | 'green')[];
+  /** The fewest pages (minimal photos, more columns) even within 8 pages. */
+  shortest?: boolean;
 }
 
 export type ProtocolsService = ReturnType<typeof createProtocolsService>;

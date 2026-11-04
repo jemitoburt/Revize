@@ -107,6 +107,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      - Závady jsou seskupené podle závažnosti (červené, bránící bezpečnému provozu, žluté, zelené, nebránící bezpečnému provozu – co znamenají,
        je napsáno jednou u skupiny) a pak podle pracoviště (hala). Karty jsou kompaktní: číslo TZ,
        označení, řada a pozice, popis a fotky, v jednom až třech sloupcích.
+     - Přepínač **Co nejkratší protokol** (zapamatuje se) vždy zvolí nejmenší fotky (3,5 cm)
+       a víc sloupců závad, i když by se protokol vešel do 8 stran.
+     - Volba _Všechny / Červené a žluté / Jen červené_ je vidět jen u kontrol s regály.
      - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
        U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají
        v rozlišení 300 dpi přesně podle tištěné velikosti, mírně oříznuté (až na čtverec), aby

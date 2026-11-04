@@ -277,6 +277,9 @@ describe('organization settings and protocol', () => {
     expect(html).toContain('Červené riziko (1)<span>okamžitě vyprázdnit a vyřadit z užívání');
     // The photo at 300 dpi of its printed size (layout: 50 mm high).
     expect(html).toMatch(/style="height:50mm;width:\d+(\.\d)?mm"/);
+    // "Co nejkratší protokol": the minimal photos even for a short protocol.
+    const shortest = (await api('GET', `/api/inspections/${id}/protocol.html?size=shortest`)).body;
+    expect(shortest).toMatch(/style="height:35mm;width:\d+(\.\d)?mm"/);
     // Only red defects get cards: the green one is left out of the cards.
     const redOnly = (await api('GET', `/api/inspections/${id}/protocol.html?defects=red`)).body;
     expect(html).toContain('Žluté riziko (1)');

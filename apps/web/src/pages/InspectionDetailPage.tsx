@@ -409,6 +409,7 @@ export function InspectionDetailPage() {
         types={[...new Set((items.data ?? []).map((i) => i.equipmentTypeId))].map((id) => ({
           id,
           name: typeName.get(id) ?? '?',
+          riskLevels: riskLevels.get(id) ?? true,
         }))}
         opened={dialog === 'protocol'}
         onClose={() => setDialog(null)}
