@@ -35,6 +35,25 @@ const LADDER_MANUFACTURERS = [
   'Drabest',
 ];
 
+/**
+ * Makers of lifting slings (mainly textile) on the Czech market: from manufacturers' and
+ * dealers' pages (Dolezych, SpanSet, pewag, Forankra via vazacivazaky.cz, KRATOS via
+ * pavlinek.cz, Popruhy-Lemfeld) and the usual sling brands.
+ */
+const SLING_MANUFACTURERS = [
+  'Dolezych',
+  'SpanSet',
+  'pewag',
+  'Forankra',
+  'KRATOS SAFETY',
+  'Popruhy-Lemfeld',
+  'RUD',
+  'Gunnebo Industries',
+  'Yale',
+  'Carl Stahl',
+  'Certex',
+];
+
 const RACK_MANUFACTURERS = [
   'Mecalux',
   'Jungheinrich',
@@ -124,6 +143,17 @@ const FIXED_LADDER_PROTOCOL = `# Pevné žebříky
   • kontrolu odpočívadel, madel a zábradlí na výstupu,
   • kontrolu zabezpečení proti výstupu nepovolaných osob,
   • kontrolu identifikačního štítku (označení).`;
+
+/** Draft in the style of the form (the form has no text for lifting slings). */
+const SLING_PROTOCOL = `# Vázací prostředky
+• Kontrola vázacích prostředků je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací (návodem výrobce) a ČSN EN 1492-1 (ploché vázací pásy), ČSN EN 1492-2 (kruhové smyce), popř. ČSN EN 1492-4 (lana z vláken), ČSN EN 818-4 (řetězové úvazky) a ČSN EN 13414-1 (úvazky z ocelových lan).
+• Kontrola vázacích prostředků zahrnuje:
+  • kontrolu identifikačního štítku (nosnost, materiál, užitná délka, výrobce, rok výroby; chybějící nebo nečitelný štítek znamená vyřazení),
+  • vizuální kontrolu tkaniny nebo pláště (prořezy, natržení, odřeniny, uzly, poškozené švy a oka),
+  • kontrolu tepelného, chemického a UV poškození (zatavení, ztvrdnutí, změna barvy, křehkost vláken),
+  • u kruhových smycí kontrolu pláště a nosného jádra (obnažené nebo poškozené jádro),
+  • kontrolu ok a kovových součástí (háky, třmeny, koncovky: deformace, trhliny, koroze, opotřebení, pojistky háků),
+  • kontrolu způsobu skladování a používání (ochrana hran, přetěžování, nosnost podle způsobu vázání).`;
 
 const SECTIONAL_DOOR_PROTOCOL = `# Sekční vrata
 • Kontrola sekčních vrat je provedena dle nařízení vlády č. 378/2001 Sb., a to v souladu s průvodní dokumentací sekčních vrat (návodem výrobce).
@@ -449,6 +479,99 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
       ...rackCommon(15),
     ]),
     protocolTemplate: RACK_PROTOCOL,
+  },
+  {
+    key: 'lifting_sling',
+    name: 'Vázací prostředky',
+    description: 'Textilní vázací pásy a kruhové smyce, lana a řetězové úvazky pro zvedání břemen.',
+    standards: [
+      'ČSN EN 1492-1',
+      'ČSN EN 1492-2',
+      'ČSN EN 1492-4',
+      'ČSN EN 818-4',
+      'ČSN EN 13414-1',
+      'ČSN EN 1677',
+    ],
+    defaultIntervalMonths: 12,
+    fieldDefinitions: fields([
+      {
+        key: 'manufacturer',
+        label: 'Výrobce',
+        kind: 'text',
+        required: true,
+        suggestions: SLING_MANUFACTURERS,
+        order: 0,
+      },
+      {
+        key: 'sling_type',
+        label: 'Druh',
+        kind: 'select',
+        required: true,
+        options: [
+          'Plochý vázací pás (EN 1492-1)',
+          'Kruhová smyce (EN 1492-2)',
+          'Textilní lano (EN 1492-4)',
+          'Řetězový úvazek (EN 818-4)',
+          'Úvazek z ocelového lana (EN 13414-1)',
+          'Jiný',
+        ],
+        order: 1,
+      },
+      {
+        key: 'wll_t',
+        label: 'Nosnost WLL (přímý tah)',
+        kind: 'number',
+        unit: 't',
+        required: true,
+        order: 2,
+      },
+      {
+        key: 'colour',
+        label: 'Barva (nosnost podle EN 1492)',
+        kind: 'select',
+        options: [
+          'Fialová (1 t)',
+          'Zelená (2 t)',
+          'Žlutá (3 t)',
+          'Šedá (4 t)',
+          'Červená (5 t)',
+          'Hnědá (6 t)',
+          'Modrá (8 t)',
+          'Oranžová (10 t a více)',
+          'Jiná',
+        ],
+        help: 'Textilní vázací prostředky mají barvu podle nosnosti v přímém tahu.',
+        order: 3,
+      },
+      { key: 'length_m', label: 'Užitná délka', kind: 'number', unit: 'm', order: 4 },
+      { key: 'width_mm', label: 'Šířka pásu', kind: 'integer', unit: 'mm', order: 5 },
+      {
+        key: 'material',
+        label: 'Materiál',
+        kind: 'select',
+        options: ['Polyester (PES)', 'Polyamid (PA)', 'Polypropylen (PP)', 'Ocel'],
+        order: 6,
+      },
+      { key: 'legs', label: 'Počet větví', kind: 'integer', order: 7 },
+      {
+        key: 'ends',
+        label: 'Zakončení',
+        kind: 'select',
+        options: ['Oka', 'Nekonečný (bez ok)', 'Kovové koncovky', 'Háky', 'Třmeny'],
+        order: 8,
+      },
+      {
+        key: 'label_ok',
+        label: 'Štítek čitelný',
+        kind: 'boolean',
+        help: 'Štítek s nosností, materiálem, délkou, výrobcem a rokem výroby; bez čitelného štítku se vázací prostředek vyřadí.',
+        order: 9,
+      },
+      { ...common.serial(10) },
+      { ...common.year(11) },
+      { ...common.note(12) },
+    ]),
+    protocolTemplate: SLING_PROTOCOL,
   },
   {
     key: 'sectional_door',

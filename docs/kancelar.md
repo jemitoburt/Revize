@@ -10,8 +10,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - Šipky mění pořadí, **⋯ → Přesunout** přesune umístění i s podřízenými a artikly.
    - Archivovat jde jen umístění, ve kterém nejsou artikly.
 4. **Typy vybavení → Nový typ:**
-   - _Z knihovny podle norem:_ žebříky, pevné žebříky, regály paletové, policové, konzolové
-     a vjezdové a typy z formuláře protokolu (sekční vrata, pojízdné lešení, OOPP, vozíky,
+   - _Z knihovny podle norem:_ žebříky, pevné žebříky, vázací prostředky (textilní pásy,
+     kruhové smyce, lana, řetězové úvazky), regál (paletový, policový, konzolový, vjezdový…) a typy z formuláře protokolu (sekční vrata, pojízdné lešení, OOPP, vozíky,
      rollkontejnery, ostatní vybavení), viz [typy-vybaveni.md](typy-vybaveni.md).
    - _Prázdný typ:_ vlastní pole.
    - **Pole:** popisek (z něj vznikne klíč), druh, povinnost, jednotka, hodnoty číselníku

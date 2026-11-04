@@ -32,6 +32,23 @@ describe('equipment type presets', () => {
     ).toMatchObject({ manufacturer: 'Alve', rungs: 9 });
   });
 
+  it('describes textile lifting slings (fit / unfit, 12 months)', () => {
+    const sling = EQUIPMENT_TYPE_PRESETS.find((p) => p.key === 'lifting_sling')!;
+    expect(sling.riskLevels).toBeFalsy();
+    expect(sling.defaultIntervalMonths).toBe(12);
+    expect(
+      buildFieldValuesSchema(sling.fieldDefinitions).parse({
+        manufacturer: 'Dolezych',
+        sling_type: 'Kruhová smyce (EN 1492-2)',
+        wll_t: 2,
+        colour: 'Zelená (2 t)',
+        length_m: 3,
+        material: 'Polyester (PES)',
+        label_ok: true,
+      }),
+    ).toMatchObject({ wll_t: 2, label_ok: true });
+  });
+
   it('fills protocol placeholders', () => {
     expect(
       fillProtocolTemplate('Dne {{datum_kontroly}} u {{ zakaznik }}, {{neznamy}}', {
