@@ -209,6 +209,7 @@ export function createInspectionsService(db: Db) {
       takenOutOfService: row.takenOutOfService,
       severity: row.severity as InspectionResult['severity'],
       includeInProtocol: row.includeInProtocol,
+      photosInProtocol: row.photosInProtocol,
       recordedAt: row.recordedAt.toISOString(),
       recordedBy: row.recordedBy,
       recordedByName: extra?.name ?? '?',
@@ -387,6 +388,7 @@ export function createInspectionsService(db: Db) {
               takenOutOfService: r.result.takenOutOfService,
               severity: r.result.severity as InspectionResult['severity'],
               includeInProtocol: r.result.includeInProtocol,
+              photosInProtocol: r.result.photosInProtocol,
               recordedAt: r.result.recordedAt.toISOString(),
               recordedBy: r.result.recordedBy,
               recordedByName: r.recordedByName ?? '?',
@@ -427,12 +429,20 @@ export function createInspectionsService(db: Db) {
         await addInspector(tx, inspectionId, auth.userId);
 
         const recordedAt = new Date(input.recordedAt);
+        // Types without the risk levels of ČSN EN 15635 are fit / unfit: a defect means unfit,
+        // stored as the highest level (out of service, always in the protocol).
+        const [targetType] = await tx
+          .select({ riskLevels: equipmentType.riskLevels })
+          .from(equipmentType)
+          .where(eq(equipmentType.id, target.equipmentTypeId));
+        const unfit = input.outcome === 'defect' && targetType?.riskLevels === false;
         const values = {
           outcome: input.outcome,
           defectDescription: input.outcome === 'defect' ? input.defectDescription : null,
-          takenOutOfService: input.takenOutOfService,
-          severity: input.severity,
-          includeInProtocol: input.includeInProtocol,
+          takenOutOfService: unfit || input.takenOutOfService,
+          severity: unfit ? ('red' as const) : input.severity,
+          includeInProtocol: unfit || input.includeInProtocol,
+          photosInProtocol: input.photosInProtocol,
           recordedAt,
           recordedBy: auth.userId,
         };
@@ -470,6 +480,7 @@ export function createInspectionsService(db: Db) {
             existing.takenOutOfService === values.takenOutOfService &&
             existing.severity === values.severity &&
             existing.includeInProtocol === values.includeInProtocol &&
+            existing.photosInProtocol === values.photosInProtocol &&
             existing.recordedAt.getTime() === recordedAt.getTime() &&
             existing.recordedBy === auth.userId;
           if (unchanged) return resultDto(tx, existing);
@@ -611,6 +622,46 @@ export function createInspectionsService(db: Db) {
         await audit(tx, auth, 'inspection.reopen', 'inspection', id, row, opened, reason);
       });
       return get(db, auth, id);
+    },
+
+    /** Office: print the defect photos of one result in the protocol or not (audited). */
+    async setPhotosInProtocol(
+      auth: AuthContext,
+      inspectionId: string,
+      itemId: string,
+      photosInProtocol: boolean,
+    ): Promise<InspectionResult> {
+      return db.transaction(async (tx) => {
+        const row = await lockInspection(tx, auth, inspectionId);
+        if (row.status === 'closed') throw inspectionClosed();
+        const [existing] = await tx
+          .select()
+          .from(inspectionResult)
+          .where(
+            and(
+              eq(inspectionResult.inspectionId, inspectionId),
+              eq(inspectionResult.itemId, itemId),
+            ),
+          )
+          .for('update');
+        if (!existing) throw notFound('Artikl v této kontrole nemá výsledek.');
+        if (existing.photosInProtocol === photosInProtocol) return resultDto(tx, existing);
+        const [saved] = await tx
+          .update(inspectionResult)
+          .set({ photosInProtocol, version: existing.version + 1, updatedAt: new Date() })
+          .where(eq(inspectionResult.id, existing.id))
+          .returning();
+        await audit(
+          tx,
+          auth,
+          'inspection.result_photos_in_protocol',
+          'inspection_result',
+          existing.id,
+          { photosInProtocol: existing.photosInProtocol },
+          { photosInProtocol },
+        );
+        return resultDto(tx, saved!);
+      });
     },
 
     /** Back to "not checked". Defect photos have to be deleted first. */

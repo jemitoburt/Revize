@@ -165,6 +165,11 @@ export const equipmentType = pgTable(
     defaultIntervalMonths: integer('default_interval_months').notNull().default(12),
     /** Text of the inspection protocol section for this type (placeholders allowed). */
     protocolTemplate: text('protocol_template').notNull().default(''),
+    /**
+     * Defects rated by the risk levels of ČSN EN 15635 (green/yellow/red; racks). Without it the
+     * result is just fit / unfit (a defect = unfit, taken out of service).
+     */
+    riskLevels: boolean('risk_levels').notNull().default(false),
     schemaVersion: integer('schema_version').notNull().default(1),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     ...timestamps,
@@ -328,6 +333,8 @@ export const inspectionResult = pgTable(
     severity: text('severity'),
     /** Minor (green/amber) defects can be left out of the protocol; red ones never are. */
     includeInProtocol: boolean('include_in_protocol').notNull().default(true),
+    /** Defect photos printed in the protocol (the technician or the office may leave them out). */
+    photosInProtocol: boolean('photos_in_protocol').notNull().default(true),
     /** Time on the device when the technician recorded the result. */
     recordedAt: timestamp('recorded_at', { withTimezone: true }).notNull(),
     recordedBy: uuid('recorded_by')

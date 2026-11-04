@@ -316,7 +316,10 @@ export function createExportsService(
         const own = items.filter((i) => i.equipmentTypeId === type.id);
         const by = new Map<string, number>();
         for (const i of own)
-          by.set(outcomeLabel(i.result), (by.get(outcomeLabel(i.result)) ?? 0) + 1);
+          by.set(
+            outcomeLabel(i.result, type.riskLevels),
+            (by.get(outcomeLabel(i.result, type.riskLevels)) ?? 0) + 1,
+          );
         summary.addRow([
           type.name,
           `${own.length}: ${[...by].map(([label, n]) => `${label} ${n}`).join(', ')}`,
@@ -356,9 +359,11 @@ export function createExportsService(
       const org = await organizationOf(db, auth);
       const typeName = (item: InspectionItem) =>
         types.find((t) => t.id === item.equipmentTypeId)?.name ?? '';
+      const riskLevels = (item: InspectionItem) =>
+        types.find((t) => t.id === item.equipmentTypeId)?.riskLevels ?? true;
       const describe = (p: ExportPhoto) =>
         p.item
-          ? photoCaption(p.item, typeName(p.item))
+          ? photoCaption(p.item, typeName(p.item), riskLevels(p.item))
           : `Kontrola ${inspection.siteName}, ${formatDate(inspection.inspectionDate)}`;
 
       const photoList = () =>
@@ -382,7 +387,7 @@ export function createExportsService(
               p.item?.designation ?? '',
               p.item ? typeName(p.item) : '',
               p.item?.locationPath.join(LOCATION_SEPARATOR) ?? '',
-              p.item ? outcomeLabel(p.item.result) : '',
+              p.item ? outcomeLabel(p.item.result, riskLevels(p.item)) : '',
               describe(p),
               formatDateTime(p.takenAt?.toISOString() ?? null),
               p.author ?? '',

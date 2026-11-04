@@ -46,18 +46,25 @@ techniků současně. Stačí v ní zapsat první výsledek.
 ## Karta artiklu
 
 - Ukazuje číslo, typ, umístění, QR kód, hodnoty polí a případný dřívější výsledek v této kontrole.
-- **V pořádku** uloží výsledek jedním klepnutím.
-- **Závada** má úroveň rizika podle ČSN EN 15635. Napište popis, případně přidejte fotky závady
-  a klepněte na **Uložit závadu**.
-  - **Zelená:** poškození v mezích tolerance. Lze dále používat, poškození se zaznamená
-    a sleduje při dalších kontrolách. V protokolu je „schopno bezpečného provozu: ANO“.
-  - **Žlutá:** nebezpečné poškození. Poškozenou část vyprázdnit a do opravy nezaplňovat.
-    Neopraví-li se do 4 týdnů, platí červené riziko. V protokolu je „NE“.
-  - **Červená:** velmi vážné poškození. Okamžitě vyprázdnit a vyřadit z užívání až do opravy.
-    Artikl se hned označí jako vyřazený. Vrátit ho do provozu může jen kancelář (s důvodem,
-    zapíše se do auditu).
-- U zelené a žluté je zaškrtávátko **Zahrnout do protokolu** (výchozí zapnuté). Červená
-  závada je v protokolu vždy.
+- **Regály** (typy se zapnutým hodnocením rizika podle ČSN EN 15635):
+  - **V pořádku** uloží výsledek jedním klepnutím.
+  - **Závada** má úroveň rizika. Napište popis, případně přidejte fotky závady a klepněte
+    na **Uložit závadu**.
+    - **Zelená:** poškození v mezích tolerance. Lze dále používat, poškození se zaznamená
+      a sleduje při dalších kontrolách. V protokolu je „schopno bezpečného provozu: ANO“.
+    - **Žlutá:** nebezpečné poškození. Poškozenou část vyprázdnit a do opravy nezaplňovat.
+      Neopraví-li se do 4 týdnů, platí červené riziko. V protokolu je „NE“.
+    - **Červená:** velmi vážné poškození. Okamžitě vyprázdnit a vyřadit z užívání až do opravy.
+      Artikl se hned označí jako vyřazený. Vrátit ho do provozu může jen kancelář (s důvodem,
+      zapíše se do auditu).
+  - U zelené a žluté je zaškrtávátko **Zahrnout do protokolu** (výchozí zapnuté). Červená
+    závada je v protokolu vždy.
+- **Ostatní vybavení** (žebříky, pevné žebříky…): jen **Vyhovuje** / **Nevyhovuje**.
+  Nevyhovující artikl se vyřadí z užívání až do opravy (jako červená u regálů) a v protokolu je
+  vždy. Popište závadu a klepněte na **Uložit – nevyhovuje**.
+- U každé závady je zaškrtávátko **Zahrnout fotky do protokolu** (výchozí zapnuté). Vypnuté:
+  fotky zůstanou u výsledku (export, kancelář), ale do protokolu se netisknou. Změnit to jde
+  i v kanceláři.
 - **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Zůstávají
   u artiklu i pro další kontroly.
 - Hned po vyfocení se otevře **Upravit fotku**: tlačítky **Doleva** / **Doprava** fotku otočíte

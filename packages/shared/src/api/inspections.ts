@@ -73,6 +73,8 @@ export const inspectionResultSchema = z.object({
   severity: z.enum(SEVERITIES).nullable(),
   /** Minor defects can be left out of the protocol (red ones are always in it). */
   includeInProtocol: z.boolean(),
+  /** The defect photos are printed in the protocol (can be switched off in the field or office). */
+  photosInProtocol: z.boolean(),
   recordedAt: z.string(),
   recordedBy: idSchema,
   recordedByName: z.string(),
@@ -112,6 +114,7 @@ export const recordResultSchema = z
     severity: z.enum(SEVERITIES).nullable().optional(),
     takenOutOfService: z.boolean().default(false),
     includeInProtocol: z.boolean().default(true),
+    photosInProtocol: z.boolean().default(true),
     recordedAt: isoDateTimeSchema,
   })
   .superRefine((value, ctx) => {
@@ -132,7 +135,13 @@ export const recordResultSchema = z
   })
   .transform((value) => {
     if (value.outcome === 'ok') {
-      return { ...value, severity: null, takenOutOfService: false, includeInProtocol: true };
+      return {
+        ...value,
+        severity: null,
+        takenOutOfService: false,
+        includeInProtocol: true,
+        photosInProtocol: true,
+      };
     }
     const severity: Severity = value.severity ?? (value.takenOutOfService ? 'red' : 'amber');
     // Red means out of service and always appears in the protocol.
@@ -144,6 +153,9 @@ export const recordResultSchema = z
     };
   });
 export type RecordResultInput = z.input<typeof recordResultSchema>;
+
+/** `PUT /inspections/:id/results/:itemId/photos-in-protocol` (office): print the photos or not. */
+export const photosInProtocolSchema = z.object({ photosInProtocol: z.boolean() });
 
 export const PHOTO_OWNERS = ['item', 'result', 'inspection'] as const;
 export type PhotoOwner = (typeof PHOTO_OWNERS)[number];

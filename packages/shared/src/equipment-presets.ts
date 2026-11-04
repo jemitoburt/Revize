@@ -18,6 +18,8 @@ export interface EquipmentTypePreset {
   defaultIntervalMonths: number;
   fieldDefinitions: FieldDefinition[];
   protocolTemplate: string;
+  /** Defects rated green/yellow/red after ČSN EN 15635 (racks); otherwise fit / unfit. */
+  riskLevels?: boolean;
 }
 
 const LADDER_MANUFACTURERS = [
@@ -344,6 +346,7 @@ export const EQUIPMENT_TYPE_PRESETS: EquipmentTypePreset[] = [
   {
     key: 'rack',
     name: 'Regál',
+    riskLevels: true,
     description:
       'Všechny skladovací regály v jednom typu; druh určuje pole „Typ regálu“ (paletový, policový, konzolový, vjezdový…).',
     standards: ['ČSN EN 15635', 'ČSN EN 15512', 'ČSN EN 15620', 'ČSN EN 15629', 'ČSN 26 9030'],

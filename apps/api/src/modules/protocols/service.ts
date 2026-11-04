@@ -44,10 +44,14 @@ const DETAIL_FIELDS = 3;
  */
 function printedResult(
   result: InspectionItem['result'],
+  riskLevels: boolean,
 ): Pick<ProtocolItem, 'outcome' | 'defectDescription'> {
   if (!result) return { outcome: 'unchecked', defectDescription: null };
   const severity = severityOf(result);
-  if (!severity || !result.includeInProtocol) return { outcome: 'ok', defectDescription: null };
+  if (!severity) return { outcome: 'ok', defectDescription: null };
+  // Types without risk levels: any defect is "unfit" (always printed).
+  if (!riskLevels) return { outcome: 'unfit', defectDescription: result.defectDescription };
+  if (!result.includeInProtocol) return { outcome: 'ok', defectDescription: null };
   return { outcome: severity, defectDescription: result.defectDescription };
 }
 
@@ -66,8 +70,10 @@ function appendixOf(
   if (!chosen.length) return null;
   // A minor defect left out of the protocol is printed as fit, without its note (as in the
   // protocol table).
+  const riskLevelsOf = (i: InspectionItem) =>
+    types.find((t) => t.id === i.equipmentTypeId)?.riskLevels ?? true;
   const printed = items.map((i) =>
-    i.result && i.result.outcome === 'defect' && !i.result.includeInProtocol
+    i.result && i.result.outcome === 'defect' && !i.result.includeInProtocol && riskLevelsOf(i)
       ? {
           ...i,
           result: { ...i.result, outcome: 'ok' as const, severity: null, defectDescription: null },
@@ -83,7 +89,11 @@ function appendixOf(
         i,
       ),
       // ANO/NE as in the protocol table: yellow and red are not fit for safe operation.
-      unsafe: i.result !== null && ['amber', 'red'].includes(severityOf(i.result) ?? ''),
+      unsafe:
+        i.result !== null &&
+        (riskLevelsOf(i)
+          ? ['amber', 'red'].includes(severityOf(i.result) ?? '')
+          : i.result.outcome === 'defect'),
     })),
   };
 }
@@ -183,8 +193,12 @@ export function createProtocolsService(
               .slice(0, DETAIL_FIELDS)
               .map((f) => f.value)
               .join(' · '),
-            ...printedResult(i.result),
-            photos: i.result?.includeInProtocol === false ? [] : (photosByItem.get(i.id) ?? []),
+            ...printedResult(i.result, type.riskLevels),
+            photos:
+              (type.riskLevels && i.result?.includeInProtocol === false) ||
+              i.result?.photosInProtocol === false
+                ? []
+                : (photosByItem.get(i.id) ?? []),
           }));
         return { typeName: type.name, text, items: rows };
       });

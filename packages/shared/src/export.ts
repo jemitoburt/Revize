@@ -6,7 +6,7 @@ import type { InspectionItem } from './api/inspections.js';
 import { LOCATION_SEPARATOR } from './api/master-data.js';
 import { formatDate, formatDateTime } from './dates.js';
 import type { FieldDefinition } from './equipment-fields.js';
-import { outcomeLabel, SEVERITY_LABELS, severityOf } from './inspection.js';
+import { FIT_LABELS, outcomeLabel, SEVERITY_LABELS, severityOf } from './inspection.js';
 
 /** A cell: text, number (kept as a number for Excel) or empty. */
 export type ExportCell = string | number | null;
@@ -15,6 +15,8 @@ export interface ExportType {
   id: string;
   name: string;
   fieldDefinitions: readonly FieldDefinition[];
+  /** Risk levels of ČSN EN 15635 (racks; default); otherwise fit / unfit. */
+  riskLevels?: boolean;
 }
 
 export interface ExportColumn {
@@ -81,7 +83,8 @@ export function exportRow(
   const fieldHeaders = exportColumns(types).slice(FIXED_BEFORE.length, -FIXED_AFTER.length);
   const ownFields = type ? activeFields(type) : [];
   const result = item.result;
-  const severity = result ? severityOf(result) : null;
+  const riskLevels = type?.riskLevels ?? true;
+  const severity = result && riskLevels ? severityOf(result) : null;
   return [
     item.itemNumber,
     item.designation ?? '',
@@ -92,7 +95,7 @@ export function exportRow(
       const field = ownFields.find((f) => fieldHeader(f) === header);
       return field ? fieldCell(field, item.fieldValues[field.key]) : null;
     }),
-    outcomeLabel(result),
+    outcomeLabel(result, riskLevels),
     severity ? SEVERITY_LABELS[severity].short : '',
     result?.defectDescription ?? '',
     result ? (result.takenOutOfService ? 'ano' : 'ne') : '',
@@ -114,6 +117,7 @@ export function photoFileName(prefix: string, index: number, mimeType: string): 
 export function photoCaption(
   item: Pick<InspectionItem, 'itemNumber' | 'designation' | 'locationPath' | 'result'>,
   typeName: string,
+  riskLevels = true,
 ): string {
   const severity = item.result ? severityOf(item.result) : null;
   return [
@@ -121,7 +125,7 @@ export function photoCaption(
     item.designation ? `označení ${item.designation}` : '',
     typeName,
     item.locationPath.join(LOCATION_SEPARATOR),
-    severity ? SEVERITY_LABELS[severity].protocol : '',
+    severity ? (riskLevels ? SEVERITY_LABELS[severity].protocol : FIT_LABELS.defect) : '',
     item.result?.defectDescription ?? '',
   ]
     .filter(Boolean)
@@ -242,7 +246,7 @@ export function databaseRow(types: readonly ExportType[], item: DatabaseItem): E
         : 'v provozu',
     formatDate(item.nextInspectionDate),
     formatDate(last?.date ?? null),
-    last ? outcomeLabel(last.result) : '',
+    last ? outcomeLabel(last.result, type?.riskLevels ?? true) : '',
     last?.result.defectDescription ?? '',
   ];
 }
@@ -299,6 +303,7 @@ export function appendixRow(
   item: InspectionItem,
 ): string[] {
   const type = types.find((t) => t.id === item.equipmentTypeId);
+  const riskLevels = type?.riskLevels ?? true;
   return keys.map((key) => {
     if (key.startsWith('field:')) {
       const field = type?.fieldDefinitions.find((f) => f.key === key.slice(6));
@@ -317,22 +322,22 @@ export function appendixRow(
       case 'qrCode':
         return item.qrCode ?? '';
       case 'result':
-        return outcomeLabel(item.result);
+        return outcomeLabel(item.result, riskLevels);
       case 'defect':
         return item.result?.defectDescription ?? '';
       case 'safe': {
         // As in the protocol table: ok and green = ANO, yellow and red = NE.
         if (!item.result) return '';
         const severity = severityOf(item.result);
+        if (!riskLevels) return severity ? 'NE' : 'ANO';
         return !severity || severity === 'green' ? 'ANO' : 'NE';
       }
       case 'note': {
         if (!item.result) return 'Nezkontrolováno';
         const severity = severityOf(item.result);
         // Short: the meaning of the levels is explained with the defect groups.
-        return severity
-          ? [item.result.defectDescription, RISK_SHORT[severity]].filter(Boolean).join(' – ')
-          : '';
+        const level = riskLevels ? RISK_SHORT[severity ?? 'green'] : 'nevyhovuje';
+        return severity ? [item.result.defectDescription, level].filter(Boolean).join(' – ') : '';
       }
       case 'nextInspection':
         return formatDate(item.nextInspectionDate);

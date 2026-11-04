@@ -6,6 +6,7 @@ import {
   inspectionResultSchema,
   inspectionSchema,
   listInspectionsQuerySchema,
+  photosInProtocolSchema,
   recordResultSchema,
   reopenInspectionSchema,
   startInspectionSchema,
@@ -109,6 +110,26 @@ export const inspectionsRoutes: FastifyPluginAsyncZod<{ inspections: Inspections
       },
     },
     (req) => inspections.recordResult(authOf(req), req.params.id, req.params.itemId, req.body),
+  );
+  app.put(
+    '/inspections/:id/results/:itemId/photos-in-protocol',
+    {
+      preHandler: perform,
+      schema: {
+        tags,
+        summary: 'Tisknout fotky závady v protokolu, nebo ne',
+        params: resultParams,
+        body: photosInProtocolSchema,
+        response: { 200: inspectionResultSchema, ...errors },
+      },
+    },
+    (req) =>
+      inspections.setPhotosInProtocol(
+        authOf(req),
+        req.params.id,
+        req.params.itemId,
+        req.body.photosInProtocol,
+      ),
   );
   app.post(
     '/inspections/:id/close',

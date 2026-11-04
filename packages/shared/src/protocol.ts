@@ -80,7 +80,7 @@ export interface ProtocolItem {
    * Result as printed. A minor defect the technician left out of the protocol is printed as
    * `ok` without its note (`includeInProtocol`, decided by the service that builds the data).
    */
-  outcome: 'ok' | 'green' | 'amber' | 'red' | 'unchecked';
+  outcome: 'ok' | 'green' | 'amber' | 'red' | 'unfit' | 'unchecked';
   defectDescription: string | null;
   /** data: URLs of defect photo thumbnails. */
   photos: string[];
@@ -114,7 +114,10 @@ export interface ProtocolData {
   appendix?: { columns: string[]; rows: { cells: string[]; unsafe: boolean }[] } | null;
   /** Příloha 1 even when the table would fit on the first page. */
   forceAppendix?: boolean;
-  /** Risk levels whose defects get a card with photos (default all); the table lists all. */
+  /**
+   * Risk levels whose defects get a card with photos (default all); the table lists all. Unfit
+   * items of types without risk levels always get one.
+   */
   defectSeverities?: readonly ('red' | 'amber' | 'green')[];
   generatedAt: string;
 }
@@ -208,9 +211,12 @@ export function protocolTextHtml(text: string): string {
     .join('');
 }
 
-const isDefect = (o: ProtocolItem['outcome']): o is 'green' | 'amber' | 'red' =>
-  o === 'green' || o === 'amber' || o === 'red';
-const SEVERITY_ORDER = { red: 0, amber: 1, green: 2 } as const;
+/** Defect levels in the protocol: the risk levels of racks, or "unfit" (other types). */
+export type DefectLevel = 'red' | 'unfit' | 'amber' | 'green';
+const DEFECT_LEVELS: readonly DefectLevel[] = ['red', 'unfit', 'amber', 'green'];
+const isDefect = (o: ProtocolItem['outcome']): o is DefectLevel =>
+  o === 'green' || o === 'amber' || o === 'red' || o === 'unfit';
+const SEVERITY_ORDER = { red: 0, unfit: 1, amber: 2, green: 3 } as const;
 
 /**
  * "Schopno bezpečného provozu": ok and green = ANO, yellow and red = NE, unchecked = none
@@ -222,7 +228,7 @@ export function safeToOperate(outcome: ProtocolItem['outcome']): boolean | null 
 }
 
 export type ProtocolDefect = ProtocolItem & {
-  outcome: 'green' | 'amber' | 'red';
+  outcome: DefectLevel;
   typeName: string;
 };
 
@@ -243,8 +249,8 @@ export function protocolDefects(data: ProtocolData): {
     )
     .sort((a, b) => SEVERITY_ORDER[a.outcome] - SEVERITY_ORDER[b.outcome]);
   return {
-    serious: defects.filter((d) => d.outcome === 'red'),
-    other: defects.filter((d) => d.outcome !== 'red'),
+    serious: defects.filter((d) => d.outcome === 'red' || d.outcome === 'unfit'),
+    other: defects.filter((d) => d.outcome !== 'red' && d.outcome !== 'unfit'),
   };
 }
 
@@ -256,7 +262,7 @@ export interface DefectPlace {
 
 /** Defects by risk level (red, yellow, green) and, within it, by workplace. */
 export interface DefectGroup {
-  severity: 'red' | 'amber' | 'green';
+  severity: DefectLevel;
   count: number;
   places: DefectPlace[];
 }
@@ -279,8 +285,11 @@ export function placeOf(location: string): { place: string; rest: string } {
 export function protocolDefectGroups(data: ProtocolData): DefectGroup[] {
   const { serious, other } = protocolDefects(data);
   const all = [...serious, ...other];
-  const shown = data.defectSeverities ?? ['red', 'amber', 'green'];
-  return (['red', 'amber', 'green'] as const).flatMap((severity) => {
+  const shown: readonly DefectLevel[] = [
+    ...(data.defectSeverities ?? ['red', 'amber', 'green']),
+    'unfit',
+  ];
+  return DEFECT_LEVELS.flatMap((severity) => {
     if (!shown.includes(severity)) return [];
     const defects = all.filter((d) => d.outcome === severity);
     if (!defects.length) return [];
@@ -301,11 +310,18 @@ export function defectCardTitle(d: ProtocolDefect): string {
 }
 
 /** Heading of a severity group: the level, how many and what it means (once, not per card). */
-export const SEVERITY_GROUP_TITLE: Record<'red' | 'amber' | 'green', string> = {
+export const SEVERITY_GROUP_TITLE: Record<DefectLevel, string> = {
   red: 'Červené riziko',
+  unfit: 'Nevyhovuje',
   amber: 'Žluté riziko',
   green: 'Zelené riziko',
 };
+
+/** What a defect group means, printed once next to its heading. */
+export function defectGroupMeaning(level: DefectLevel): string {
+  if (level === 'unfit') return 'nesmí se používat, vyřadit z užívání až do opravy.';
+  return SEVERITY_LABELS[level].protocol.replace(/^[^–]*–\s*/, '');
+}
 
 /**
  * The note column: the defect with its risk level in short ("Ohnutý sloupek – červené riziko"),
@@ -568,7 +584,7 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
         })
         .join('');
       return `<h2 class="sev">${SEVERITY_GROUP_TITLE[group.severity]} (${group.count})<span>${escape(
-        SEVERITY_LABELS[group.severity].protocol.replace(/^[^–]*–\s*/, ''),
+        defectGroupMeaning(group.severity),
       )}</span></h2><div class="flow c${columns}">${places}</div>`;
     })
     .join('');

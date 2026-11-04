@@ -15,7 +15,7 @@ let admin: string;
 let siteId: string;
 let ladderTypeId: string;
 
-type Method = 'GET' | 'PUT' | 'POST';
+type Method = 'GET' | 'PUT' | 'POST' | 'PATCH';
 const api = (method: Method, url: string, payload?: unknown, as = admin) =>
   ctx.app.inject({ method, url, headers: bearer(as), ...(payload ? { payload } : {}) });
 
@@ -35,7 +35,15 @@ beforeEach(async () => {
     { id: string }[]
   >()[0]!.id;
   const types = (await api('GET', '/api/equipment-types')).json<{ id: string; name: string }[]>();
-  ladderTypeId = types.find((t) => t.name === 'Žebřík')!.id;
+  const ladder = types.find((t) => t.name === 'Žebřík')! as { id: string; version?: number };
+  ladderTypeId = ladder.id;
+  // These tests check the risk levels (traffic light); ladders are fit / unfit by default
+  // (see "fit / unfit" in protocols.test.ts).
+  const enabled = await api('PATCH', `/api/equipment-types/${ladderTypeId}`, {
+    riskLevels: true,
+    version: ladder.version,
+  });
+  expect(enabled.statusCode, enabled.body).toBe(200);
 });
 
 /** Ladder inspection: one OK, one yellow defect with two photos, one overview photo. */

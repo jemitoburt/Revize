@@ -10,7 +10,7 @@ import {
   protocolDefectGroups,
   protocolLayout,
   SEVERITY_GROUP_TITLE,
-  SEVERITY_LABELS,
+  defectGroupMeaning,
   protocolNoteLines,
   protocolTexts,
   safeToOperate,
@@ -461,7 +461,7 @@ export async function renderProtocolDocx(
             size: 11,
             color: RED,
           }),
-          run(`  ${SEVERITY_LABELS[group.severity].protocol.replace(/^[^–]*–\s*/, '')}`, {
+          run(`  ${defectGroupMeaning(group.severity)}`, {
             size: 8,
           }),
         ],

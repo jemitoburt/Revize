@@ -83,6 +83,7 @@ describe('export table', () => {
           takenOutOfService: false,
           severity: 'amber',
           includeInProtocol: true,
+          photosInProtocol: true,
           recordedAt: '2026-11-03T08:05:00Z',
           recordedBy: '00000000-0000-4000-8000-0000000000cc',
           recordedByName: 'Jan Technik',

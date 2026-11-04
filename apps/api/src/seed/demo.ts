@@ -79,6 +79,7 @@ export async function seedDemo(db: Db, organizationId: string): Promise<boolean>
         fieldDefinitions: preset.fieldDefinitions,
         defaultIntervalMonths: preset.defaultIntervalMonths,
         protocolTemplate: preset.protocolTemplate,
+        riskLevels: preset.riskLevels ?? false,
       });
     }
     const ladder = EQUIPMENT_TYPE_PRESETS.find((p) => p.key === 'portable_ladder')!;

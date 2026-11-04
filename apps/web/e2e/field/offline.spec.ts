@@ -24,11 +24,11 @@ test('without a connection results and photos stay on the device, survive a relo
   for (const digit of '05001') {
     await page.getByRole('dialog').getByRole('button', { name: digit, exact: true }).click();
   }
-  await sheet(page).getByRole('button', { name: 'V pořádku' }).click();
+  await sheet(page).getByRole('button', { name: 'Vyhovuje', exact: true }).click();
   await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
 
   await page.getByTestId('item-20002').click();
-  await sheet(page).getByRole('button', { name: 'Žlutá' }).click();
+  await sheet(page).getByRole('button', { name: 'Nevyhovuje' }).click();
   await sheet(page).getByLabel('Popis závady').fill('Uvolněná příčka');
   const chooser = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
@@ -38,7 +38,7 @@ test('without a connection results and photos stay on the device, survive a relo
     .getByRole('button', { name: 'Uložit fotku' })
     .click();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
+  await sheet(page).getByRole('button', { name: 'Uložit – nevyhovuje' }).click();
   await expect(page.getByTestId('progress')).toHaveText('2 / 3 zkontrolováno');
   await expect(page.getByTestId('sync-status')).toHaveText('Neodesláno: 3');
 

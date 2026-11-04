@@ -75,8 +75,9 @@ type Source = 'list' | 'scan';
 
 const SEVERITY_COLORS = { green: 'teal', amber: 'yellow', red: 'red' } as const;
 
-function resultColor(result: InspectionResult) {
+function resultColor(result: InspectionResult, riskLevels = true) {
   const severity = severityOf(result);
+  if (!riskLevels) return severity ? 'red' : 'green';
   return severity ? SEVERITY_COLORS[severity] : 'green';
 }
 
@@ -152,8 +153,8 @@ function ItemRow({
               <Badge color="gray">Mimo provoz</Badge>
             )}
             {item.result ? (
-              <Badge size="lg" color={resultColor(item.result)}>
-                {outcomeLabel(item.result)}
+              <Badge size="lg" color={resultColor(item.result, type?.riskLevels)}>
+                {outcomeLabel(item.result, type?.riskLevels)}
               </Badge>
             ) : (
               <Badge size="lg" variant="outline" color="gray">

@@ -92,9 +92,16 @@ export function severityOf(result: LabelledResult): Severity | null {
   return result.severity ?? (result.takenOutOfService ? 'red' : 'amber');
 }
 
-/** Label of a result as shown in lists and the protocol. */
-export function outcomeLabel(result: LabelledResult | null): string {
+/** Results of types without risk levels (everything but racks): fit or unfit. */
+export const FIT_LABELS = { ok: 'Vyhovuje', defect: 'Nevyhovuje' } as const;
+
+/**
+ * Label of a result as shown in lists and the protocol. `riskLevels`: the type rates defects
+ * green/yellow/red (ČSN EN 15635, racks); otherwise the result is "Vyhovuje" / "Nevyhovuje".
+ */
+export function outcomeLabel(result: LabelledResult | null, riskLevels = true): string {
   if (!result) return OUTCOME_LABELS.unchecked;
+  if (!riskLevels) return FIT_LABELS[result.outcome];
   const severity = severityOf(result);
   if (!severity) return OUTCOME_LABELS.ok;
   if (severity === 'red') return OUTCOME_LABELS.outOfService;

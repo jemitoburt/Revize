@@ -40,7 +40,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
     await page.getByRole('dialog').getByRole('button', { name: digit, exact: true }).click();
   }
   await expect(sheet(page).getByRole('heading', { name: '4001', exact: true })).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'V pořádku' }).click();
+  await sheet(page).getByRole('button', { name: 'Vyhovuje', exact: true }).click();
   await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
 
   // Camera: the fake camera shows the QR label of 10001.
@@ -48,11 +48,12 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page).getByRole('heading', { name: '10001', exact: true })).toBeVisible({
     timeout: 15_000,
   });
-  await sheet(page).getByRole('button', { name: 'Žlutá' }).click();
-  await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
+  await sheet(page).getByRole('button', { name: 'Nevyhovuje' }).click();
+  await sheet(page).getByRole('button', { name: 'Uložit – nevyhovuje' }).click();
   await expect(sheet(page).getByText('Popište závadu')).toBeVisible();
-  // Minor (green/amber) defects can be left out of the protocol; included by default.
-  await expect(sheet(page).getByLabel('Zahrnout do protokolu')).toBeChecked();
+  // Ladders are fit / unfit (risk levels are for racks); photos go to the protocol by default.
+  await expect(sheet(page).getByRole('button', { name: 'Žlutá' })).toHaveCount(0);
+  await expect(sheet(page).getByLabel('Zahrnout fotky do protokolu')).toBeChecked();
   await sheet(page).getByLabel('Popis závady').fill('Prasklá příčka');
   const chooser = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
@@ -71,7 +72,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await editor.getByRole('button', { name: 'Uložit fotku' }).click();
   await expect(editor).toBeHidden();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
+  await sheet(page).getByRole('button', { name: 'Uložit – nevyhovuje' }).click();
   await expect(sheet(page)).toBeHidden();
   // Back in the scanner, which keeps running; close it.
   await page.getByTestId('scanner').getByRole('button', { name: 'Zavřít' }).click();
@@ -80,7 +81,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   // The defect and its uploaded photo are on the server.
   await page.getByText('Závady (1)').click();
   await page.getByTestId('item-10001').click();
-  await expect(sheet(page).getByText('Zapsáno: Závada – žlutá')).toBeVisible();
+  await expect(sheet(page).getByText('Zapsáno: Nevyhovuje')).toBeVisible();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await expect(sheet(page).getByRole('button', { name: 'Zobrazit fotku' })).toHaveCount(1);
   // Turned (the test photo is landscape 1600 × 1200) and cropped on the device.
@@ -149,7 +150,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await form.getByRole('button', { name: 'Založit artikl' }).click();
   // The new item opens for its result right away.
   await expect(sheet(page).getByRole('heading', { name: '10003', exact: true })).toBeVisible();
-  await sheet(page).getByRole('button', { name: 'V pořádku' }).click();
+  await sheet(page).getByRole('button', { name: 'Vyhovuje', exact: true }).click();
   await expect(page.getByTestId('progress')).toHaveText('3 / 4 zkontrolováno');
   // Location and item reached the server (the item waited for its location).
   await expect(page.getByText('Vše odesláno')).toBeVisible();

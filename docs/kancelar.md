@@ -20,6 +20,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      uložením se ukáže, kolik hodnot u artiklů se převede a které ne. Ty, které převést nejde,
      zůstanou jako text k opravě a původní hodnoty jsou v auditu.
    - **Text protokolu** se zástupnými údaji (Zákazník, Datum kontroly…) a náhled.
+   - **Hodnocení rizika podle ČSN EN 15635** (zelená / žlutá / červená) je zapnuté jen u regálů.
+     U ostatních typů technik hodnotí **Vyhovuje / Nevyhovuje**; nevyhovující artikl se vyřadí
+     z provozu a v protokolu je ve skupině „Nevyhovuje“.
 5. **Artikly:**
    - Filtrujte zákazníka a provozovnu, pak **Nový artikl**. Pole se nabídnou podle typu.
    - **Číslo TZ** má 4 nebo 5 číslic a v celé evidenci je jen jednou. Bez čísla se přidělí
@@ -80,6 +83,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
 9. **Kontroly:**
    - Přehled otevřených a uzavřených kontrol s postupem a počtem závad. Řádek otevře detail
      s výsledky všech artiklů (filtry Závady a Nezkontrolované).
+   - Ve sloupci **Fotky** je u závady s fotkami zaškrtávátko **do protokolu**: vypnuté fotky se
+     do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
+     změna se zapíše do auditu.
    - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
      dvěma stranami na list (A4 na šířku) a Word (DOCX, dá se dál upravovat). Dokud kontrola
      není uzavřená, je protokol označený jako předběžný.
@@ -89,8 +95,8 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
        a vytiskne ji na konci na A4 na šířku se zvolenými sloupci (číslo TZ, označení, typ,
        umístění, schopno bezpečného provozu, poznámka…). Nezpůsobilé vybavení je tučně
        a červeně. Přepínač _Tabulku vybavení vždy jako Přílohu 1_ ji tam dá vždy.
-     - Závady jsou seskupené podle závažnosti (červené, žluté, zelené – co znamenají, je napsáno
-       jednou u skupiny) a pak podle pracoviště (hala). Karty jsou kompaktní: číslo TZ,
+     - Závady jsou seskupené podle závažnosti (červené, nevyhovuje, žluté, zelené – co znamenají,
+       je napsáno jednou u skupiny) a pak podle pracoviště (hala). Karty jsou kompaktní: číslo TZ,
        označení, řada a pozice, popis a fotky, v jednom až třech sloupcích.
      - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
        U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají

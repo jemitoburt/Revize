@@ -14,7 +14,7 @@ let technik: string;
 let siteId: string;
 let ladderTypeId: string;
 
-type Method = 'GET' | 'PUT' | 'POST' | 'DELETE';
+type Method = 'GET' | 'PUT' | 'POST' | 'DELETE' | 'PATCH';
 const api = (method: Method, url: string, payload?: unknown, as = admin) =>
   ctx.app.inject({ method, url, headers: bearer(as), ...(payload ? { payload } : {}) });
 
@@ -76,7 +76,15 @@ beforeEach(async () => {
     { id: string }[]
   >()[0]!.id;
   const types = (await api('GET', '/api/equipment-types')).json<{ id: string; name: string }[]>();
-  ladderTypeId = types.find((t) => t.name === 'Žebřík')!.id;
+  const ladder = types.find((t) => t.name === 'Žebřík')! as { id: string; version?: number };
+  ladderTypeId = ladder.id;
+  // These tests check the risk levels (traffic light); ladders are fit / unfit by default
+  // (see "fit / unfit" in protocols.test.ts).
+  const enabled = await api('PATCH', `/api/equipment-types/${ladderTypeId}`, {
+    riskLevels: true,
+    version: ladder.version,
+  });
+  expect(enabled.statusCode, enabled.body).toBe(200);
 });
 
 describe('closing and reopening inspections', () => {
@@ -183,6 +191,54 @@ describe('organization settings and protocol', () => {
     ).body;
     expect(onlyRacks).not.toContain('Prasklá příčka');
     expect(onlyRacks).not.toContain('<h3>Žebříky a schůdky</h3>');
+  });
+
+  it('rates types without risk levels as fit / unfit; office leaves photos out', async () => {
+    const type = (await api('GET', `/api/equipment-types/${ladderTypeId}`)).json<{
+      version: number;
+    }>();
+    const off = await api('PATCH', `/api/equipment-types/${ladderTypeId}`, {
+      riskLevels: false,
+      version: type.version,
+    });
+    expect(off.json()).toMatchObject({ riskLevels: false });
+    const { id, items } = await inspectionWithResults();
+    // A minor level sent for a fit / unfit type is stored as unfit: out of service.
+    const amber = await api(
+      'PUT',
+      `/api/inspections/${id}/results/${items[2]!.id}`,
+      result('defect', { severity: 'amber', defectDescription: 'Uvolněná patka' }),
+    );
+    expect(amber.json()).toMatchObject({ severity: 'red', takenOutOfService: true });
+    let html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
+    expect(html).toContain('Nevyhovuje (2)');
+    expect(html).not.toContain('riziko');
+    expect(html).toContain('Uvolněná patka – nevyhovuje');
+    expect(html).toContain('data:image/jpeg;base64,');
+
+    // The office leaves the photos of one defect out of the protocol (audited).
+    const photos = await api(
+      'PUT',
+      `/api/inspections/${id}/results/${items[1]!.id}/photos-in-protocol`,
+      { photosInProtocol: false },
+    );
+    expect(photos.statusCode, photos.body).toBe(200);
+    expect(photos.json()).toMatchObject({ photosInProtocol: false });
+    html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
+    expect(html).toContain('Prasklá příčka');
+    expect(html).not.toContain('data:image/jpeg;base64,');
+    const listed = (await api('GET', `/api/inspections/${id}/items`)).json<
+      { id: string; result: { photosInProtocol: boolean } | null }[]
+    >();
+    expect(listed.find((i) => i.id === items[1]!.id)!.result!.photosInProtocol).toBe(false);
+    // Read-only once closed.
+    await api('POST', `/api/inspections/${id}/close`, {});
+    const closed = await api(
+      'PUT',
+      `/api/inspections/${id}/results/${items[1]!.id}/photos-in-protocol`,
+      { photosInProtocol: true },
+    );
+    expect(closed.statusCode).toBe(409);
   });
 
   it('renders the protocol as HTML and PDF, draft until closed', async () => {

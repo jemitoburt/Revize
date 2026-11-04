@@ -32,11 +32,30 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
     });
   await record('30001', { outcome: 'ok' });
   await record('30002', { outcome: 'defect', defectDescription: 'Ohnutá štěřina' });
+  const photo = await page.request.put(`/api/photos/${crypto.randomUUID()}`, {
+    multipart: {
+      owner: 'result',
+      itemId: byNumber['30002'],
+      inspectionId,
+      file: {
+        name: 'defect.jpg',
+        mimeType: 'image/jpeg',
+        buffer: readFileSync('e2e/.generated/defect.jpg'),
+      },
+    },
+  });
+  expect(photo.status()).toBe(201);
 
   await page.getByRole('navigation').getByRole('link', { name: 'Kontroly', exact: true }).click();
   await page.getByRole('row', { name: /Sklad Zlín kancelář/ }).click();
   await expect(page.getByRole('heading', { name: 'Sklad Zlín kancelář' })).toBeVisible();
   await expect(page.getByTestId('inspection-results')).toContainText('Ohnutá štěřina');
+  // Ladders are fit / unfit; the defect photo goes to the protocol unless unticked here.
+  await expect(page.getByTestId('inspection-results')).toContainText('Nevyhovuje');
+  const photosInProtocol = page.getByLabel('Fotky 30002 do protokolu');
+  await expect(photosInProtocol).toBeChecked();
+  await photosInProtocol.click();
+  await expect(photosInProtocol).not.toBeChecked();
 
   // Preview: the draft protocol with the company header.
   await page.getByRole('button', { name: 'Protokol' }).click();
@@ -44,6 +63,8 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
   await expect(preview.getByText('Revize Novák s.r.o.').first()).toBeVisible();
   await expect(preview.getByText('Osvědčení č. 42/2025')).toBeVisible();
+  await expect(preview.getByText('Nevyhovuje (1)')).toBeVisible();
+  await expect(preview.locator('.defect img')).toHaveCount(0);
   // Three items fit on page 1: the table is in the protocol. Forced, it becomes Příloha 1
   // (A4 landscape, preset columns) and the protocol only refers to it.
   await expect(

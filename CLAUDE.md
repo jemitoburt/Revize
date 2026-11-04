@@ -141,4 +141,7 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   logic in `packages/shared/src/export.ts`; ZIP streamed with fflate (web `ReadableStream`, the
   demo router collects it); `MetadataWriter` = ExifTool via exiftool-vendored (Perl in the API
   image), demo `noMetadataWriter`. Users can be deleted (soft delete, `deleted_at`).
+- Risk levels only for racks (ADR-0018): `equipment_type.risk_levels`; other types fit / unfit
+  (unfit stored as red); `inspection_result.photos_in_protocol` (field + office checkbox).
+  Photos can be turned/cropped right after capture (`field/PhotoEditor.tsx`).
 - Next: M8 history and filters, export of the whole database.

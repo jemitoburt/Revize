@@ -2,6 +2,7 @@ import {
   Alert,
   Badge,
   Button,
+  Checkbox,
   Group,
   Loader,
   Modal,
@@ -31,6 +32,7 @@ import {
   useInspectionItems,
   useMe,
   useReopenInspection,
+  useSetPhotosInProtocol,
 } from '../api/hooks.js';
 import { ExportMenu } from '../components/ExportMenu.js';
 import { AnchorLink, ButtonLink } from '../components/links.js';
@@ -42,8 +44,9 @@ import { DateField } from '../components/DateField.js';
 type Filter = 'all' | 'defects' | 'unchecked';
 
 const SEVERITY_COLOR = { green: 'teal', amber: 'yellow', red: 'red' } as const;
-const color = (r: InspectionResult) => {
+const color = (r: InspectionResult, riskLevels = true) => {
   const severity = severityOf(r);
+  if (!riskLevels) return severity ? 'red' : 'green';
   return severity ? SEVERITY_COLOR[severity] : 'green';
 };
 
@@ -171,6 +174,11 @@ export function InspectionDetailPage() {
     () => new Map((types.data ?? []).map((t) => [t.id, t.name])),
     [types.data],
   );
+  const riskLevels = useMemo(
+    () => new Map((types.data ?? []).map((t) => [t.id, t.riskLevels])),
+    [types.data],
+  );
+  const photosInProtocol = useSetPhotosInProtocol(inspectionId);
 
   if (inspection.isPending || items.isPending) return <Loader />;
   if (inspection.error) return <Alert color="red">{inspection.error.message}</Alert>;
@@ -293,7 +301,9 @@ export function InspectionDetailPage() {
               <Table.Td>{i.locationPath.join(LOCATION_SEPARATOR) || '–'}</Table.Td>
               <Table.Td>
                 {i.result ? (
-                  <Badge color={color(i.result)}>{outcomeLabel(i.result)}</Badge>
+                  <Badge color={color(i.result, riskLevels.get(i.equipmentTypeId))}>
+                    {outcomeLabel(i.result, riskLevels.get(i.equipmentTypeId))}
+                  </Badge>
                 ) : (
                   <Text size="sm" c="dimmed">
                     Nezkontrolováno
@@ -319,7 +329,25 @@ export function InspectionDetailPage() {
                   </Text>
                 )}
               </Table.Td>
-              <Table.Td>{(i.result?.photoCount ?? 0) + i.itemPhotoCount || ''}</Table.Td>
+              <Table.Td>
+                {(i.result?.photoCount ?? 0) + i.itemPhotoCount || ''}
+                {i.result?.outcome === 'defect' && i.result.photoCount > 0 && (
+                  <Checkbox
+                    mt={4}
+                    size="xs"
+                    label="do protokolu"
+                    aria-label={`Fotky ${i.itemNumber} do protokolu`}
+                    checked={i.result.photosInProtocol}
+                    disabled={!open || !can('inspection.perform')}
+                    onChange={(e) =>
+                      photosInProtocol.mutate(
+                        { itemId: i.id, photosInProtocol: e.currentTarget.checked },
+                        { onError: notifyError },
+                      )
+                    }
+                  />
+                )}
+              </Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>

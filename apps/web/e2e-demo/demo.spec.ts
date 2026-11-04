@@ -60,7 +60,7 @@ test('demo field mode: a technician records results and photos in the browser', 
     await page.getByRole('dialog').getByRole('button', { name: digit, exact: true }).click();
   }
   const sheet = page.getByRole('dialog').filter({ hasText: 'Výsledek kontroly' });
-  await sheet.getByRole('button', { name: 'V pořádku' }).click();
+  await sheet.getByRole('button', { name: 'Vyhovuje', exact: true }).click();
   await expect(page.getByTestId('progress')).toHaveText('1 / 35 zkontrolováno');
 
   // An inspection photo goes through the canvas thumbnail and the PGlite file table.

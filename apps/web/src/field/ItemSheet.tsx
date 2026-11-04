@@ -15,6 +15,7 @@ import {
 import {
   LOCATION_SEPARATOR,
   newId,
+  FIT_LABELS,
   SEVERITY_LABELS,
   outcomeLabel,
   severityOf,
@@ -115,6 +116,10 @@ function SheetBody({
   );
   const [description, setDescription] = useState(current?.defectDescription ?? '');
   const [includeInProtocol, setIncludeInProtocol] = useState(current?.includeInProtocol ?? true);
+  const [photosInProtocol, setPhotosInProtocol] = useState(current?.photosInProtocol ?? true);
+  // Racks: risk levels of ČSN EN 15635; other types: fit / unfit (unfit = out of service).
+  const riskLevels = type?.riskLevels ?? true;
+  const unfit = !riskLevels && choice?.outcome === 'defect';
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [busyItemPhoto, setBusyItemPhoto] = useState(false);
   // Photos on this device: drafts (defect photos before the result is saved) and unsent ones.
@@ -150,6 +155,7 @@ function SheetBody({
           defectDescription: next.outcome === 'defect' ? description.trim() : null,
           severity: next.outcome === 'defect' ? next.severity : null,
           includeInProtocol: next.outcome === 'ok' || next.severity === 'red' || includeInProtocol,
+          photosInProtocol: next.outcome === 'ok' || photosInProtocol,
           recordedAt: new Date().toISOString(),
         },
       });
@@ -173,7 +179,7 @@ function SheetBody({
       notifyError(error);
       return;
     }
-    notifySaved(`${item.itemNumber}: ${outcomeLabel(result)}`);
+    notifySaved(`${item.itemNumber}: ${outcomeLabel(result, riskLevels)}`);
     onSaved(result);
   };
 
@@ -263,7 +269,7 @@ function SheetBody({
       {current && (
         <Alert
           color={current.outcome === 'ok' ? 'green' : 'orange'}
-          title={`Zapsáno: ${outcomeLabel(current)}`}
+          title={`Zapsáno: ${outcomeLabel(current, riskLevels)}`}
         >
           {current.recordedByName}, {formatDateTime(current.recordedAt)}
           {current.defectDescription && <Text mt={4}>{current.defectDescription}</Text>}
@@ -271,7 +277,7 @@ function SheetBody({
       )}
 
       <Divider label="Výsledek kontroly" labelPosition="left" />
-      <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="sm">
+      <SimpleGrid cols={riskLevels ? { base: 2, sm: 4 } : 2} spacing="sm">
         <Button
           size={phone ? 'lg' : 'xl'}
           color="green"
@@ -284,9 +290,21 @@ function SheetBody({
             void save({ outcome: 'ok' });
           }}
         >
-          V pořádku
+          {riskLevels ? 'V pořádku' : FIT_LABELS.ok}
         </Button>
-        {SEVERITY_BUTTONS.map(({ severity, color, icon: Icon }) => (
+        {!riskLevels && (
+          <Button
+            size={phone ? 'lg' : 'xl'}
+            color="red"
+            variant={choice?.outcome === 'defect' ? 'filled' : 'light'}
+            leftSection={<IconBan />}
+            disabled={readOnly}
+            onClick={() => setChoice({ outcome: 'defect', severity: 'red' })}
+          >
+            {FIT_LABELS.defect}
+          </Button>
+        )}
+        {(riskLevels ? SEVERITY_BUTTONS : []).map(({ severity, color, icon: Icon }) => (
           <Button
             key={severity}
             size={phone ? 'lg' : 'xl'}
@@ -306,10 +324,14 @@ function SheetBody({
       {choice?.outcome === 'defect' && (
         <Stack gap="sm">
           <Text size="sm" c="dimmed">
-            {SEVERITY_LABELS[choice.severity].hint}
+            {unfit
+              ? 'Nevyhovující vybavení se vyřadí z užívání až do opravy.'
+              : SEVERITY_LABELS[choice.severity].hint}
           </Text>
           <Textarea
-            label={choice.severity === 'red' ? 'Závada (vyřazení z provozu)' : 'Popis závady'}
+            label={
+              choice.severity === 'red' && !unfit ? 'Závada (vyřazení z provozu)' : 'Popis závady'
+            }
             placeholder="Např. ohnutý stojan, chybí pojistka nosníku…"
             autosize
             minRows={3}
@@ -321,6 +343,13 @@ function SheetBody({
               setDescription(e.currentTarget.value);
               setDescriptionError(null);
             }}
+          />
+          <Checkbox
+            size="md"
+            label="Zahrnout fotky do protokolu"
+            checked={photosInProtocol}
+            disabled={readOnly}
+            onChange={(e) => setPhotosInProtocol(e.currentTarget.checked)}
           />
           {choice.severity !== 'red' && (
             <Checkbox
@@ -349,7 +378,11 @@ function SheetBody({
             disabled={readOnly}
             onClick={() => void save(choice)}
           >
-            {choice.severity === 'red' ? 'Uložit a vyřadit z provozu' : 'Uložit závadu'}
+            {unfit
+              ? 'Uložit – nevyhovuje'
+              : choice.severity === 'red'
+                ? 'Uložit a vyřadit z provozu'
+                : 'Uložit závadu'}
           </Button>
         </Stack>
       )}

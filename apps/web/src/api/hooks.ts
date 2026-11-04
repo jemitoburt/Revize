@@ -349,6 +349,38 @@ export const useInspectionItems = (id: string) =>
         await localDb.outbox.toArray(),
       ),
   });
+/**
+ * Office: print a defect's photos in the protocol or not. Online like other office edits; the
+ * checkbox changes at once and goes back when the server refuses.
+ */
+export function useSetPhotosInProtocol(inspectionId: string) {
+  const client = useQueryClient();
+  const key = ['inspection-items', inspectionId];
+  const apply = (itemId: string, photosInProtocol: boolean) =>
+    client.setQueryData<InspectionItem[]>(key, (items) =>
+      items?.map((i) =>
+        i.id === itemId && i.result ? { ...i, result: { ...i.result, photosInProtocol } } : i,
+      ),
+    );
+  return useMutation<
+    InspectionResult,
+    ApiRequestError,
+    { itemId: string; photosInProtocol: boolean }
+  >({
+    mutationFn: ({ itemId, photosInProtocol }) =>
+      api.put<InspectionResult>(
+        `/inspections/${inspectionId}/results/${itemId}/photos-in-protocol`,
+        { photosInProtocol },
+      ),
+    onMutate: ({ itemId, photosInProtocol }) => apply(itemId, photosInProtocol),
+    onError: (_error, { itemId, photosInProtocol }) => apply(itemId, !photosInProtocol),
+    onSettled: () => {
+      void client.invalidateQueries({ queryKey: key });
+      void client.invalidateQueries({ queryKey: ['protocol', inspectionId] });
+    },
+  });
+}
+
 export const useStartInspection = () =>
   useApiMutation(
     ({ id, ...body }: In<typeof startInspectionSchema> & { id: string }) =>
@@ -381,6 +413,7 @@ export function useRecordResult(inspectionId: string) {
         takenOutOfService: parsed.takenOutOfService,
         severity: parsed.severity,
         includeInProtocol: parsed.includeInProtocol,
+        photosInProtocol: parsed.photosInProtocol,
         recordedAt: parsed.recordedAt,
         recordedBy: me.id,
         recordedByName: me.displayName,

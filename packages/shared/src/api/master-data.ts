@@ -144,6 +144,8 @@ export const equipmentTypeSchema = z.object({
   fieldDefinitions: fieldDefinitionsSchema,
   defaultIntervalMonths: z.number().int(),
   protocolTemplate: z.string(),
+  /** Defects rated green/yellow/red after ČSN EN 15635 (racks); otherwise fit / unfit. */
+  riskLevels: z.boolean(),
   schemaVersion: z.number().int(),
   archived: z.boolean(),
   itemCount: z.number().int(),
@@ -156,9 +158,14 @@ const equipmentTypeFields = {
   fieldDefinitions: fieldDefinitionsSchema,
   defaultIntervalMonths: z.number().int().min(1).max(120),
   protocolTemplate: z.string().max(20_000),
+  riskLevels: z.boolean(),
 };
 export const createEquipmentTypeSchema = z.union([
-  z.object({ id: idSchema.optional(), ...equipmentTypeFields }),
+  z.object({
+    id: idSchema.optional(),
+    ...equipmentTypeFields,
+    riskLevels: equipmentTypeFields.riskLevels.default(false),
+  }),
   /** Copy of a library type; the name may be changed. */
   z.object({
     id: idSchema.optional(),

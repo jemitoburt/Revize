@@ -76,6 +76,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
   const [name, setName] = useState(type.name);
   const [interval, setInterval] = useState<number>(type.defaultIntervalMonths);
   const [template, setTemplate] = useState(type.protocolTemplate);
+  const [riskLevels, setRiskLevels] = useState(type.riskLevels);
   const [fields, setFields] = useState<DraftField[]>(() => toDraft(type));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [previewValues, setPreviewValues] = useState<Record<string, unknown>>({});
@@ -152,6 +153,7 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
         name,
         defaultIntervalMonths: interval,
         protocolTemplate: template,
+        riskLevels,
         fieldDefinitions: parsed.data,
       },
       {
@@ -274,6 +276,14 @@ function Editor({ type, canWrite }: { type: EquipmentType; canWrite: boolean }) 
             onChange={(v) => setInterval(Number(v) || 12)}
           />
         </SimpleGrid>
+        <Switch
+          mt="md"
+          label="Hodnocení rizika podle ČSN EN 15635 (zelená / žlutá / červená)"
+          description="Pro regály. Bez toho technik hodnotí jen Vyhovuje / Nevyhovuje; nevyhovující artikl se vyřadí z provozu."
+          disabled={!canWrite}
+          checked={riskLevels}
+          onChange={(e) => setRiskLevels(e.currentTarget.checked)}
+        />
       </Paper>
 
       <Paper withBorder p="md">
