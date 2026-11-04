@@ -15,3 +15,4 @@ export * from './permissions.js';
 export * from './protocol-layout.js';
 export * from './protocol.js';
 export * from './scan-payload.js';
+export * from './type-merge.js';

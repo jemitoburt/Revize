@@ -22,6 +22,7 @@ import {
   useEquipmentTypes,
   useMe,
 } from '../api/hooks.js';
+import { MergeTypesDialog } from '../components/MergeTypesDialog.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
 function NewTypeDialog({ onCreated }: { onCreated: (id: string) => void }) {
@@ -103,13 +104,21 @@ export function EquipmentTypesPage() {
   const canWrite = me.data?.permissions.includes('equipmentType.write');
   const navigate = useNavigate();
   const [opened, { open, close }] = useDisclosure();
+  const [merging, merge] = useDisclosure();
   const openType = (id: string) => void navigate({ to: '/typy/$typeId', params: { typeId: id } });
 
   return (
     <Stack>
       <Group justify="space-between">
         <Title order={2}>Typy vybavení</Title>
-        {canWrite && <Button onClick={open}>Nový typ</Button>}
+        {canWrite && (
+          <Group>
+            <Button variant="default" onClick={merge.open}>
+              Sloučit typy…
+            </Button>
+            <Button onClick={open}>Nový typ</Button>
+          </Group>
+        )}
       </Group>
       <Switch
         label="Zobrazit archivované"
@@ -138,6 +147,15 @@ export function EquipmentTypesPage() {
           ))}
         </Table.Tbody>
       </Table>
+      <Modal opened={merging} onClose={merge.close} title="Sloučit typy vybavení" size="lg">
+        <MergeTypesDialog
+          types={types.data ?? []}
+          onDone={(id) => {
+            merge.close();
+            openType(id);
+          }}
+        />
+      </Modal>
       <Modal opened={opened} onClose={close} title="Nový typ vybavení" size="xl">
         <NewTypeDialog
           onCreated={(id) => {

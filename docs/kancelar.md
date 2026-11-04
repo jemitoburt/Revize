@@ -14,6 +14,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      kruhové smyce, lana, řetězové úvazky), regál (paletový, policový, konzolový, vjezdový…) a typy z formuláře protokolu (sekční vrata, pojízdné lešení, OOPP, vozíky,
      rollkontejnery, ostatní vybavení), viz [typy-vybaveni.md](typy-vybaveni.md).
    - _Prázdný typ:_ vlastní pole.
+   - **Sloučit typy…** (např. dřívější „Regál paletový / policový / konzolový / vjezdový“ do jednoho
+     „Regál“): zvolíte **cílový typ** – jeho nastavení zůstane (pole, interval, text protokolu,
+     hodnocení rizika) – a typy, které se do něj sloučí. Cílový typ dostane pole, která neměl,
+     artikly přejdou do něj a původní druh se jim zapíše do pole („Typ regálu“ = „Paletový“ …).
+     Sloučené typy se archivují. Před sloučením se ukáže náhled. Sloučení je v auditu.
    - **Pole:** popisek (z něj vznikne klíč), druh, povinnost, jednotka, hodnoty číselníku
      a nabízené hodnoty. Uložené pole nejde smazat, jde jen archivovat, aby se neztratila data.
    - **Druh pole** jde změnit i u uloženého pole a u typů z knihovny (např. text → číslo). Před

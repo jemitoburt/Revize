@@ -5,15 +5,24 @@ import {
   fieldDefinitionsSchema,
   kindChanges,
   newId,
+  planTypeMerge,
   summarizeConversion,
+  type MergePlan,
+  type MergeTypesRequest,
   type ConversionSummary,
   type EquipmentType,
   type FieldDefinition,
   type createEquipmentTypeSchema,
   type updateEquipmentTypeSchema,
 } from '@revize/shared';
-import { and, asc, eq, isNull, ne, sql } from 'drizzle-orm';
-import { auditLog, equipmentType, item } from '../../db/schema.js';
+import { and, asc, eq, inArray, isNull, ne, sql } from 'drizzle-orm';
+import {
+  auditLog,
+  equipmentType,
+  importMapping,
+  inspectionTypeScope,
+  item,
+} from '../../db/schema.js';
 import type { z } from 'zod';
 import type { AuthContext } from '../../auth/context.js';
 import type { Db, DbOrTx } from '../../db/client.js';
@@ -67,6 +76,25 @@ const nameTaken = () =>
     { path: ['name'], message: 'Název už je použit' },
   ]);
 
+/** The target and the merged types (all of the organization, not archived targets only). */
+async function mergeRows(tx: DbOrTx, auth: AuthContext, input: MergeTypesRequest) {
+  const ids = [input.targetId, ...input.sourceIds];
+  if (new Set(ids).size !== ids.length) {
+    throw validationError([
+      { path: ['sourceIds'], message: 'Cílový typ nemůže být mezi slučovanými' },
+    ]);
+  }
+  const rows = await tx
+    .select()
+    .from(equipmentType)
+    .where(
+      and(eq(equipmentType.organizationId, auth.organizationId), inArray(equipmentType.id, ids)),
+    );
+  const target = rows.find((r) => r.id === input.targetId);
+  if (!target || rows.length !== ids.length) throw notFound('Typ vybavení neexistuje.');
+  return { target, sources: input.sourceIds.map((id) => rows.find((r) => r.id === id)!) };
+}
+
 export function createEquipmentTypesService(db: Db) {
   async function getRow(tx: DbOrTx, auth: AuthContext, id: string) {
     const [row] = await tx
@@ -93,6 +121,109 @@ export function createEquipmentTypesService(db: Db) {
 
   return {
     /** What saving these definitions would do to the stored values of changed-kind fields. */
+    /** What merging types would do (nothing is saved). */
+    async mergePreview(auth: AuthContext, input: MergeTypesRequest): Promise<MergePlan> {
+      const { target, sources } = await mergeRows(db, auth, input);
+      const plan = planTypeMerge(target, sources, input);
+      const [count] = await db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(item)
+        .where(
+          and(
+            eq(item.organizationId, auth.organizationId),
+            inArray(
+              item.equipmentTypeId,
+              sources.map((s) => s.id),
+            ),
+          ),
+        );
+      return {
+        items: count?.n ?? 0,
+        addedFields: plan.addedFields,
+        conflicts: plan.conflicts,
+        kindValues: plan.kindValues,
+      };
+    },
+
+    /**
+     * Merges types into the target (audited): the target keeps its settings and gets the missing
+     * fields, the items (and inspections limited to the merged types) move to it, the former type
+     * is kept in the kind field, the merged types are archived.
+     */
+    async merge(auth: AuthContext, input: MergeTypesRequest): Promise<EquipmentType> {
+      const id = await db.transaction(async (tx) => {
+        const { target, sources } = await mergeRows(tx, auth, input);
+        const plan = planTypeMerge(target, sources, input);
+        const name = input.name || target.name;
+        if (name !== target.name && (await nameExists(tx, auth, name, target.id))) {
+          throw nameTaken();
+        }
+        await tx
+          .update(equipmentType)
+          .set({
+            name,
+            fieldDefinitions: plan.fieldDefinitions,
+            schemaVersion: target.schemaVersion + 1,
+            version: target.version + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(equipmentType.id, target.id));
+        const sourceIds = sources.map((x) => x.id);
+        const key = input.kindField?.key;
+        // The former type of every item into the kind field, unless it already has a value.
+        for (const t of [target, ...sources]) {
+          const value = key ? plan.kindValues[t.name] : undefined;
+          await tx
+            .update(item)
+            .set({
+              equipmentTypeId: target.id,
+              ...(key && value
+                ? {
+                    fieldValues: sql`case when coalesce(${item.fieldValues}->>${key}, '') = '' then ${item.fieldValues} || jsonb_build_object(${key}::text, ${value}::text) else ${item.fieldValues} end`,
+                  }
+                : {}),
+              version: sql`${item.version} + 1`,
+              updatedAt: new Date(),
+            })
+            .where(
+              and(eq(item.organizationId, auth.organizationId), eq(item.equipmentTypeId, t.id)),
+            );
+        }
+        // Inspections limited to a merged type now cover the target.
+        await tx.execute(sql`
+          insert into inspection_type_scope (inspection_id, equipment_type_id)
+          select distinct s.inspection_id, ${target.id}::uuid from inspection_type_scope s
+          where s.equipment_type_id in (${sql.join(
+            sourceIds.map((x) => sql`${x}::uuid`),
+            sql`, `,
+          )})
+          on conflict do nothing`);
+        await tx
+          .delete(inspectionTypeScope)
+          .where(inArray(inspectionTypeScope.equipmentTypeId, sourceIds));
+        await tx.delete(importMapping).where(inArray(importMapping.equipmentTypeId, sourceIds));
+        await tx
+          .update(equipmentType)
+          .set({
+            archivedAt: new Date(),
+            updatedAt: new Date(),
+            version: sql`${equipmentType.version} + 1`,
+          })
+          .where(inArray(equipmentType.id, sourceIds));
+        await recordAudit(tx, {
+          organizationId: auth.organizationId,
+          actorUserId: auth.userId,
+          action: 'equipment_type.merge',
+          entityType: 'equipment_type',
+          entityId: target.id,
+          before: { target, sources: sources.map((x) => ({ id: x.id, name: x.name })) },
+          after: { name, kindValues: plan.kindValues, addedFields: plan.addedFields },
+        });
+        return target.id;
+      });
+      return this.get(auth, id);
+    },
+
     async conversionPreview(
       auth: AuthContext,
       id: string,

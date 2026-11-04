@@ -257,3 +257,31 @@ test('admin deletes a user (with confirmation)', async ({ page }) => {
   await expect(page.getByText('Uživatel smazán')).toBeVisible();
   await expect(page.getByRole('cell', { name: 'Karel Smazat' })).toBeHidden();
 });
+
+test('admin merges the old rack types into one (Sloučit typy)', async ({ page }) => {
+  await login(page);
+  const make = (name: string) =>
+    page.request.post('/api/equipment-types', {
+      data: {
+        name,
+        defaultIntervalMonths: 12,
+        protocolTemplate: `# ${name}`,
+        fieldDefinitions: [{ key: 'manufacturer', label: 'Výrobce', kind: 'text', order: 0 }],
+      },
+    });
+  await make('Sklad paletový');
+  await make('Sklad policový');
+  await nav(page, 'Typy vybavení');
+  await page.getByRole('button', { name: 'Sloučit typy…' }).click();
+  await page.getByRole('combobox', { name: 'Cílový typ' }).click();
+  await page.getByRole('option', { name: /^Sklad paletový/ }).click();
+  await page.getByRole('combobox', { name: 'Sloučit do něj typy' }).click();
+  await page.getByRole('option', { name: /^Sklad policový/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(dialog(page).getByLabel('Název sloučeného typu')).toHaveValue('Sklad');
+  await expect(dialog(page).getByText('Sklad policový → Policový')).toBeVisible();
+  await dialog(page).getByRole('button', { name: 'Sloučit' }).click();
+  await expect(page.getByText('Typy sloučeny')).toBeVisible();
+  // The merged type with the kind field.
+  await expect(page.getByLabel('Název typu')).toHaveValue('Sklad');
+});

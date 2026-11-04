@@ -20,6 +20,8 @@ import type {
   Photo,
   ServerStatus,
   ClosePreview,
+  MergePlan,
+  MergeTypesRequest,
   PhotoOwner,
   RecordResultInput,
   Site,
@@ -233,6 +235,18 @@ export const useEquipmentTypes = (includeArchived = false) =>
     queryKey: ['equipment-types', { includeArchived }],
     queryFn: () => api.get(`/equipment-types${queryString({ includeArchived })}`),
   });
+/** What merging types would do (Typy vybavení → Sloučit typy). */
+export const useMergePreview = (request: MergeTypesRequest | null) =>
+  useQuery<MergePlan, ApiRequestError>({
+    queryKey: ['merge-preview', request],
+    queryFn: () => api.post<MergePlan>('/equipment-types/merge-preview', request),
+    enabled: request !== null,
+  });
+export const useMergeTypes = () =>
+  useApiMutation(
+    (body: MergeTypesRequest) => api.post<EquipmentType>('/equipment-types/merge', body),
+    [['equipment-types'], ['items'], ['inspection-items']],
+  );
 export const useEquipmentType = (id: string) =>
   useQuery<EquipmentType, ApiRequestError>({
     queryKey: ['equipment-types', id],

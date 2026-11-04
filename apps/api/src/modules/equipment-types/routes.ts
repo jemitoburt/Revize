@@ -1,4 +1,6 @@
 import {
+  mergePlanSchema,
+  mergeTypesRequestSchema,
   apiErrorSchema,
   createEquipmentTypeSchema,
   equipmentTypePresetSchema,
@@ -93,6 +95,32 @@ export const equipmentTypesRoutes: FastifyPluginAsyncZod<{ types: EquipmentTypes
       },
     },
     (req) => types.update(authOf(req), req.params.id, req.body),
+  );
+  app.post(
+    '/equipment-types/merge-preview',
+    {
+      preHandler: write,
+      schema: {
+        tags,
+        summary: 'Náhled sloučení typů vybavení (nic neukládá)',
+        body: mergeTypesRequestSchema,
+        response: { 200: mergePlanSchema, ...errors },
+      },
+    },
+    (req) => types.mergePreview(authOf(req), req.body),
+  );
+  app.post(
+    '/equipment-types/merge',
+    {
+      preHandler: write,
+      schema: {
+        tags,
+        summary: 'Sloučit typy vybavení do jednoho (artikly, pole, druh do pole, archivace)',
+        body: mergeTypesRequestSchema,
+        response: { 200: equipmentTypeSchema, ...errors },
+      },
+    },
+    (req) => types.merge(authOf(req), req.body),
   );
   app.post(
     '/equipment-types/:id/conversion-preview',
