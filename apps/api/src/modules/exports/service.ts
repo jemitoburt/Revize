@@ -7,6 +7,8 @@ import {
   databaseColumns,
   databaseRow,
   fileNamePart,
+  HISTORY_COLUMNS,
+  historyRow,
   outcomeLabel,
   photoCaption,
   photoFileName,
@@ -14,6 +16,7 @@ import {
   toCsv,
   type DatabaseItem,
   type ExportType,
+  type HistoryRow,
   type Inspection,
   type InspectionItem,
 } from '@revize/shared';
@@ -236,6 +239,7 @@ export function createExportsService(
               id: equipmentType.id,
               name: equipmentType.name,
               fieldDefinitions: equipmentType.fieldDefinitions,
+              riskLevels: equipmentType.riskLevels,
             })
             .from(equipmentType)
             .where(inArray(equipmentType.id, typeIds))
@@ -255,7 +259,66 @@ export function createExportsService(
       nextInspectionDate: r.item.nextInspectionDate,
       lastInspection: last.get(r.item.id) ?? null,
     }));
-    return { items, types };
+    return { items, types, rows, names };
+  }
+
+  /** Every result of the exported items (newest inspection first per item): the history. */
+  async function loadHistory(auth: AuthContext, query: DatabaseQuery) {
+    const { types, rows, names } = await loadDatabase(auth, query);
+    const byId = new Map(rows.map((r) => [r.item.id, r]));
+    const history: HistoryRow[] = [];
+    const ids = rows.map((r) => r.item.id);
+    for (let i = 0; i < ids.length; i += 1000) {
+      const results = await db
+        .select({
+          result: inspectionResult,
+          date: inspection.inspectionDate,
+          status: inspection.status,
+          recordedByName: appUser.displayName,
+          photos: sql<number>`(select count(*)::int from photo p where p.inspection_result_id = "inspection_result"."id")`,
+        })
+        .from(inspectionResult)
+        .innerJoin(inspection, eq(inspection.id, inspectionResult.inspectionId))
+        .innerJoin(appUser, eq(appUser.id, inspectionResult.recordedBy))
+        .where(
+          and(
+            eq(inspectionResult.organizationId, auth.organizationId),
+            inArray(inspectionResult.itemId, ids.slice(i, i + 1000)),
+          ),
+        );
+      for (const r of results) {
+        const owner = byId.get(r.result.itemId)!;
+        history.push({
+          customerName: owner.customerName,
+          siteName: owner.siteName,
+          itemNumber: owner.item.itemNumber,
+          designation: owner.item.designation,
+          equipmentTypeId: owner.item.equipmentTypeId,
+          locationPath: owner.pathIds ? pathNamesOf(owner.pathIds, names) : [],
+          inspectionDate: r.date,
+          inspectionClosed: r.status === 'closed',
+          result: {
+            outcome: r.result.outcome as 'ok' | 'defect',
+            takenOutOfService: r.result.takenOutOfService,
+            severity: r.result.severity as HistoryRow['result']['severity'],
+            defectDescription: r.result.defectDescription,
+            includeInProtocol: r.result.includeInProtocol,
+          },
+          recordedByName: r.recordedByName,
+          recordedAt: r.result.recordedAt.toISOString(),
+          photoCount: r.photos,
+        });
+      }
+    }
+    // In the order of the records, the newest inspection first.
+    const order = new Map(rows.map((r, index) => [r.item.itemNumber + '|' + r.siteName, index]));
+    history.sort(
+      (a, b) =>
+        (order.get(a.itemNumber + '|' + a.siteName) ?? 0) -
+          (order.get(b.itemNumber + '|' + b.siteName) ?? 0) ||
+        b.inspectionDate.localeCompare(a.inspectionDate),
+    );
+    return { history, types };
   }
 
   const databaseName = () => `evidence-${new Date().toISOString().slice(0, 10)}`;
@@ -275,6 +338,19 @@ export function createExportsService(
     },
 
     /** The records as XLSX: a sheet with everything and one sheet per equipment type. */
+    /** Every inspection result of the records as CSV (the history sheet of the XLSX). */
+    async historyCsv(auth: AuthContext, query: DatabaseQuery): Promise<ExportFile<string>> {
+      const { history, types } = await loadHistory(auth, query);
+      return {
+        data: toCsv([
+          HISTORY_COLUMNS.map((c) => c.header),
+          ...history.map((h) => historyRow(types, h)),
+        ]),
+        fileName: `historie-kontrol-${new Date().toISOString().slice(0, 10)}.csv`,
+        contentType: 'text/csv; charset=utf-8',
+      };
+    },
+
     async databaseXlsx(auth: AuthContext, query: DatabaseQuery): Promise<ExportFile<Uint8Array>> {
       const { items, types } = await loadDatabase(auth, query);
       const org = await organizationOf(db, auth);
@@ -289,7 +365,7 @@ export function createExportsService(
         for (const i of rows) ws.addRow(databaseRow(sheetTypes, i));
       };
       sheet('Vše', types, items);
-      const taken = ['Vše'];
+      const taken = ['Vše', 'Historie kontrol'];
       for (const type of types) {
         const name = sheetName(type.name, taken);
         taken.push(name);
@@ -299,6 +375,18 @@ export function createExportsService(
           items.filter((i) => i.equipmentTypeId === type.id),
         );
       }
+      // Every inspection result of these items (the whole history).
+      const { history } = await loadHistory(auth, query);
+      const hs = workbook.addWorksheet('Historie kontrol', {
+        views: [{ state: 'frozen', ySplit: 1 }],
+      });
+      hs.columns = HISTORY_COLUMNS.map((c) => ({ header: c.header, width: c.width }));
+      hs.getRow(1).font = { bold: true };
+      hs.autoFilter = {
+        from: { row: 1, column: 1 },
+        to: { row: 1, column: HISTORY_COLUMNS.length },
+      };
+      for (const h of history) hs.addRow(historyRow(types, h));
       return {
         data: new Uint8Array(await workbook.xlsx.writeBuffer()),
         fileName: `${databaseName()}.xlsx`,

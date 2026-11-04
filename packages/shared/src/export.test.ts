@@ -6,6 +6,8 @@ import {
   appendixRow,
   databaseColumns,
   databaseRow,
+  historyRow,
+  HISTORY_COLUMNS,
   exportColumns,
   exportRow,
   fileNamePart,
@@ -148,10 +150,11 @@ describe('database export', () => {
     const headers = databaseColumns([ladder, rack]).map((c) => c.header);
     expect(headers.slice(0, 3)).toEqual(['Zákazník', 'Provozovna', 'Číslo TZ']);
     expect(headers).toContain('Nosnost úrovně [kg]');
+    expect(headers.slice(0, 8)).toContain('V provozu');
     expect(headers.slice(-3)).toEqual([
-      'Poslední kontrola',
       'Výsledek poslední kontroly',
-      'Závada',
+      'Schopno bezpečného provozu',
+      'Poznámka (popis zjištění, závady, doporučení)',
     ]);
     const row = databaseRow([ladder, rack], {
       customerName: 'Sklad s.r.o.',
@@ -175,13 +178,53 @@ describe('database export', () => {
         },
       },
     });
-    expect(row.slice(0, 6)).toEqual(['Sklad s.r.o.', 'Brno', '10001', 'Ž-01', 'Žebřík', 'Hala A']);
+    expect(row.slice(0, 7)).toEqual([
+      'Sklad s.r.o.',
+      'Brno',
+      '10001',
+      'Ž-01',
+      'Žebřík',
+      'Hala A',
+      'NE',
+    ]);
     expect(row.slice(-5)).toEqual([
-      'vyřazen z provozu',
       '03/11/2027',
       '03/11/2026',
       'Vyřazeno z provozu',
-      'Prasklá příčka',
+      'NE',
+      'Prasklá příčka – červené riziko',
+    ]);
+  });
+
+  it('lists every result in the history', () => {
+    const row = historyRow([ladder], {
+      customerName: 'Sklad s.r.o.',
+      siteName: 'Brno',
+      itemNumber: '10001',
+      designation: null,
+      equipmentTypeId: ladder.id,
+      locationPath: [],
+      inspectionDate: '2025-11-03',
+      inspectionClosed: true,
+      result: {
+        outcome: 'defect',
+        takenOutOfService: false,
+        severity: 'amber',
+        defectDescription: 'Uvolněná příčka',
+        includeInProtocol: true,
+      },
+      recordedByName: 'Jan Technik',
+      recordedAt: '2025-11-03T08:00:00Z',
+      photoCount: 2,
+    });
+    expect(row).toHaveLength(HISTORY_COLUMNS.length);
+    expect(row.slice(6, 12)).toEqual([
+      '03/11/2025',
+      'uzavřená',
+      'Závada – žlutá',
+      'NE',
+      'ne',
+      'Uvolněná příčka – žluté riziko',
     ]);
   });
 });

@@ -129,10 +129,16 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await page.goto('/artikly');
   const database = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export evidence' }).click();
-  await page.getByRole('menuitem', { name: 'CSV' }).click();
-  expect(readFileSync(await (await database).path(), 'utf8')).toContain(
-    'Zákazník;Provozovna;Číslo TZ;',
-  );
+  await page.getByRole('menuitem', { name: 'CSV – evidence' }).click();
+  expect((await database).suggestedFilename()).toMatch(/^evidence-\d{4}-\d{2}-\d{2}_\d{4}\.csv$/);
+  const evidence = readFileSync(await (await database).path(), 'utf8');
+  expect(evidence).toContain('Zákazník;Provozovna;Číslo TZ;');
+  expect(evidence).toContain(';V provozu;');
+  // The history of all inspections.
+  const historyDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export evidence' }).click();
+  await page.getByRole('menuitem', { name: 'CSV – historie kontrol' }).click();
+  expect(readFileSync(await (await historyDownload).path(), 'utf8')).toContain('Ohnutá štěřina');
   await page.goBack();
 
   // Exports: results in Excel and CSV.

@@ -80,6 +80,7 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
       });
       return reply
         .header('content-type', 'application/pdf')
+        .header('cache-control', 'no-store')
         .header('content-disposition', `attachment; filename="${fileName}"`)
         .send(Buffer.from(data.buffer, data.byteOffset, data.byteLength));
     },
@@ -101,6 +102,7 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
           'content-type',
           'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         )
+        .header('cache-control', 'no-store')
         .header('content-disposition', `attachment; filename="${fileName}"`)
         .send(Buffer.from(data.buffer, data.byteOffset, data.byteLength));
     },

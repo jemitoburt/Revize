@@ -309,8 +309,19 @@ describe('inspection exports', () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(xlsx.rawPayload as unknown as ArrayBuffer);
     expect(workbook.worksheets.map((w) => w.name)).toEqual(
-      expect.arrayContaining(['Vše', 'Regál', 'Žebřík']),
+      expect.arrayContaining(['Vše', 'Regál', 'Žebřík', 'Historie kontrol']),
     );
     expect(workbook.getWorksheet('Vše')!.rowCount).toBe(36);
+    const all = workbook.getWorksheet('Vše')!;
+    expect((all.getRow(1).values as unknown[]).slice(1)).toEqual(
+      expect.arrayContaining(['V provozu', 'Schopno bezpečného provozu']),
+    );
+    // The history: every result of the exported items (here one OK and one defect).
+    const history = workbook.getWorksheet('Historie kontrol')!;
+    expect(history.rowCount).toBe(3);
+    const historyCsv = await api('GET', '/api/exports/history.csv');
+    expect(historyCsv.statusCode).toBe(200);
+    expect(historyCsv.headers['cache-control']).toBe('no-store');
+    expect(historyCsv.body).toContain('"Uvolněná příčka; ""č. 3"" – žluté riziko"');
   });
 });

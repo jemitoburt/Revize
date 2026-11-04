@@ -13,11 +13,14 @@ export interface DatabaseExportMenuProps {
 export function DatabaseExportMenu({ filters }: DatabaseExportMenuProps) {
   const [busy, setBusy] = useState(false);
   const filtered = Boolean(filters.customerId || filters.equipmentTypeId);
-  const download = (format: 'xlsx' | 'csv') => {
+  // The whole database: also the items removed from the records.
+  const query = queryString({ ...filters, includeRetired: 'true' });
+  const download = (file: string, name: string) => {
     setBusy(true);
+    const [base, ext] = name.split('.');
     downloadFile(
-      `/exports/items.${format}${queryString(filters)}`,
-      `evidence-${new Date().toISOString().slice(0, 10)}.${format}`,
+      `/exports/${file}${query}`,
+      `${base}-${new Date().toISOString().slice(0, 10)}.${ext}`,
     )
       .catch(notifyError)
       .finally(() => setBusy(false));
@@ -31,11 +34,23 @@ export function DatabaseExportMenu({ filters }: DatabaseExportMenuProps) {
       </Menu.Target>
       <Menu.Dropdown>
         <Menu.Label>{filtered ? 'Podle zvoleného filtru' : 'Celá evidence'}</Menu.Label>
-        <Menu.Item leftSection={<IconFileSpreadsheet size={16} />} onClick={() => download('xlsx')}>
-          Excel (XLSX)
+        <Menu.Item
+          leftSection={<IconFileSpreadsheet size={16} />}
+          onClick={() => download('items.xlsx', 'evidence.xlsx')}
+        >
+          Excel (XLSX) – evidence a historie kontrol
         </Menu.Item>
-        <Menu.Item leftSection={<IconFileText size={16} />} onClick={() => download('csv')}>
-          CSV
+        <Menu.Item
+          leftSection={<IconFileText size={16} />}
+          onClick={() => download('items.csv', 'evidence.csv')}
+        >
+          CSV – evidence
+        </Menu.Item>
+        <Menu.Item
+          leftSection={<IconFileText size={16} />}
+          onClick={() => download('history.csv', 'historie-kontrol.csv')}
+        >
+          CSV – historie kontrol
         </Menu.Item>
       </Menu.Dropdown>
     </Menu>

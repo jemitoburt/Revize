@@ -32,10 +32,16 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      písmen, mezery a pomlčky se při porovnání nepočítají. Hledat jde podle obojího.
    - Kliknutím na řádek artikl upravíte. Změna stavu (vyřazen z provozu ↔ v provozu) vyžaduje
      důvod a zapíše se do auditu.
-   - **Export evidence** (Excel nebo CSV): artikly podle zvoleného filtru (bez filtru celá
-     evidence). Obsahuje zákazníka, provozovnu, číslo TZ, označení, umístění, všechna pole, stav,
-     příští a poslední kontrolu s výsledkem a závadou. V Excelu je list se vším a list pro každý
-     typ vybavení.
+   - **Export evidence**: artikly podle zvoleného filtru (bez filtru celá databáze, včetně
+     artiklů vyřazených z evidence).
+     - Excel: list _Vše_ a list pro každý typ vybavení – zákazník, provozovna, číslo TZ,
+       označení, typ, umístění, **V provozu (ANO/NE)**, všechna pole, příští a poslední kontrola,
+       výsledek, **schopno bezpečného provozu (ANO/NE)** a poznámka jako v Příloze 1. List
+       **Historie kontrol** má každý výsledek každé kontroly (datum, stav kontroly, výsledek,
+       vyřazení, poznámka, zahrnutí do protokolu, kdo a kdy zapsal, počet fotek závady).
+     - CSV: evidence a zvlášť historie kontrol.
+   - Stažené soubory mají v názvu čas (`…_1012.xlsx`), takže se nikdy nesplete starší soubor
+     se stejným názvem ve Stažených souborech.
    - Hromadné akce na zaškrtnutých artiklech: přesun, stav, datum příští kontroly, vyřazení
      z evidence.
 6. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace

@@ -147,13 +147,26 @@ export async function fetchBlob(path: string): Promise<Blob> {
   return response.blob();
 }
 
+/**
+ * `protokol-Vyroba-2026-11-03.pdf` → `protokol-Vyroba-2026-11-03_1012.pdf`: every download gets
+ * its own name, so a repeated export never sits behind an older file of the same name
+ * ("… (1).pdf") in the downloads folder.
+ */
+export function stampedFileName(fileName: string, now = new Date()): string {
+  const time = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}`;
+  const dot = fileName.lastIndexOf('.');
+  return dot > 0
+    ? `${fileName.slice(0, dot)}_${time}${fileName.slice(dot)}`
+    : `${fileName}_${time}`;
+}
+
 /** Downloads a file the API generates (e.g. an import template) under the given name. */
 export async function downloadFile(path: string, fileName: string): Promise<void> {
   const blob = await fetchBlob(path);
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = fileName;
+  link.download = stampedFileName(fileName);
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }

@@ -19,6 +19,8 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
   const tags = ['Exporty'];
   const send = (reply: FastifyReply, file: ExportFile<unknown>) =>
     reply
+      // Generated now from the current data: never reuse a stored copy.
+      .header('cache-control', 'no-store')
       .header('content-type', file.contentType)
       .header('content-disposition', disposition(file.fileName))
       .send(file.data);
@@ -106,5 +108,17 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
       schema: { tags, summary: 'Export evidence (artikly) v CSV', querystring: databaseQuery },
     },
     async (req, reply) => send(reply, await exports.databaseCsv(authOf(req), req.query)),
+  );
+  app.get(
+    '/exports/history.csv',
+    {
+      preHandler: records,
+      schema: {
+        tags,
+        summary: 'Historie kontrol (všechny výsledky artiklů evidence) v CSV',
+        querystring: databaseQuery,
+      },
+    },
+    async (req, reply) => send(reply, await exports.historyCsv(authOf(req), req.query)),
   );
 };

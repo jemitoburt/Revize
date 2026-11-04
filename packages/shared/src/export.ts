@@ -2,7 +2,7 @@
  * Exports of an inspection (M7): the result table (XLSX per equipment type, one CSV) and the
  * names and captions of exported photos. Pure functions; the API turns them into files.
  */
-import type { InspectionItem } from './api/inspections.js';
+import type { InspectionItem, Severity } from './api/inspections.js';
 import { LOCATION_SEPARATOR } from './api/master-data.js';
 import { formatDate, formatDateTime } from './dates.js';
 import type { FieldDefinition } from './equipment-fields.js';
@@ -217,15 +217,47 @@ const DB_BEFORE: ExportColumn[] = [
   { header: 'Označení', width: 12 },
   { header: 'Typ vybavení', width: 22 },
   { header: 'Umístění', width: 28 },
+  { header: 'V provozu', width: 10 },
   { header: 'QR kód', width: 14 },
 ];
 const DB_AFTER: ExportColumn[] = [
-  { header: 'Stav', width: 16 },
   { header: 'Příští kontrola', width: 14 },
   { header: 'Poslední kontrola', width: 14 },
-  { header: 'Výsledek poslední kontroly', width: 22 },
-  { header: 'Závada', width: 36 },
+  { header: 'Výsledek poslední kontroly', width: 24 },
+  { header: 'Schopno bezpečného provozu', width: 14 },
+  { header: 'Poznámka (popis zjištění, závady, doporučení)', width: 50 },
 ];
+
+/** ANO / NE: safe to operate after a result (as in the protocol table and Příloha 1). */
+export function safeAnswer(result: {
+  outcome: 'ok' | 'defect';
+  takenOutOfService: boolean;
+  severity?: Severity | null;
+}): 'ANO' | 'NE' {
+  // Racks: green is fine to use, yellow and red are not; other types: minor (green) or unfit.
+  const severity = severityOf(result);
+  return !severity || severity === 'green' ? 'ANO' : 'NE';
+}
+
+/** "Ohnutý stojan – nevyhovuje": the defect with its level in short (as in Příloha 1). */
+export function resultNote(
+  result: {
+    outcome: 'ok' | 'defect';
+    takenOutOfService: boolean;
+    severity?: Severity | null;
+    defectDescription: string | null;
+  },
+  riskLevels = true,
+): string {
+  const severity = severityOf(result);
+  if (!severity) return '';
+  const level = riskLevels
+    ? RISK_SHORT[severity]
+    : severity === 'green'
+      ? 'závada nebránící bezpečnému provozu'
+      : 'nevyhovuje';
+  return [result.defectDescription, level].filter(Boolean).join(' – ');
+}
 
 /** Columns of the database export: item, the types' fields (union), state and last inspection. */
 export function databaseColumns(types: readonly ExportType[]): ExportColumn[] {
@@ -236,6 +268,7 @@ export function databaseColumns(types: readonly ExportType[]): ExportColumn[] {
 /** One row of the database export, matching `databaseColumns(types)`. */
 export function databaseRow(types: readonly ExportType[], item: DatabaseItem): ExportCell[] {
   const type = types.find((t) => t.id === item.equipmentTypeId);
+  const riskLevels = type?.riskLevels ?? true;
   const fieldHeaders = databaseColumns(types).slice(DB_BEFORE.length, -DB_AFTER.length);
   const ownFields = type ? activeFields(type) : [];
   const last = item.lastInspection;
@@ -246,20 +279,81 @@ export function databaseRow(types: readonly ExportType[], item: DatabaseItem): E
     item.designation ?? '',
     type?.name ?? '',
     item.locationPath.join(LOCATION_SEPARATOR),
+    item.retired ? 'NE (vyřazen z evidence)' : item.status === 'out_of_service' ? 'NE' : 'ANO',
     item.qrCode ?? '',
     ...fieldHeaders.map(({ header }) => {
       const field = ownFields.find((f) => fieldHeader(f) === header);
       return field ? fieldCell(field, item.fieldValues[field.key]) : null;
     }),
-    item.retired
-      ? 'vyřazen z evidence'
-      : item.status === 'out_of_service'
-        ? 'vyřazen z provozu'
-        : 'v provozu',
     formatDate(item.nextInspectionDate),
     formatDate(last?.date ?? null),
-    last ? outcomeLabel(last.result, type?.riskLevels ?? true) : '',
-    last?.result.defectDescription ?? '',
+    last ? outcomeLabel(last.result, riskLevels) : 'Nezkontrolováno',
+    last ? safeAnswer(last.result) : '',
+    last ? resultNote(last.result, riskLevels) : '',
+  ];
+}
+
+/** One result of an item in an inspection: a row of the history sheet. */
+export interface HistoryRow {
+  customerName: string;
+  siteName: string;
+  itemNumber: string;
+  designation: string | null;
+  equipmentTypeId: string;
+  locationPath: string[];
+  inspectionDate: string;
+  inspectionClosed: boolean;
+  result: {
+    outcome: 'ok' | 'defect';
+    takenOutOfService: boolean;
+    severity: Severity | null;
+    defectDescription: string | null;
+    includeInProtocol: boolean;
+  };
+  recordedByName: string;
+  recordedAt: string;
+  photoCount: number;
+}
+
+export const HISTORY_COLUMNS: ExportColumn[] = [
+  { header: 'Zákazník', width: 24 },
+  { header: 'Provozovna', width: 20 },
+  { header: 'Číslo TZ', width: 10 },
+  { header: 'Označení', width: 12 },
+  { header: 'Typ vybavení', width: 22 },
+  { header: 'Umístění', width: 28 },
+  { header: 'Datum kontroly', width: 14 },
+  { header: 'Kontrola', width: 12 },
+  { header: 'Výsledek', width: 24 },
+  { header: 'Schopno bezpečného provozu', width: 14 },
+  { header: 'Vyřazeno z provozu', width: 12 },
+  { header: 'Poznámka (popis zjištění, závady, doporučení)', width: 50 },
+  { header: 'V protokolu', width: 10 },
+  { header: 'Zapsal', width: 20 },
+  { header: 'Zapsáno', width: 17 },
+  { header: 'Fotky závady', width: 10 },
+];
+
+export function historyRow(types: readonly ExportType[], row: HistoryRow): ExportCell[] {
+  const type = types.find((t) => t.id === row.equipmentTypeId);
+  const riskLevels = type?.riskLevels ?? true;
+  return [
+    row.customerName,
+    row.siteName,
+    row.itemNumber,
+    row.designation ?? '',
+    type?.name ?? '',
+    row.locationPath.join(LOCATION_SEPARATOR),
+    formatDate(row.inspectionDate),
+    row.inspectionClosed ? 'uzavřená' : 'otevřená',
+    outcomeLabel(row.result, riskLevels),
+    safeAnswer(row.result),
+    row.result.takenOutOfService ? 'ano' : 'ne',
+    resultNote(row.result, riskLevels),
+    row.result.includeInProtocol ? 'ano' : 'ne',
+    row.recordedByName,
+    formatDateTime(row.recordedAt),
+    row.photoCount,
   ];
 }
 
@@ -339,21 +433,11 @@ export function appendixRow(
         return item.result?.defectDescription ?? '';
       case 'safe': {
         // As in the protocol table: ok and green = ANO, yellow and red = NE.
-        if (!item.result) return '';
-        const severity = severityOf(item.result);
-        if (!riskLevels) return severity && severity !== 'green' ? 'NE' : 'ANO';
-        return !severity || severity === 'green' ? 'ANO' : 'NE';
+        return item.result ? safeAnswer(item.result) : '';
       }
       case 'note': {
-        if (!item.result) return 'Nezkontrolováno';
-        const severity = severityOf(item.result);
         // Short: the meaning of the levels is explained with the defect groups.
-        const level = riskLevels
-          ? RISK_SHORT[severity ?? 'green']
-          : severity === 'green'
-            ? 'závada nebránící bezpečnému provozu'
-            : 'nevyhovuje';
-        return severity ? [item.result.defectDescription, level].filter(Boolean).join(' – ') : '';
+        return item.result ? resultNote(item.result, riskLevels) : 'Nezkontrolováno';
       }
       case 'nextInspection':
         return formatDate(item.nextInspectionDate);
