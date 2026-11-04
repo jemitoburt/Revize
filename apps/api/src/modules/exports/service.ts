@@ -379,19 +379,19 @@ export function createExportsService(
             'Pořízeno',
             'Pořídil',
           ],
-          ...photos
-            .filter((p) => !missing.has(p.fileName))
-            .map((p) => [
-              p.fileName,
-              p.item?.itemNumber ?? '',
-              p.item?.designation ?? '',
-              p.item ? typeName(p.item) : '',
-              p.item?.locationPath.join(LOCATION_SEPARATOR) ?? '',
-              p.item ? outcomeLabel(p.item.result, riskLevels(p.item)) : '',
-              describe(p),
-              formatDateTime(p.takenAt?.toISOString() ?? null),
-              p.author ?? '',
-            ]),
+          // A photo whose file is not in the storage stays in the list, marked, so it is not
+          // silently lost.
+          ...photos.map((p) => [
+            missing.has(p.fileName) ? `${p.fileName} (soubor chybí na serveru)` : p.fileName,
+            p.item?.itemNumber ?? '',
+            p.item?.designation ?? '',
+            p.item ? typeName(p.item) : '',
+            p.item?.locationPath.join(LOCATION_SEPARATOR) ?? '',
+            p.item ? outcomeLabel(p.item.result, riskLevels(p.item)) : '',
+            describe(p),
+            formatDateTime(p.takenAt?.toISOString() ?? null),
+            p.author ?? '',
+          ]),
         ]);
       const add = (zip: Zip, name: string, bytes: Uint8Array) => {
         const entry = new ZipPassThrough(name);
@@ -422,6 +422,7 @@ export function createExportsService(
             return;
           }
           if (!(await files.exists(p.storageKey))) {
+            console.warn(`photos.zip: photo file missing in storage: ${p.storageKey}`);
             missing.add(p.fileName);
             return;
           }

@@ -264,6 +264,9 @@ export function createProtocolsService(
       if (await files.exists(p.storageKey)) {
         const fitted = await images.fit(await files.read(p.storageKey), width, height);
         if (fitted) return `data:image/jpeg;base64,${Buffer.from(fitted).toString('base64')}`;
+      } else {
+        // The database knows the photo but the file storage does not have it (lost volume?).
+        console.warn(`protocol: photo file missing in storage: ${p.storageKey}`);
       }
       return dataUrl(p.thumbnailKey, 'image/jpeg');
     };

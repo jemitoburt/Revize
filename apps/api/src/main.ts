@@ -7,15 +7,17 @@ import { ChromiumPdfRenderer } from './infra/chromium-pdf-renderer.js';
 import { ExifToolMetadataWriter } from './infra/exiftool-metadata-writer.js';
 import { LocalDiskStorage } from './infra/local-disk-storage.js';
 import { SharpImageProcessor } from './infra/sharp-image-processor.js';
+import { checkPhotoFiles } from './infra/check-photo-files.js';
 
 const config = loadConfig();
 const database = createDatabase(config.DATABASE_URL, config.DATABASE_PASSWORD);
 const storageMaxBytes =
   config.STORAGE_MAX_GB !== undefined ? config.STORAGE_MAX_GB * 1024 * 1024 * 1024 : undefined;
+const files = new LocalDiskStorage(config.FILES_DIR, storageMaxBytes);
 const app = await buildApp({
   config,
   db: database.db,
-  files: new LocalDiskStorage(config.FILES_DIR, storageMaxBytes),
+  files,
   images: new SharpImageProcessor(),
   pdf: new ChromiumPdfRenderer(config.CHROMIUM_PATH || undefined),
   metadata: new ExifToolMetadataWriter(),
@@ -27,6 +29,7 @@ try {
     app.log.info('Databázové migrace jsou aktuální.');
   }
   await bootstrap(database.db, config, app.log);
+  await checkPhotoFiles(database.db, files, config.FILES_DIR, app.log);
   await app.listen({ host: config.HOST, port: config.PORT });
 } catch (error) {
   app.log.fatal(error);
