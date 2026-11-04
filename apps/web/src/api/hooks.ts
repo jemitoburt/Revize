@@ -19,6 +19,7 @@ import type {
   Organization,
   Photo,
   ServerStatus,
+  ClosePreview,
   PhotoOwner,
   RecordResultInput,
   Site,
@@ -280,6 +281,11 @@ export const useCreateItem = () =>
     (body: In<typeof createItemSchema>) => api.post<Item>('/items', body),
     [['items'], ['customers'], ['sites'], ['locations'], ['equipment-types']],
   );
+export const useClosePreview = (inspectionId: string) =>
+  useQuery<ClosePreview, ApiRequestError>({
+    queryKey: ['close-preview', inspectionId],
+    queryFn: () => api.get(`/inspections/${inspectionId}/close-preview`),
+  });
 export const useServerStatus = () =>
   useQuery<ServerStatus, ApiRequestError>({
     queryKey: ['server-status'],

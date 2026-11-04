@@ -8,6 +8,7 @@ import {
   Paper,
   SimpleGrid,
   Stack,
+  Switch,
   Text,
   TextInput,
   Textarea,
@@ -28,7 +29,10 @@ import { AnchorLink } from '../components/links.js';
 import { formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
-const FIELDS: { key: keyof OrganizationSettings; label: string; description?: string }[] = [
+/** The text settings (the rest are switches). */
+type TextSetting = Exclude<keyof OrganizationSettings, 'deletePreviousDefectPhotos'>;
+
+const FIELDS: { key: TextSetting; label: string; description?: string }[] = [
   { key: 'companyId', label: 'IČO' },
   { key: 'address', label: 'Adresa' },
   { key: 'phone', label: 'Telefon' },
@@ -115,8 +119,10 @@ function SettingsForm({ organization }: { organization: Organization }) {
   const [name, setName] = useState(organization.name);
   const [settings, setSettings] = useState(organization.settings);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const set = (key: keyof OrganizationSettings, value: string) =>
-    setSettings((s) => ({ ...s, [key]: value }));
+  const set = (
+    key: Exclude<keyof OrganizationSettings, 'deletePreviousDefectPhotos'>,
+    value: string,
+  ) => setSettings((s) => ({ ...s, [key]: value }));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -165,6 +171,15 @@ function SettingsForm({ organization }: { organization: Organization }) {
           value={settings.protocolFooter}
           error={errors['settings.protocolFooter']}
           onChange={(e) => set('protocolFooter', e.currentTarget.value)}
+        />
+        <Switch
+          label="Při uzavření kontroly smazat fotky závad z předchozích kontrol"
+          description="Fotky závad stejných artiklů z dřívějších kontrol nahradí fotky nové kontroly, aby se na serveru nehromadily. Před uzavřením je zálohujte přes Export → Fotky (ZIP). Fotky artiklů (štítek) zůstávají."
+          checked={settings.deletePreviousDefectPhotos}
+          onChange={(e) => {
+            const checked = e.currentTarget.checked;
+            setSettings((s) => ({ ...s, deletePreviousDefectPhotos: checked }));
+          }}
         />
         <Group justify="flex-end">
           <Button type="submit" loading={update.isPending}>

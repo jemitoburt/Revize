@@ -1,4 +1,5 @@
 import {
+  type ClosePreview,
   nextInspectionDateOf,
   shouldApplyResult,
   type closeInspectionSchema,
@@ -25,8 +26,11 @@ import {
   inspectionTypeScope,
   item,
   location,
+  photo,
   site,
 } from '../../db/schema.js';
+import type { FileStorage } from '../../infra/file-storage.js';
+import { organizationOf, settingsOf } from '../organization/service.js';
 import { AppError, conflict, notFound, validationError } from '../../errors.js';
 import { recordAudit } from '../audit/service.js';
 import { locationNames, pathNamesOf } from '../locations/service.js';
@@ -75,7 +79,28 @@ function inScope(row: InspectionRow, types: string[]): SQL {
   )!;
 }
 
-export function createInspectionsService(db: Db) {
+export function createInspectionsService(db: Db, files?: FileStorage) {
+  /**
+   * Defect photos of earlier closed inspections (same or earlier date) of the items that have a
+   * result in this inspection – replaced by this inspection's photos when it is closed.
+   */
+  async function previousDefectPhotos(tx: DbOrTx, auth: AuthContext, row: InspectionRow) {
+    return tx
+      .select({ id: photo.id, storageKey: photo.storageKey, thumbnailKey: photo.thumbnailKey })
+      .from(photo)
+      .innerJoin(inspectionResult, eq(inspectionResult.id, photo.inspectionResultId))
+      .innerJoin(inspection, eq(inspection.id, inspectionResult.inspectionId))
+      .where(
+        and(
+          eq(photo.organizationId, auth.organizationId),
+          sql`${inspection.id} <> ${row.id}`,
+          eq(inspection.status, 'closed'),
+          sql`${inspection.inspectionDate} <= ${row.inspectionDate}`,
+          sql`${inspectionResult.itemId} in (select r.item_id from inspection_result r where r.inspection_id = ${row.id})`,
+        ),
+      );
+  }
+
   async function progressOf(tx: DbOrTx, ids: string[]): Promise<Map<string, InspectionProgress>> {
     if (ids.length === 0) return new Map();
     // Raw SQL with explicit aliases: the scope subqueries refer to the outer inspection.
@@ -555,10 +580,34 @@ export function createInspectionsService(db: Db) {
       id: string,
       input: z.output<typeof closeInspectionSchema>,
     ): Promise<Inspection> {
-      await db.transaction(async (tx) => {
+      const pruned = await db.transaction(async (tx) => {
         const row = await lockInspection(tx, auth, id);
         if (row.status === 'closed')
           throw conflict('inspection_closed', 'Kontrola už je uzavřená.');
+        // The defect photos of earlier inspections of these items are replaced by this one's
+        // (backed up outside through the photo ZIP), unless switched off in Nastavení.
+        let previous: Awaited<ReturnType<typeof previousDefectPhotos>> = [];
+        if (settingsOf(await organizationOf(tx, auth)).deletePreviousDefectPhotos) {
+          previous = await previousDefectPhotos(tx, auth, row);
+          if (previous.length) {
+            await tx.delete(photo).where(
+              inArray(
+                photo.id,
+                previous.map((p) => p.id),
+              ),
+            );
+            await audit(
+              tx,
+              auth,
+              'photo.delete_previous_defect_photos',
+              'inspection',
+              id,
+              { photoIds: previous.map((p) => p.id) },
+              null,
+              'Uzavření kontroly: fotky závad z předchozích kontrol',
+            );
+          }
+        }
         const checked = await tx
           .select({ item, interval: equipmentType.defaultIntervalMonths })
           .from(inspectionResult)
@@ -604,8 +653,28 @@ export function createInspectionsService(db: Db) {
           ...closed,
           checkedItems: checked.length,
         });
+        return previous;
       });
+      // Files after the commit: a failed close keeps them.
+      for (const p of pruned) {
+        await files?.delete(p.storageKey);
+        if (p.thumbnailKey) await files?.delete(p.thumbnailKey);
+      }
       return get(db, auth, id);
+    },
+
+    /** What closing would delete (shown in the close dialog). */
+    async closePreview(auth: AuthContext, id: string): Promise<ClosePreview> {
+      const [row] = await db
+        .select()
+        .from(inspection)
+        .where(and(eq(inspection.organizationId, auth.organizationId), eq(inspection.id, id)));
+      if (!row) throw notFound('Kontrola neexistuje.');
+      const deletes = settingsOf(await organizationOf(db, auth)).deletePreviousDefectPhotos;
+      return {
+        previousDefectPhotos: (await previousDefectPhotos(db, auth, row)).length,
+        deletesPreviousDefectPhotos: deletes,
+      };
     },
 
     /** Opens a closed inspection again (audited with the reason, ADR-0011). */

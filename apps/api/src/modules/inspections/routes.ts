@@ -1,6 +1,7 @@
 import {
   apiErrorSchema,
   closeInspectionSchema,
+  closePreviewSchema,
   idSchema,
   inspectionItemSchema,
   inspectionResultSchema,
@@ -130,6 +131,19 @@ export const inspectionsRoutes: FastifyPluginAsyncZod<{ inspections: Inspections
         req.params.itemId,
         req.body.photosInProtocol,
       ),
+  );
+  app.get(
+    '/inspections/:id/close-preview',
+    {
+      preHandler: requirePermission('inspection.close'),
+      schema: {
+        tags,
+        summary: 'Co uzavření smaže (fotky závad z předchozích kontrol)',
+        params,
+        response: { 200: closePreviewSchema, ...errors },
+      },
+    },
+    (req) => inspections.closePreview(authOf(req), req.params.id),
   );
   app.post(
     '/inspections/:id/close',

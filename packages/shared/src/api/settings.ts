@@ -19,6 +19,11 @@ export const organizationSettingsSchema = z.object({
   pageFooter: text(200),
   /** Additional text after the standard statements at the end of the protocol. */
   protocolFooter: text(3000),
+  /**
+   * Closing an inspection deletes the defect photos of earlier inspections of the same items
+   * (backed up outside via the photo ZIP), so the server does not keep piling them up.
+   */
+  deletePreviousDefectPhotos: z.boolean().default(true),
 });
 export type OrganizationSettings = z.infer<typeof organizationSettingsSchema>;
 

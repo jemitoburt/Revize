@@ -60,7 +60,7 @@ export async function registerApiRoutes(
   await api.register(equipmentTypesRoutes, { types: createEquipmentTypesService(db) });
   await api.register(itemsRoutes, { items: createItemsService(db) });
   await api.register(importsRoutes, { imports: createImportsService(db), db });
-  const inspections = createInspectionsService(db);
+  const inspections = createInspectionsService(db, files);
   await api.register(inspectionsRoutes, { inspections });
   await api.register(organizationRoutes, { organization: createOrganizationService(db, files) });
   await api.register(protocolsRoutes, {

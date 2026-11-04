@@ -452,20 +452,34 @@ export function createExportsService(
             missing.add(p.fileName);
             return;
           }
-          const original = await files.read(p.storageKey);
-          const bytes = await metadata.write(original, p.mimeType, {
-            title: p.item ? p.item.itemNumber : `Kontrola ${inspection.siteName}`,
-            description: describe(p),
-            keywords: [
-              ...(p.item ? [p.item.itemNumber, typeName(p.item)] : []),
-              inspection.customerName,
-              inspection.siteName,
-            ].filter(Boolean),
-            author: p.author,
-            copyright: org.name,
-            location: p.item ? p.item.locationPath.join(LOCATION_SEPARATOR) : '',
-            takenAt: p.takenAt,
-          });
+          let original: Uint8Array;
+          try {
+            original = await files.read(p.storageKey);
+          } catch (error) {
+            console.warn(`photos.zip: cannot read ${p.storageKey}`, error);
+            missing.add(p.fileName);
+            return;
+          }
+          // The metadata are a bonus: if ExifTool fails, the photo goes in as it is, so one
+          // photo never breaks the whole archive.
+          let bytes = original;
+          try {
+            bytes = await metadata.write(original, p.mimeType, {
+              title: p.item ? p.item.itemNumber : `Kontrola ${inspection.siteName}`,
+              description: describe(p),
+              keywords: [
+                ...(p.item ? [p.item.itemNumber, typeName(p.item)] : []),
+                inspection.customerName,
+                inspection.siteName,
+              ].filter(Boolean),
+              author: p.author,
+              copyright: org.name,
+              location: p.item ? p.item.locationPath.join(LOCATION_SEPARATOR) : '',
+              takenAt: p.takenAt,
+            });
+          } catch (error) {
+            console.warn(`photos.zip: metadata not written for ${p.storageKey}`, error);
+          }
           add(zip, p.fileName, bytes);
         },
       });

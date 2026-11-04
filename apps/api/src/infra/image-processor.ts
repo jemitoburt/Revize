@@ -3,6 +3,14 @@ export interface ProcessedImage {
   width: number;
   height: number;
   thumbnail: Uint8Array;
+  /** The photo to store instead of the upload when it was larger than the limit (JPEG). */
+  resized?: Uint8Array;
+}
+
+/** Largest photo kept as uploaded; a bigger one is stored re-encoded. */
+export interface StoredLimit {
+  maxSide: number;
+  maxBytes: number;
 }
 
 /**
@@ -10,7 +18,11 @@ export interface ProcessedImage {
  * `thumbnailSize`. Server: sharp; browser demo: canvas (ADR-0015). `null` = not a readable image.
  */
 export interface ImageProcessor {
-  process(data: Uint8Array, thumbnailSize: number): Promise<ProcessedImage | null>;
+  process(
+    data: Uint8Array,
+    thumbnailSize: number,
+    limit?: StoredLimit,
+  ): Promise<ProcessedImage | null>;
   /**
    * The image cropped to fill exactly `width` × `height` pixels (JPEG): photos in the protocol
    * at 300 dpi of their printed size. `null` = not a readable image.

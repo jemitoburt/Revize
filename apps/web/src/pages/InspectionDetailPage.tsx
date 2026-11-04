@@ -28,6 +28,7 @@ import { useParams } from '@tanstack/react-router';
 import { useMemo, useState, type FormEvent } from 'react';
 import {
   useCloseInspection,
+  useClosePreview,
   useEquipmentTypes,
   useInspection,
   useInspectionItems,
@@ -65,6 +66,7 @@ function CloseForm({
   onDone: () => void;
 }) {
   const close = useCloseInspection();
+  const preview = useClosePreview(inspectionId);
   const [date, setDate] = useState(defaultNext);
   const [note, setNote] = useState('');
   const submit = (event: FormEvent) => {
@@ -92,6 +94,14 @@ function CloseForm({
         <Text size="sm">
           Po uzavření nejde výsledky měnit. Zkontrolované artikly dostanou datum příští kontroly.
         </Text>
+        {preview.data?.deletesPreviousDefectPhotos && preview.data.previousDefectPhotos > 0 && (
+          <Alert color="orange" title="Smažou se starší fotky závad">
+            Uzavřením se ze serveru smaže {preview.data.previousDefectPhotos} fotek závad z
+            předchozích kontrol těchto artiklů (nahradí je fotky této kontroly). Pokud je ještě
+            nemáte zálohované, stáhněte je u předchozí kontroly přes Export → Fotky (ZIP). Vypnout
+            to jde v Nastavení.
+          </Alert>
+        )}
         <DateField
           label="Příští kontrola"
           description="Předvyplněno podle intervalu typů vybavení (datum kontroly + obvykle 12 měsíců). Vymazáním se použije interval každého typu zvlášť."

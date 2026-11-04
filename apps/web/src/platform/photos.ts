@@ -1,9 +1,13 @@
+import { PHOTO_LIMITS } from '@revize/shared';
 import { FULL_CROP, isFullCrop, type CropRect, type Rotation } from '../lib/crop.js';
 import { editToJpeg, resizeToJpeg } from '../lib/images.js';
 
-/** Photos leave the device as JPEG with the longer side at most this size (ADR-0007). */
-const MAX_SIDE = 2048;
-const QUALITY = 0.82;
+/**
+ * Photos leave the device as JPEG with the longer side at most this size (ADR-0007): the size
+ * the server keeps (`PHOTO_LIMITS.storedMaxSide`), so a phone photo is ~200–400 kB.
+ */
+const MAX_SIDE = PHOTO_LIMITS.storedMaxSide;
+const QUALITY = 0.8;
 
 /**
  * Opens the camera (or the photo library) and resolves with the chosen photo, or null when

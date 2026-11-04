@@ -174,6 +174,13 @@ export const PHOTO_LIMITS = {
   maxBytes: 15 * 1024 * 1024,
   mimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
   thumbnailSize: 480,
+  /**
+   * Stored photos are at most this size (JPEG, longer side): enough for the protocol at 300 dpi
+   * (5 cm ≈ 590 px) and for zooming in, without keeping 12 MPx phone originals (ADR-0007).
+   */
+  storedMaxSide: 1600,
+  /** A smaller photo above this size is re-encoded too. */
+  storedMaxBytes: 700 * 1024,
 } as const;
 
 /** Text fields of the multipart `PUT /photos/:id` (sent before the file). */
@@ -248,3 +255,12 @@ export const serverStatusSchema = z.object({
   }),
 });
 export type ServerStatus = z.infer<typeof serverStatusSchema>;
+
+/** `GET /inspections/:id/close-preview`: what closing will do besides the next dates. */
+export const closePreviewSchema = z.object({
+  /** Defect photos of earlier closed inspections of the items checked here. */
+  previousDefectPhotos: z.number().int(),
+  /** They are deleted on closing (Nastavení → delete previous defect photos). */
+  deletesPreviousDefectPhotos: z.boolean(),
+});
+export type ClosePreview = z.infer<typeof closePreviewSchema>;

@@ -49,3 +49,10 @@ soubor oddělí od protokolu.
 - **Příloha protokolu pro zákazníka:** parametr `columns` u `protocol.html|pdf|docx`. Nabídku
   sloupců vrací `GET /inspections/:id/protocol-columns` (`appendixColumns`): pevné sloupce
   a pole typů v kontrole. Příloha je tabulka na konci protokolu.
+
+## Doplnění (2026-11-04)
+
+- ZIP obsahuje i fotky artiklů (`<číslo>_artikl_01.jpg`).
+- Když ExifTool selže nebo soubor nejde přečíst, fotka jde do ZIP bez metadat (nebo je
+  v seznamu označená „soubor chybí na serveru“) a chyba se zapíše do logu – jedna fotka nikdy
+  nerozbije celý archiv.

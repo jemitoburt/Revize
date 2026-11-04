@@ -1,13 +1,16 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { newId } from '@revize/shared';
+import { newId, permissionsOf } from '@revize/shared';
+import { eq } from 'drizzle-orm';
 import ExcelJS from 'exceljs';
 import { exiftool } from 'exiftool-vendored';
 import { strFromU8, unzipSync } from 'fflate';
 import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { photo as photoTable } from '../src/db/schema.js';
+import { appUser, photo as photoTable } from '../src/db/schema.js';
+import { createExportsService } from '../src/modules/exports/service.js';
+import { createInspectionsService } from '../src/modules/inspections/service.js';
 import { DEMO_INSPECTOR } from '../src/seed/demo.js';
 import { ADMIN, bearer, createTestContext, type TestContext } from './helpers.js';
 
@@ -179,6 +182,75 @@ describe('inspection exports', () => {
     const [row] = await ctx.database.db.select().from(photoTable).limit(1);
     await ctx.files.delete(row!.storageKey);
     expect((await api('GET', '/api/server-status')).json()).toMatchObject({ missingFiles: 1 });
+  });
+
+  it('closing replaces the defect photos of earlier inspections of the same items', async () => {
+    const first = await inspection();
+    await api('POST', `/api/inspections/${first.id}/close`, {});
+    const second = await inspection();
+    const preview = await api('GET', `/api/inspections/${second.id}/close-preview`);
+    expect(preview.json()).toEqual({ previousDefectPhotos: 2, deletesPreviousDefectPhotos: true });
+    await api('POST', `/api/inspections/${second.id}/close`, {});
+    const photosOf = async (id: string) =>
+      (await api('GET', `/api/photos?inspectionId=${id}&itemId=${first.items[1]!.id}`)).json<
+        { owner: string }[]
+      >();
+    // The first inspection keeps no defect photos, the item photos (nameplate) stay.
+    expect((await photosOf(first.id)).map((p) => p.owner).sort()).toEqual(['item', 'item']);
+    expect((await photosOf(second.id)).filter((p) => p.owner === 'result')).toHaveLength(2);
+    expect((await api('GET', '/api/server-status')).json()).toMatchObject({ missingFiles: 0 });
+  });
+
+  it('stores big photos re-encoded within the size limit', async () => {
+    const { id, items } = await inspection();
+    const big = await sharp({
+      create: { width: 4032, height: 3024, channels: 3, background: '#556' },
+    })
+      .jpeg({ quality: 95 })
+      .toBuffer();
+    const form = new FormData();
+    form.append('owner', 'result');
+    form.append('itemId', items[1]!.id);
+    form.append('inspectionId', id);
+    form.append('file', new Blob([new Uint8Array(big)], { type: 'image/jpeg' }), 'iphone.jpg');
+    const res = await ctx.app.inject({
+      method: 'PUT',
+      url: `/api/photos/${newId()}`,
+      headers: bearer(admin),
+      payload: form,
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ width: 1600, height: 1200, mimeType: 'image/jpeg' });
+    expect(res.json().sizeBytes).toBeLessThan(700 * 1024);
+  });
+
+  it('the ZIP is complete even when the metadata cannot be written', async () => {
+    const { id, items } = await inspection();
+    const broken = createExportsService(
+      ctx.database.db,
+      ctx.files,
+      createInspectionsService(ctx.database.db),
+      {
+        write: () => Promise.reject(new Error('exiftool missing')),
+        close: () => Promise.resolve(),
+      },
+    );
+    const [user] = await ctx.database.db
+      .select()
+      .from(appUser)
+      .where(eq(appUser.email, ADMIN.email));
+    const auth = {
+      userId: user!.id,
+      organizationId: user!.organizationId,
+      role: 'admin' as const,
+      permissions: permissionsOf('admin'),
+      sessionId: 'test',
+      via: 'bearer' as const,
+    };
+    const file = await broken.photosZip(auth, id);
+    const zip = unzipSync(new Uint8Array(await new Response(file.data).arrayBuffer()));
+    expect(Object.keys(zip)).toContain(`${items[1]!.itemNumber}_01.jpg`);
+    expect(Object.keys(zip)).toContain('fotky.csv');
   });
 
   it('moves a photo between the item and its defect (office)', async () => {

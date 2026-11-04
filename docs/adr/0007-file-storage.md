@@ -26,3 +26,14 @@ Hned po vyfocení technik fotku může otočit o 90° a oříznout (`src/field/P
 v jednom kroku se zmenšením na 2048 px (`editToJpeg`), takže se JPEG kóduje jen jednou.
 Do IndexedDB jde až upravená fotka po „Uložit fotku"; dokud technik nepotvrdí, fotka není
 zapsaná (stejně jako dřív před výběrem souboru).
+
+## Doplnění: velikost uložených fotek a mazání starších fotek závad (2026-11-04)
+
+- Telefon fotky zmenší na **1600 px** delší strany (JPEG 0,8, typicky 200–400 kB). Server
+  fotku větší než 1600 px nebo 700 kB uloží znovu zakódovanou jako JPEG v tomto limitu (bez
+  GPS a dalších údajů fotoaparátu; orientace je už použitá), takže 12 Mpx originály z iPhonu
+  server nezatěžují. Pro protokol stačí: 5 cm při 300 dpi ≈ 590 px.
+- **Při uzavření kontroly** se smažou fotky závad z dřívějších uzavřených kontrol stejných
+  artiklů (nastavení _Při uzavření kontroly smazat fotky závad z předchozích kontrol_, výchozí
+  zapnuto). Uživatel si je zálohuje mimo server přes Export → Fotky (ZIP). Dialog uzavření
+  ukáže, kolik fotek se smaže. Fotky artiklů zůstávají. Smazání je v auditu (ID fotek).

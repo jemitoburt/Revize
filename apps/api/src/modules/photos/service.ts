@@ -149,14 +149,20 @@ export function createPhotosService(db: Db, files: FileStorage, images: ImagePro
       if (file.data.byteLength > PHOTO_LIMITS.maxBytes) {
         throw invalidPhoto(`Fotka je větší než ${PHOTO_LIMITS.maxBytes / 1024 / 1024} MB.`);
       }
-      const processed = await images.process(file.data, PHOTO_LIMITS.thumbnailSize);
+      const processed = await images.process(file.data, PHOTO_LIMITS.thumbnailSize, {
+        maxSide: PHOTO_LIMITS.storedMaxSide,
+        maxBytes: PHOTO_LIMITS.storedMaxBytes,
+      });
       if (!processed) throw invalidPhoto('Soubor se nepodařilo přečíst jako obrázek.');
+      // A too big photo is stored re-encoded (JPEG within the limit), not as uploaded.
+      const stored = processed.resized ?? file.data;
+      const mimeType = processed.resized ? 'image/jpeg' : file.mimetype;
 
       const now = new Date();
       const folder = `photos/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${id}`;
-      const storageKey = `${folder}/original.${extension}`;
+      const storageKey = `${folder}/original.${processed.resized ? 'jpg' : extension}`;
       const thumbnailKey = `${folder}/thumb.jpg`;
-      await files.put(storageKey, file.data);
+      await files.put(storageKey, stored);
       await files.put(thumbnailKey, processed.thumbnail);
       try {
         await db.transaction(async (tx) => {
@@ -169,11 +175,11 @@ export function createPhotosService(db: Db, files: FileStorage, images: ImagePro
               ...owner,
               storageKey,
               thumbnailKey,
-              mimeType: file.mimetype,
+              mimeType,
               width: processed.width,
               height: processed.height,
-              sizeBytes: file.data.byteLength,
-              sha256: createHash('sha256').update(file.data).digest('hex'),
+              sizeBytes: stored.byteLength,
+              sha256: createHash('sha256').update(stored).digest('hex'),
               takenAt: fields.takenAt ? new Date(fields.takenAt) : null,
               caption: fields.caption || null,
               createdBy: auth.userId,

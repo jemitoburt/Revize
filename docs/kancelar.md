@@ -89,6 +89,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      závady_ (tisknou se do protokolu) a _Fotky artiklu_ (štítek, celkový pohled – netisknou
      se), a upravit artikl (označení, pole, umístění). Výsledek a fotky jdou měnit jen
      u otevřené kontroly, oprava se zapíše jako nový výsledek a do auditu.
+   - **Uzavření kontroly** smaže ze serveru fotky závad z předchozích kontrol stejných artiklů
+     (nahradí je fotky nové kontroly). Dialog ukáže, kolik jich bude, a připomene zálohu přes
+     Export → Fotky (ZIP) u předchozí kontroly. Vypnout to jde v Nastavení.
    - Ve sloupci **Fotky** je u závady s fotkami zaškrtávátko **do protokolu**: vypnuté fotky se
      do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
      změna se zapíše do auditu.
