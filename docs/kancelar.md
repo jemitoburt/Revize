@@ -83,6 +83,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
 9. **Kontroly:**
    - Přehled otevřených a uzavřených kontrol s postupem a počtem závad. Řádek otevře detail
      s výsledky všech artiklů (filtry Závady a Nezkontrolované).
+   - **Klepnutím na řádek** se otevře artikl: jde opravit výsledek (výsledek, popis závady,
+     zahrnutí do protokolu), prohlížet, přidávat a mazat fotky a přesouvat je mezi _Fotky
+     závady_ (tisknou se do protokolu) a _Fotky artiklu_ (štítek, celkový pohled – netisknou
+     se), a upravit artikl (označení, pole, umístění). Výsledek a fotky jdou měnit jen
+     u otevřené kontroly, oprava se zapíše jako nový výsledek a do auditu.
    - Ve sloupci **Fotky** je u závady s fotkami zaškrtávátko **do protokolu**: vypnuté fotky se
      do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
      změna se zapíše do auditu.
@@ -118,6 +123,7 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      - _Výsledky – Excel_: list se souhrnem a list pro každý typ vybavení s jeho poli.
      - _Výsledky – CSV_: jedna tabulka, otevře se rovnou v českém Excelu.
      - _Fotky (ZIP s popisy)_: fotky závad pojmenované podle čísla artiklu (`10001_01.jpg`),
+       fotky artiklů (`10001_artikl_01.jpg`),
        fotky kontroly (`kontrola_01.jpg`) a seznam `fotky.csv`. Popis (artikl, umístění,
        závada, technik) je zapsaný přímo ve fotce (EXIF/IPTC), takže ho ukáže i prohlížeč fotek.
        V ukázce na GitHub Pages fotky popis nemají.

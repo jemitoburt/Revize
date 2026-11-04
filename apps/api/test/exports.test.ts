@@ -84,11 +84,14 @@ async function inspection() {
       payload: form,
     });
     expect(res.statusCode).toBe(201);
+    return res.json<{ id: string }>().id;
   };
   await upload({ owner: 'result', itemId: items[1]!.id, inspectionId: id });
   await upload({ owner: 'result', itemId: items[1]!.id, inspectionId: id });
   await upload({ owner: 'inspection', inspectionId: id });
-  return { id, items };
+  // A photo of the item itself (nameplate), taken by mistake instead of a defect photo.
+  const nameplate = await upload({ owner: 'item', itemId: items[1]!.id });
+  return { id, items, nameplate };
 }
 
 describe('inspection exports', () => {
@@ -108,7 +111,8 @@ describe('inspection exports', () => {
     const defect = (sheet.getRow(3).values as unknown[]).slice(1);
     expect(defect[0]).toBe(items[1]!.itemNumber);
     expect(defect).toContain('Závada – žlutá');
-    expect(defect).toContain(`${items[1]!.itemNumber}_01.jpg, ${items[1]!.itemNumber}_02.jpg`);
+    const n = items[1]!.itemNumber;
+    expect(defect).toContain(`${n}_01.jpg, ${n}_02.jpg, ${n}_artikl_01.jpg`);
     expect(sheet.rowCount).toBe(1 + items.length);
 
     const csv = await api('GET', `/api/inspections/${id}/export.csv`);
@@ -130,9 +134,17 @@ describe('inspection exports', () => {
     expect(res.headers['content-type']).toBe('application/zip');
     const zip = unzipSync(new Uint8Array(res.rawPayload));
     const number = items[1]!.itemNumber;
+    // Item photos (nameplate, overview) go in too, named apart from the defect photos.
     expect(Object.keys(zip).sort()).toEqual(
-      [`${number}_01.jpg`, `${number}_02.jpg`, 'fotky.csv', 'kontrola_01.jpg'].sort(),
+      [
+        `${number}_01.jpg`,
+        `${number}_02.jpg`,
+        `${number}_artikl_01.jpg`,
+        'fotky.csv',
+        'kontrola_01.jpg',
+      ].sort(),
     );
+    expect(strFromU8(zip['fotky.csv']!)).toContain(`${number}_artikl_01.jpg;`);
     expect(strFromU8(zip['fotky.csv']!)).toContain(`${number}_02.jpg;${number};Ž-02;Žebřík;`);
 
     const dir = await mkdtemp(join(tmpdir(), 'revize-test-'));
@@ -152,6 +164,32 @@ describe('inspection exports', () => {
       await rm(dir, { recursive: true, force: true });
     }
   }, 60_000);
+
+  it('moves a photo between the item and its defect (office)', async () => {
+    const { id, items, nameplate } = await inspection();
+    const moved = await api('PUT', `/api/photos/${nameplate}/owner`, {
+      owner: 'result',
+      inspectionId: id,
+    });
+    expect(moved.statusCode, moved.body).toBe(200);
+    expect(moved.json()).toMatchObject({ owner: 'result', itemId: items[1]!.id, inspectionId: id });
+    let zip = unzipSync(
+      new Uint8Array((await api('GET', `/api/inspections/${id}/photos.zip`)).rawPayload),
+    );
+    expect(Object.keys(zip)).toContain(`${items[1]!.itemNumber}_03.jpg`);
+    const back = await api('PUT', `/api/photos/${nameplate}/owner`, { owner: 'item' });
+    expect(back.json()).toMatchObject({ owner: 'item', itemId: items[1]!.id });
+    // The OK item has a result too; a defect-less item without a result cannot get one.
+    const noResult = await api('PUT', `/api/photos/${nameplate}/owner`, {
+      owner: 'result',
+      inspectionId: newId(),
+    });
+    expect(noResult.statusCode).toBe(404);
+    zip = unzipSync(
+      new Uint8Array((await api('GET', `/api/inspections/${id}/photos.zip`)).rawPayload),
+    );
+    expect(Object.keys(zip)).toContain(`${items[1]!.itemNumber}_artikl_01.jpg`);
+  });
 
   it('exports the whole database as CSV and XLSX with the last inspection result', async () => {
     const { items } = await inspection();

@@ -3,6 +3,7 @@ import {
   apiErrorSchema,
   idSchema,
   listPhotosQuerySchema,
+  movePhotoSchema,
   photoSchema,
   uploadPhotoFieldsSchema,
 } from '@revize/shared';
@@ -103,6 +104,20 @@ export const photosRoutes: FastifyPluginAsyncZod<{ photos: PhotosService }> = as
     );
   }
 
+  app.put(
+    '/photos/:id/owner',
+    {
+      preHandler: perform,
+      schema: {
+        tags,
+        summary: 'Přesunout fotku mezi artiklem a závadou v kontrole',
+        params,
+        body: movePhotoSchema,
+        response: { 200: photoSchema, ...errors },
+      },
+    },
+    (req) => photos.move(authOf(req), req.params.id, req.body),
+  );
   app.delete(
     '/photos/:id',
     {

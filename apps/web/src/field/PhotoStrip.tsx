@@ -94,6 +94,8 @@ export interface PhotoStripProps {
   onAdd: () => void;
   onDelete: (photo: Photo) => void;
   onDeleteLocal?: (photo: LocalPhoto) => void;
+  /** Another action on an uploaded photo in the full view (office: move it). */
+  photoAction?: { label: string; onClick: (photo: Photo) => void };
 }
 
 /** Thumbnails with "add" and a full-size view that can delete the photo. */
@@ -107,6 +109,7 @@ export function PhotoStrip({
   onAdd,
   onDelete,
   onDeleteLocal,
+  photoAction,
 }: PhotoStripProps) {
   const [open, setOpen] = useState<{ server: Photo } | { local: LocalPhoto } | null>(null);
   const count = photos.length + local.length;
@@ -164,6 +167,18 @@ export function PhotoStrip({
                     ? 'Uložená v zařízení, odešle se po uložení výsledku.'
                     : 'Uložená v zařízení, čeká na odeslání.'}
                 </Text>
+              )}
+              {'server' in open && photoAction && (
+                <Button
+                  variant="light"
+                  disabled={disabled}
+                  onClick={() => {
+                    photoAction.onClick(open.server);
+                    setOpen(null);
+                  }}
+                >
+                  {photoAction.label}
+                </Button>
               )}
               <ActionIcon
                 ml="auto"

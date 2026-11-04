@@ -279,6 +279,12 @@ export const useCreateItem = () =>
     (body: In<typeof createItemSchema>) => api.post<Item>('/items', body),
     [['items'], ['customers'], ['sites'], ['locations'], ['equipment-types']],
   );
+export const useItem = (id: string | null) =>
+  useQuery<Item, ApiRequestError>({
+    queryKey: ['items', 'one', id],
+    queryFn: () => api.get(`/items/${id}`),
+    enabled: id !== null,
+  });
 export const useUpdateItem = () =>
   useApiMutation(
     ({ id, ...body }: In<typeof updateItemSchema> & { id: string }) =>
@@ -349,6 +355,25 @@ export const useInspectionItems = (id: string) =>
         await localDb.outbox.toArray(),
       ),
   });
+/**
+ * Office: correct a result (outcome, description, protocol flags). Online like other office
+ * edits, recorded now, so it wins over the technician's earlier result (ADR-0004).
+ */
+export const useOfficeRecordResult = (inspectionId: string) =>
+  useApiMutation(
+    ({ itemId, body }: { itemId: string; body: RecordResultInput }) =>
+      api.put<InspectionResult>(`/inspections/${inspectionId}/results/${itemId}`, body),
+    [['inspection-items', inspectionId], ['inspections'], ['protocol', inspectionId]],
+  );
+
+/** Office: move a photo between the item and its defect in this inspection. */
+export const useMovePhoto = (inspectionId: string) =>
+  useApiMutation(
+    ({ id, owner }: { id: string; owner: 'item' | 'result' }) =>
+      api.put<Photo>(`/photos/${id}/owner`, { owner, inspectionId }),
+    [['photos'], ['inspection-items', inspectionId], ['protocol', inspectionId]],
+  );
+
 /**
  * Office: print a defect's photos in the protocol or not. Online like other office edits; the
  * checkbox changes at once and goes back when the server refuses.

@@ -202,6 +202,59 @@ export function createPhotosService(db: Db, files: FileStorage, images: ImagePro
     },
 
     /** Item photos can always be deleted; photos of an inspection only while it is open. */
+    /** Moves a photo between its item and the item's result in an open inspection (audited). */
+    async move(
+      auth: AuthContext,
+      id: string,
+      target: { owner: 'item' | 'result'; inspectionId?: string },
+    ): Promise<Photo> {
+      return db.transaction(async (tx) => {
+        const found = await getJoined(tx, auth, id);
+        const itemId = found.photo.itemId ?? found.resultItemId;
+        if (!itemId)
+          throw conflict('photo_not_movable', 'Celkovou fotku kontroly nelze přesunout.');
+        // A photo of a closed inspection stays where it is.
+        if (found.resultInspectionId) {
+          const row = await lockInspection(tx, auth, found.resultInspectionId);
+          if (row.status === 'closed') throw inspectionClosed();
+        }
+        let values: Pick<PhotoRow, 'itemId' | 'inspectionResultId'>;
+        if (target.owner === 'item') {
+          values = { itemId, inspectionResultId: null };
+        } else {
+          if (!target.inspectionId) {
+            throw new AppError(400, 'inspection_required', 'Chybí kontrola, ke které fotka patří.');
+          }
+          const row = await lockInspection(tx, auth, target.inspectionId);
+          if (row.status === 'closed') throw inspectionClosed();
+          const [result] = await tx
+            .select({ id: inspectionResult.id })
+            .from(inspectionResult)
+            .where(
+              and(
+                eq(inspectionResult.inspectionId, target.inspectionId),
+                eq(inspectionResult.itemId, itemId),
+              ),
+            );
+          if (!result) {
+            throw conflict('result_missing', 'Artikl v této kontrole nemá výsledek.');
+          }
+          values = { itemId: null, inspectionResultId: result.id };
+        }
+        const [moved] = await tx.update(photo).set(values).where(eq(photo.id, id)).returning();
+        await recordAudit(tx, {
+          organizationId: auth.organizationId,
+          actorUserId: auth.userId,
+          action: 'photo.move',
+          entityType: 'photo',
+          entityId: id,
+          before: found.photo,
+          after: moved,
+        });
+        return toDto(await getJoined(tx, auth, id));
+      });
+    },
+
     async delete(auth: AuthContext, id: string): Promise<void> {
       const deleted = await db.transaction(async (tx) => {
         const found = await getJoined(tx, auth, id);

@@ -35,6 +35,7 @@ import {
   useSetPhotosInProtocol,
 } from '../api/hooks.js';
 import { ExportMenu } from '../components/ExportMenu.js';
+import { InspectionItemDrawer } from '../components/InspectionItemDrawer.js';
 import { AnchorLink, ButtonLink } from '../components/links.js';
 import { ProtocolPreview } from '../components/ProtocolPreview.js';
 import { formatDate, formatDateTime } from '../lib/format.js';
@@ -179,6 +180,8 @@ export function InspectionDetailPage() {
     [types.data],
   );
   const photosInProtocol = useSetPhotosInProtocol(inspectionId);
+  const [openItemId, setOpenItemId] = useState<string | null>(null);
+  const typeById = useMemo(() => new Map((types.data ?? []).map((t) => [t.id, t])), [types.data]);
 
   if (inspection.isPending || items.isPending) return <Loader />;
   if (inspection.error) return <Alert color="red">{inspection.error.message}</Alert>;
@@ -292,7 +295,12 @@ export function InspectionDetailPage() {
         </Table.Thead>
         <Table.Tbody>
           {rows.map((i) => (
-            <Table.Tr key={i.id}>
+            <Table.Tr
+              key={i.id}
+              style={{ cursor: 'pointer' }}
+              onClick={() => setOpenItemId(i.id)}
+              data-testid={`result-row-${i.itemNumber}`}
+            >
               <Table.Td ff="monospace" fw={700}>
                 {i.itemNumber}
               </Table.Td>
@@ -333,6 +341,7 @@ export function InspectionDetailPage() {
                 {(i.result?.photoCount ?? 0) + i.itemPhotoCount || ''}
                 {i.result?.outcome === 'defect' && i.result.photoCount > 0 && (
                   <Checkbox
+                    onClick={(e) => e.stopPropagation()}
                     mt={4}
                     size="xs"
                     label="do protokolu"
@@ -353,6 +362,15 @@ export function InspectionDetailPage() {
         </Table.Tbody>
       </Table>
 
+      <InspectionItemDrawer
+        inspectionId={inspectionId}
+        item={(items.data ?? []).find((i) => i.id === openItemId) ?? null}
+        type={typeById.get(
+          (items.data ?? []).find((i) => i.id === openItemId)?.equipmentTypeId ?? '',
+        )}
+        editable={open && can('inspection.perform')}
+        onClose={() => setOpenItemId(null)}
+      />
       <Modal opened={dialog === 'close'} onClose={() => setDialog(null)} title="Uzavřít kontrolu">
         <CloseForm
           inspectionId={inspectionId}

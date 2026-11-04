@@ -57,6 +57,26 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await photosInProtocol.click();
   await expect(photosInProtocol).not.toBeChecked();
 
+  // A row opens the item: correct the defect, move its photo to the item and back, and give
+  // the item a designation.
+  await page.getByTestId('result-row-30002').getByText('Ohnutá štěřina').click();
+  const drawer = page.getByRole('dialog').filter({ hasText: 'Výsledek kontroly' });
+  await drawer.getByLabel('Popis závady').fill('Ohnutá štěřina, prasklý svar');
+  await drawer.getByRole('button', { name: 'Uložit výsledek' }).click();
+  await expect(page.getByTestId('inspection-results')).toContainText('prasklý svar');
+  await expect(drawer.getByText('Fotky závady (1)')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Zobrazit fotku' }).first().click();
+  await page.getByRole('button', { name: 'Přesunout k artiklu' }).click();
+  await expect(drawer.getByText('Fotky artiklu (1)')).toBeVisible();
+  await drawer.getByRole('button', { name: 'Zobrazit fotku' }).first().click();
+  await page.getByRole('button', { name: 'Přesunout k závadě' }).click();
+  await expect(drawer.getByText('Fotky závady (1)')).toBeVisible();
+  await drawer.getByLabel('Označení', { exact: true }).fill('Ž-K2');
+  await drawer.getByRole('button', { name: 'Uložit', exact: true }).click();
+  await expect(page.getByTestId('result-row-30002')).toContainText('Ž-K2');
+  await page.keyboard.press('Escape');
+  await expect(drawer).toBeHidden();
+
   // Preview: the draft protocol with the company header.
   await page.getByRole('button', { name: 'Protokol' }).click();
   const preview = page.frameLocator('iframe[title="Náhled protokolu"]');

@@ -154,6 +154,16 @@ export const recordResultSchema = z
   });
 export type RecordResultInput = z.input<typeof recordResultSchema>;
 
+/**
+ * `PUT /photos/:id/owner` (office): move a photo between the item (nameplate, overview) and the
+ * defect of the item in an inspection.
+ */
+export const movePhotoSchema = z.object({
+  owner: z.enum(['item', 'result']),
+  /** The inspection whose result gets the photo (owner `result`). */
+  inspectionId: idSchema.optional(),
+});
+
 /** `PUT /inspections/:id/results/:itemId/photos-in-protocol` (office): print the photos or not. */
 export const photosInProtocolSchema = z.object({ photosInProtocol: z.boolean() });
 

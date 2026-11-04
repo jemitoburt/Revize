@@ -45,8 +45,10 @@ interface ExportPhoto {
   mimeType: string;
   takenAt: Date | null;
   author: string | null;
-  /** The item for defect photos, null for photos of the inspection as a whole. */
+  /** The item for defect and item photos, null for photos of the inspection as a whole. */
   item: InspectionItem | null;
+  /** Item photos (nameplate, overview) are not about the defect. */
+  itemPhoto?: boolean;
 }
 
 /** Filters of the database export (empty = everything). */
@@ -92,6 +94,7 @@ export function createExportsService(
         itemId: inspectionResult.itemId,
         resultInspectionId: inspectionResult.inspectionId,
         inspectionId: photo.inspectionId,
+        ownItemId: photo.itemId,
         storageKey: photo.storageKey,
         mimeType: photo.mimeType,
         takenAt: photo.takenAt,
@@ -103,7 +106,17 @@ export function createExportsService(
       .where(
         and(
           eq(photo.organizationId, auth.organizationId),
-          or(eq(photo.inspectionId, inspectionId), eq(inspectionResult.inspectionId, inspectionId)),
+          or(
+            eq(photo.inspectionId, inspectionId),
+            eq(inspectionResult.inspectionId, inspectionId),
+            // Photos of the items themselves (nameplate, overview) go into the ZIP too.
+            items.length
+              ? inArray(
+                  photo.itemId,
+                  items.map((i) => i.id),
+                )
+              : undefined,
+          ),
         ),
       )
       .orderBy(asc(photo.createdAt), asc(photo.id));
@@ -119,6 +132,15 @@ export function createExportsService(
       for (const p of rows) {
         if (p.resultInspectionId !== inspectionId || p.itemId !== item.id) continue;
         photos.push({ ...p, fileName: nameOf(item.itemNumber, p.mimeType), item });
+      }
+      for (const p of rows) {
+        if (p.ownItemId !== item.id) continue;
+        photos.push({
+          ...p,
+          fileName: nameOf(`${item.itemNumber}_artikl`, p.mimeType),
+          item,
+          itemPhoto: true,
+        });
       }
     }
     for (const p of rows) {
@@ -362,9 +384,13 @@ export function createExportsService(
       const riskLevels = (item: InspectionItem) =>
         types.find((t) => t.id === item.equipmentTypeId)?.riskLevels ?? true;
       const describe = (p: ExportPhoto) =>
-        p.item
-          ? photoCaption(p.item, typeName(p.item), riskLevels(p.item))
-          : `Kontrola ${inspection.siteName}, ${formatDate(inspection.inspectionDate)}`;
+        p.item && p.itemPhoto
+          ? [`Fotka artiklu – číslo TZ ${p.item.itemNumber}`, p.item.designation, typeName(p.item)]
+              .filter(Boolean)
+              .join(' – ')
+          : p.item
+            ? photoCaption(p.item, typeName(p.item), riskLevels(p.item))
+            : `Kontrola ${inspection.siteName}, ${formatDate(inspection.inspectionDate)}`;
 
       const photoList = () =>
         toCsv([

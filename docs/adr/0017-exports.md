@@ -20,7 +20,8 @@ soubor oddělí od protokolu.
   - **CSV:** jedna tabulka se sjednocenými poli všech typů. Je pro český Excel: UTF-8 s BOM,
     středník, desetinná čárka, CRLF.
 - **ZIP fotek:**
-  - Fotky závad se jmenují `<číslo artiklu>_01.jpg` a fotky kontroly `kontrola_01.jpg`.
+  - Fotky závad se jmenují `<číslo artiklu>_01.jpg`, fotky artiklů kontrolovaných v kontrole
+    (štítek, celkový pohled) `<číslo artiklu>_artikl_01.jpg` a fotky kontroly `kontrola_01.jpg`.
   - V ZIP je i `fotky.csv` se seznamem a popisy.
   - Do každé JPEG fotky se zapíše EXIF, IPTC (UTF-8) i XMP: název (číslo artiklu), popis
     (artikl, typ, umístění, úroveň rizika, závada), klíčová slova, autor (technik), copyright
