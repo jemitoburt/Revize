@@ -35,6 +35,7 @@ import { itemsRoute, type ItemsSearch } from '../router.js';
 import { DateField } from '../components/DateField.js';
 import { DatabaseExportMenu } from '../components/DatabaseExportMenu.js';
 import { ItemHistory } from '../components/ItemHistory.js';
+import { PrevNext } from '../components/PrevNext.js';
 
 const PAGE_SIZE = 100;
 
@@ -432,7 +433,20 @@ export function ItemsPage() {
         onClose={drawer.close}
         position="right"
         size="xl"
-        title={editing ? `Artikl ${editing.itemNumber}` : 'Nový artikl'}
+        title={
+          editing ? (
+            <Group gap="md" wrap="nowrap">
+              <span>Artikl {editing.itemNumber}</span>
+              <PrevNext
+                index={rows.findIndex((r) => r.id === editing.id)}
+                total={rows.length}
+                onMove={(index) => openItem(rows[index]!)}
+              />
+            </Group>
+          ) : (
+            'Nový artikl'
+          )
+        }
       >
         <ItemForm
           key={`${editing?.id ?? 'new'}-${formSession}`}

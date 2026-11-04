@@ -91,6 +91,14 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await drawer.getByLabel('Označení', { exact: true }).fill('Ž-K2');
   await drawer.getByRole('button', { name: 'Uložit', exact: true }).click();
   await expect(page.getByTestId('result-row-30002')).toContainText('Ž-K2');
+  // Going through the rows with the arrows.
+  const position = page.getByTestId('item-position');
+  const at = await position.textContent();
+  await page.getByRole('button', { name: 'Předchozí artikl' }).click();
+  await expect(position).not.toHaveText(at!);
+  await page.getByRole('button', { name: 'Další artikl' }).click();
+  await expect(position).toHaveText(at!);
+  await expect(drawer.getByLabel('Označení', { exact: true })).toHaveValue('Ž-K2');
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
 

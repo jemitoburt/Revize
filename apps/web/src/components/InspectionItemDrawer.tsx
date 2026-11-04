@@ -40,6 +40,7 @@ import { notifyError, notifySaved } from '../lib/notify.js';
 import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { ItemForm } from './ItemForm.js';
 import { ItemHistory } from './ItemHistory.js';
+import { PrevNext, type PrevNextProps } from './PrevNext.js';
 
 /** Result as chosen in the office: OK or a defect level (fit / unfit types: only red). */
 type Choice = 'ok' | Severity;
@@ -50,6 +51,8 @@ export interface InspectionItemDrawerProps {
   type: EquipmentType | undefined;
   /** The inspection is open: result and photos can be changed. */
   editable: boolean;
+  /** Going through the rows of the table (its order and filter). */
+  position?: PrevNextProps;
   onClose: () => void;
 }
 
@@ -72,6 +75,7 @@ export function InspectionItemDrawer(props: InspectionItemDrawerProps) {
             </Title>
             {props.item.designation && <Title order={4}>{props.item.designation}</Title>}
             <Text c="dimmed">{props.type?.name}</Text>
+            {props.position && <PrevNext {...props.position} />}
           </Group>
         )
       }

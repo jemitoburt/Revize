@@ -391,6 +391,11 @@ export function InspectionDetailPage() {
           (items.data ?? []).find((i) => i.id === openItemId)?.equipmentTypeId ?? '',
         )}
         editable={open && can('inspection.perform')}
+        position={{
+          index: rows.findIndex((r) => r.id === openItemId),
+          total: rows.length,
+          onMove: (index) => setOpenItemId(rows[index]!.id),
+        }}
         onClose={() => setOpenItemId(null)}
       />
       <Modal opened={dialog === 'close'} onClose={() => setDialog(null)} title="Uzavřít kontrolu">

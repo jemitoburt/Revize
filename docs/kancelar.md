@@ -41,6 +41,9 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      kontrola → Nezkontrolované v poslední kontrole_ (artikl existoval při poslední uzavřené
      kontrole své provozovny, která zahrnovala jeho typ, ale nemá v ní výsledek). Filtry platí
      i pro Export evidence.
+   - V detailu artiklu (v Artiklech i v detailu kontroly) jsou nahoře šipky **Předchozí / Další**
+     s pořadím („3 / 9“): procházejí artikly v pořadí a s filtry seznamu. Neuložené změny ve
+     formuláři se přechodem zahodí.
    - **Historie kontrol** v detailu artiklu (i v detailu kontroly): každá kontrola provozovny,
      která artikl zahrnovala, s výsledkem, závadou, kdo zapsal a počtem fotek, nebo
      „Nezkontrolován“. Datum otevře kontrolu.
