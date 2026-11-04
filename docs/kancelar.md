@@ -96,7 +96,7 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
      změna se zapíše do auditu.
    - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
-     dvěma stranami na list (A4 na šířku) a Word (DOCX, dá se dál upravovat). Dokud kontrola
+     dvěma stranami na list (A4 na šířku; Příloha 1 na šířku dostane celý list sama) a Word (DOCX, dá se dál upravovat). Dokud kontrola
      není uzavřená, je protokol označený jako předběžný.
    - **Rozvržení protokolu** se volí samo, aby měl protokol co nejméně stran:
      - Když se tabulka vybavení vejde na první stranu, je v protokolu. Když ne, protokol na ni

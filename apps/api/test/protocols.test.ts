@@ -364,6 +364,18 @@ describe('organization settings and protocol', () => {
     const { width, height } = sheets.getPage(0).getSize();
     expect(Math.round(width)).toBe(842);
     expect(Math.round(height)).toBe(595);
+    // With Příloha 1: the landscape table keeps a whole sheet, the portrait pages are paired.
+    const single = await PDFDocument.load(
+      (await api('GET', `/api/inspections/${id}/protocol.pdf?appendix=always`)).rawPayload,
+    );
+    const landscape = single.getPages().filter((p) => p.getWidth() > p.getHeight()).length;
+    expect(landscape).toBeGreaterThan(0);
+    const portrait = single.getPageCount() - landscape;
+    const imposed = await PDFDocument.load(
+      (await api('GET', `/api/inspections/${id}/protocol.pdf?appendix=always&layout=two-up`))
+        .rawPayload,
+    );
+    expect(imposed.getPageCount()).toBe(Math.ceil(portrait / 2) + landscape);
 
     // Word: a DOCX (ZIP) with the texts, the table and the photo.
     const docx = await api('GET', `/api/inspections/${id}/protocol.docx`);
