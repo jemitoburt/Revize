@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { strFromU8, unzipSync } from 'fflate';
 import { createData, login } from './field/helpers.js';
 
 test('office: company settings, inspection overview, protocol PDF, close and reopen', async ({
@@ -56,6 +57,18 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(photosInProtocol).toBeChecked();
   await photosInProtocol.click();
   await expect(photosInProtocol).not.toBeChecked();
+
+  // The Export menu says how many photos the ZIP will contain.
+  await page.getByRole('button', { name: 'Export' }).click();
+  await expect(page.getByTestId('zip-count')).toHaveText('1 fotek');
+  // Downloaded through the browser like a user does, the ZIP has the photo and its list.
+  const zipDownload = page.waitForEvent('download');
+  await page.getByRole('menuitem', { name: /Fotky \(ZIP/ }).click();
+  const zipPath = await (await zipDownload).path();
+  const zip = unzipSync(new Uint8Array(readFileSync(zipPath)));
+  expect(Object.keys(zip).sort()).toEqual(['30002_01.jpg', 'fotky.csv']);
+  expect(zip['30002_01.jpg']!.length).toBeGreaterThan(1000);
+  expect(strFromU8(zip['fotky.csv']!)).toContain('30002_01.jpg;30002;');
 
   // A row opens the item: correct the defect, move its photo to the item and back, and give
   // the item a designation.

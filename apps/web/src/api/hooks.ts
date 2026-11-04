@@ -286,6 +286,13 @@ export const useClosePreview = (inspectionId: string) =>
     queryKey: ['close-preview', inspectionId],
     queryFn: () => api.get(`/inspections/${inspectionId}/close-preview`),
   });
+export const usePhotosList = (inspectionId: string, enabled: boolean) =>
+  useQuery<{ files: { fileName: string; exists: boolean }[] }, ApiRequestError>({
+    queryKey: ['photos-list', inspectionId],
+    queryFn: () => api.get(`/inspections/${inspectionId}/photos-list`),
+    enabled,
+    staleTime: 0,
+  });
 export const useServerStatus = () =>
   useQuery<ServerStatus, ApiRequestError>({
     queryKey: ['server-status'],

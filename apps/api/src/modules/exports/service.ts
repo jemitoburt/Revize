@@ -373,11 +373,28 @@ export function createExportsService(
      * `kontrola_01.jpg` for the inspection, metadata written into each photo, and
      * `fotky.csv` with the same descriptions. Photos are stored, not compressed (JPEG).
      */
+    /** What the photo ZIP will contain (shown in the Export menu, for checking). */
+    async photosList(
+      auth: AuthContext,
+      inspectionId: string,
+    ): Promise<{ files: { fileName: string; exists: boolean }[] }> {
+      const { photos } = await load(auth, inspectionId);
+      return {
+        files: await Promise.all(
+          photos.map(async (p) => ({
+            fileName: p.fileName,
+            exists: await files.exists(p.storageKey),
+          })),
+        ),
+      };
+    },
+
     async photosZip(
       auth: AuthContext,
       inspectionId: string,
     ): Promise<ExportFile<ReadableStream<Uint8Array>>> {
       const { inspection, types, photos } = await load(auth, inspectionId);
+      console.info(`photos.zip: inspection ${inspectionId}: ${photos.length} photos`);
       const org = await organizationOf(db, auth);
       const typeName = (item: InspectionItem) =>
         types.find((t) => t.id === item.equipmentTypeId)?.name ?? '';
@@ -442,48 +459,53 @@ export function createExportsService(
           });
         },
         async pull() {
-          const p = photos[next++];
-          if (!p) {
-            if (next === photos.length + 1) {
-              add(zip, 'fotky.csv', strToU8(photoList()));
-              zip.end();
+          // Each pull adds one entry (or ends the archive): a pull that adds nothing would leave
+          // the download waiting, so a skipped photo goes straight on to the next one.
+          for (;;) {
+            const p = photos[next++];
+            if (!p) {
+              if (next === photos.length + 1) {
+                add(zip, 'fotky.csv', strToU8(photoList()));
+                zip.end();
+              }
+              return;
             }
+            if (!(await files.exists(p.storageKey))) {
+              console.warn(`photos.zip: photo file missing in storage: ${p.storageKey}`);
+              missing.add(p.fileName);
+              continue;
+            }
+            let original: Uint8Array;
+            try {
+              original = await files.read(p.storageKey);
+            } catch (error) {
+              console.warn(`photos.zip: cannot read ${p.storageKey}`, error);
+              missing.add(p.fileName);
+              continue;
+            }
+            // The metadata are a bonus: if ExifTool fails, the photo goes in as it is, so one
+            // photo never breaks the whole archive.
+            let bytes = original;
+            try {
+              bytes = await metadata.write(original, p.mimeType, {
+                title: p.item ? p.item.itemNumber : `Kontrola ${inspection.siteName}`,
+                description: describe(p),
+                keywords: [
+                  ...(p.item ? [p.item.itemNumber, typeName(p.item)] : []),
+                  inspection.customerName,
+                  inspection.siteName,
+                ].filter(Boolean),
+                author: p.author,
+                copyright: org.name,
+                location: p.item ? p.item.locationPath.join(LOCATION_SEPARATOR) : '',
+                takenAt: p.takenAt,
+              });
+            } catch (error) {
+              console.warn(`photos.zip: metadata not written for ${p.storageKey}`, error);
+            }
+            add(zip, p.fileName, bytes);
             return;
           }
-          if (!(await files.exists(p.storageKey))) {
-            console.warn(`photos.zip: photo file missing in storage: ${p.storageKey}`);
-            missing.add(p.fileName);
-            return;
-          }
-          let original: Uint8Array;
-          try {
-            original = await files.read(p.storageKey);
-          } catch (error) {
-            console.warn(`photos.zip: cannot read ${p.storageKey}`, error);
-            missing.add(p.fileName);
-            return;
-          }
-          // The metadata are a bonus: if ExifTool fails, the photo goes in as it is, so one
-          // photo never breaks the whole archive.
-          let bytes = original;
-          try {
-            bytes = await metadata.write(original, p.mimeType, {
-              title: p.item ? p.item.itemNumber : `Kontrola ${inspection.siteName}`,
-              description: describe(p),
-              keywords: [
-                ...(p.item ? [p.item.itemNumber, typeName(p.item)] : []),
-                inspection.customerName,
-                inspection.siteName,
-              ].filter(Boolean),
-              author: p.author,
-              copyright: org.name,
-              location: p.item ? p.item.locationPath.join(LOCATION_SEPARATOR) : '',
-              takenAt: p.takenAt,
-            });
-          } catch (error) {
-            console.warn(`photos.zip: metadata not written for ${p.storageKey}`, error);
-          }
-          add(zip, p.fileName, bytes);
         },
       });
       return {

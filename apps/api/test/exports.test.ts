@@ -133,6 +133,12 @@ describe('inspection exports', () => {
 
   it('exports photos as a ZIP named by item number, with EXIF/IPTC and a photo list', async () => {
     const { id, items } = await inspection();
+    // The Export menu shows what the ZIP will contain.
+    const list = (await api('GET', `/api/inspections/${id}/photos-list`)).json<{
+      files: { fileName: string; exists: boolean }[];
+    }>();
+    expect(list.files).toHaveLength(4);
+    expect(list.files.every((f) => f.exists)).toBe(true);
     const res = await api('GET', `/api/inspections/${id}/photos.zip`);
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('application/zip');

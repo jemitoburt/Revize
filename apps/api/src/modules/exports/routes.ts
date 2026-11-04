@@ -45,6 +45,23 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
   );
 
   app.get(
+    '/inspections/:id/photos-list',
+    {
+      preHandler: read,
+      schema: {
+        tags,
+        summary: 'Co bude v ZIP fotek (názvy souborů, zda soubor na serveru existuje)',
+        params,
+        response: {
+          200: z.object({
+            files: z.array(z.object({ fileName: z.string(), exists: z.boolean() })),
+          }),
+        },
+      },
+    },
+    (req) => exports.photosList(authOf(req), req.params.id),
+  );
+  app.get(
     '/inspections/:id/photos.zip',
     {
       preHandler: read,
