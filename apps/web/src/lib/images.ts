@@ -1,3 +1,5 @@
+import { rotatedSize, type CropRect, type Rotation } from './crop.js';
+
 export interface ResizedImage {
   blob: Blob;
   /** Size of the source image (after EXIF orientation). */
@@ -62,6 +64,43 @@ export async function coverJpeg(
       width,
       height,
     );
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', quality),
+    );
+    if (!blob) throw new Error('Fotku se nepodařilo zakódovat');
+    return blob;
+  } finally {
+    bitmap.close();
+  }
+}
+
+/**
+ * Turns the image by `rotation` (clockwise), cuts out `crop` (fractions of the turned image) and
+ * re-encodes it as JPEG with the longer side at most `maxSize` px. Used by the photo editor.
+ */
+export async function editToJpeg(
+  source: Blob,
+  edit: { rotation: Rotation; crop: CropRect },
+  maxSize: number,
+  quality: number,
+): Promise<Blob> {
+  const bitmap = await createImageBitmap(source);
+  try {
+    const turned = rotatedSize(bitmap.width, bitmap.height, edit.rotation);
+    const cropWidth = edit.crop.w * turned.width;
+    const cropHeight = edit.crop.h * turned.height;
+    const scale = Math.min(1, maxSize / Math.max(cropWidth, cropHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(cropWidth * scale));
+    canvas.height = Math.max(1, Math.round(cropHeight * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas 2D není k dispozici');
+    context.imageSmoothingQuality = 'high';
+    context.scale(scale, scale);
+    context.translate(-edit.crop.x * turned.width, -edit.crop.y * turned.height);
+    context.translate(turned.width / 2, turned.height / 2);
+    context.rotate((edit.rotation * Math.PI) / 180);
+    context.drawImage(bitmap, -bitmap.width / 2, -bitmap.height / 2);
     const blob = await new Promise<Blob | null>((resolve) =>
       canvas.toBlob(resolve, 'image/jpeg', quality),
     );

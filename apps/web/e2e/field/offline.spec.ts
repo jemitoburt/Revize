@@ -33,6 +33,10 @@ test('without a connection results and photos stay on the device, survive a relo
   const chooser = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
   await (await chooser).setFiles(PHOTO);
+  await page
+    .getByRole('dialog', { name: 'Upravit fotku' })
+    .getByRole('button', { name: 'Uložit fotku' })
+    .click();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
   await expect(page.getByTestId('progress')).toHaveText('2 / 3 zkontrolováno');

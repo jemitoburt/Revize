@@ -40,6 +40,7 @@ import { notifyError, notifySaved } from '../lib/notify.js';
 import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { cancelPhoto, saveDraftPhoto } from '../offline/outbox.js';
 import { PhotoStrip, useLocalPhotos } from './PhotoStrip.js';
+import { usePhotoEditor } from './PhotoEditor.js';
 
 export interface ItemSheetProps {
   inspectionId: string;
@@ -102,6 +103,7 @@ function SheetBody({
   const upload = useUploadPhoto();
   const deletePhoto = useDeletePhoto();
   const photos = usePhotos({ itemId: item.id, inspectionId });
+  const photoEditor = usePhotoEditor();
   const current = item.result;
   // One result id per opened card: saving again (e.g. after a failed photo upload) repeats it.
   const resultId = useRef(current?.id ?? newId()).current;
@@ -178,10 +180,12 @@ function SheetBody({
   const addDefectPhoto = async () => {
     const file = await pickPhoto();
     if (!file) return;
+    const edit = await photoEditor.edit(file);
+    if (!edit) return;
     try {
       await saveDraftPhoto({
         id: newId(),
-        blob: await preparePhoto(file),
+        blob: await preparePhoto(file, edit),
         owner: 'result',
         itemId: item.id,
         inspectionId,
@@ -196,11 +200,13 @@ function SheetBody({
   const addItemPhoto = async () => {
     const file = await pickPhoto();
     if (!file) return;
+    const edit = await photoEditor.edit(file);
+    if (!edit) return;
     setBusyItemPhoto(true);
     try {
       await upload.mutateAsync({
         id: newId(),
-        file: await preparePhoto(file),
+        file: await preparePhoto(file, edit),
         owner: 'item',
         itemId: item.id,
         takenAt: new Date().toISOString(),
@@ -219,6 +225,7 @@ function SheetBody({
 
   return (
     <Stack gap="md">
+      {photoEditor.editor}
       <Group gap="xs">
         <Text c="dimmed">
           {item.locationPath.length ? item.locationPath.join(LOCATION_SEPARATOR) : 'Bez umístění'}

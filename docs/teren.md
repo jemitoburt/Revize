@@ -60,6 +60,10 @@ techniků současně. Stačí v ní zapsat první výsledek.
   závada je v protokolu vždy.
 - **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Zůstávají
   u artiklu i pro další kontroly.
+- Hned po vyfocení se otevře **Upravit fotku**: tlačítky **Doleva** / **Doprava** fotku otočíte
+  o 90°, tažením rohů ji oříznete (tažením uprostřed výřez posunete), **Celá** výřez zruší.
+  **Uložit fotku** ji teprve uloží do zařízení, **Zahodit** ji zahodí. Úprava se provede
+  na původní fotce, kvalita se tím nesnižuje.
 - Fotku zobrazíte klepnutím na náhled. Tam ji jde i smazat.
 - **Zrušit výsledek** vrátí artikl mezi nezkontrolované. Nejdřív je potřeba smazat fotky
   závady.

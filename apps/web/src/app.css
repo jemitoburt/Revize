@@ -6,3 +6,13 @@
     max-width: 100%;
   }
 }
+
+/* Touch devices: iOS Safari zooms into inputs smaller than 16px when they get focus and, inside a
+   drawer with scroll lock, the page then stays zoomed. 16px inputs are never zoomed into. */
+@media (pointer: coarse) {
+  .mantine-Input-input,
+  .mantine-PillsInput-field,
+  .mantine-Textarea-input {
+    font-size: max(16px, 1em);
+  }
+}

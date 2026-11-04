@@ -1,4 +1,5 @@
-import { resizeToJpeg } from '../lib/images.js';
+import { FULL_CROP, isFullCrop, type CropRect, type Rotation } from '../lib/crop.js';
+import { editToJpeg, resizeToJpeg } from '../lib/images.js';
 
 /** Photos leave the device as JPEG with the longer side at most this size (ADR-0007). */
 const MAX_SIDE = 2048;
@@ -27,7 +28,21 @@ export function pickPhoto(): Promise<File | null> {
   });
 }
 
-/** Resizes and re-encodes a photo for upload; the original stays untouched on the device. */
-export async function preparePhoto(file: Blob): Promise<Blob> {
-  return (await resizeToJpeg(file, MAX_SIDE, QUALITY)).blob;
+/** Turn and cut-out chosen in the photo editor. */
+export interface PhotoEdit {
+  rotation: Rotation;
+  crop: CropRect;
+}
+
+export const NO_EDIT: PhotoEdit = { rotation: 0, crop: FULL_CROP };
+
+/**
+ * Resizes and re-encodes a photo for upload (after the technician's turn and cut-out, done on
+ * the original so the photo is encoded only once); the original stays untouched on the device.
+ */
+export async function preparePhoto(file: Blob, edit: PhotoEdit = NO_EDIT): Promise<Blob> {
+  if (edit.rotation === 0 && isFullCrop(edit.crop)) {
+    return (await resizeToJpeg(file, MAX_SIDE, QUALITY)).blob;
+  }
+  return editToJpeg(file, edit, MAX_SIDE, QUALITY);
 }

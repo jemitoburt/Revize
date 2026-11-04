@@ -57,6 +57,19 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   const chooser = page.waitForEvent('filechooser');
   await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
   await (await chooser).setFiles(PHOTO);
+  // Right after taking it: turn the photo and cut out a part.
+  const editor = page.getByRole('dialog', { name: 'Upravit fotku' });
+  await editor.getByRole('button', { name: 'Doprava' }).click();
+  await expect(editor.locator('img[data-rotation="90"]')).toBeVisible();
+  const corner = editor.getByLabel('Roh výřezu se');
+  const box = (await corner.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x - 40, box.y - 40, { steps: 4 });
+  await page.mouse.up();
+  await expect(editor.getByRole('button', { name: 'Celá' })).toBeEnabled();
+  await editor.getByRole('button', { name: 'Uložit fotku' }).click();
+  await expect(editor).toBeHidden();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Uložit závadu' }).click();
   await expect(sheet(page)).toBeHidden();
@@ -70,6 +83,19 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page).getByText('Zapsáno: Závada – žlutá')).toBeVisible();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await expect(sheet(page).getByRole('button', { name: 'Zobrazit fotku' })).toHaveCount(1);
+  // Turned (the test photo is landscape 1600 × 1200) and cropped on the device.
+  const inspectionId = page.url().split('/').pop()!;
+  const inspected = (await (
+    await page.request.get(`/api/inspections/${inspectionId}/items`)
+  ).json()) as { id: string; itemNumber: string }[];
+  const defectItem = inspected.find((i) => i.itemNumber === '10001')!;
+  const photos = (await (
+    await page.request.get(`/api/photos?inspectionId=${inspectionId}&itemId=${defectItem.id}`)
+  ).json()) as { owner: string; width: number; height: number }[];
+  const defectPhoto = photos.find((p) => p.owner === 'result')!;
+  expect(defectPhoto.height).toBeGreaterThan(defectPhoto.width);
+  expect(defectPhoto.width).toBeLessThan(1200);
+  expect(defectPhoto.height).toBeLessThan(1600);
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
   await expect(sheet(page)).toBeHidden();
 

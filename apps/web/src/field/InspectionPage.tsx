@@ -66,6 +66,7 @@ import { pickPhoto, preparePhoto } from '../platform/photos.js';
 import { listenForHardwareScanner, scanFeedback } from '../platform/scanner.js';
 import { ItemSheet } from './ItemSheet.js';
 import { NumberPad } from './NumberPad.js';
+import { usePhotoEditor } from './PhotoEditor.js';
 import { PhotoStrip, useLocalPhotos } from './PhotoStrip.js';
 import { ScannerOverlay } from './ScannerOverlay.js';
 
@@ -171,13 +172,16 @@ function InspectionPhotos({ inspectionId, readOnly }: { inspectionId: string; re
   const local = useLocalPhotos(usePendingPhotos({ owner: 'inspection', inspectionId }));
   const upload = useUploadPhoto();
   const remove = useDeletePhoto();
+  const photoEditor = usePhotoEditor();
   const add = async () => {
     const file = await pickPhoto();
     if (!file) return;
+    const edit = await photoEditor.edit(file);
+    if (!edit) return;
     try {
       await upload.mutateAsync({
         id: newId(),
-        file: await preparePhoto(file),
+        file: await preparePhoto(file, edit),
         owner: 'inspection',
         inspectionId,
         takenAt: new Date().toISOString(),
@@ -187,19 +191,23 @@ function InspectionPhotos({ inspectionId, readOnly }: { inspectionId: string; re
     }
   };
   return (
-    <PhotoStrip
-      title="Celkové fotky kontroly"
-      description="Hala, přístup, situace – nepatří k žádnému artiklu."
-      photos={photos.data ?? []}
-      local={local}
-      busy={upload.isPending}
-      disabled={readOnly}
-      onAdd={() => void add()}
-      onDeleteLocal={(p) => void cancelPhoto(p.id)}
-      onDelete={(p: Photo) => {
-        if (window.confirm('Smazat fotku?')) remove.mutate({ id: p.id }, { onError: notifyError });
-      }}
-    />
+    <>
+      {photoEditor.editor}
+      <PhotoStrip
+        title="Celkové fotky kontroly"
+        description="Hala, přístup, situace – nepatří k žádnému artiklu."
+        photos={photos.data ?? []}
+        local={local}
+        busy={upload.isPending}
+        disabled={readOnly}
+        onAdd={() => void add()}
+        onDeleteLocal={(p) => void cancelPhoto(p.id)}
+        onDelete={(p: Photo) => {
+          if (window.confirm('Smazat fotku?'))
+            remove.mutate({ id: p.id }, { onError: notifyError });
+        }}
+      />
+    </>
   );
 }
 
