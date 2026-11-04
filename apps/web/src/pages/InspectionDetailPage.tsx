@@ -1,4 +1,5 @@
 import {
+  ActionIcon,
   Alert,
   Badge,
   Button,
@@ -22,7 +23,7 @@ import {
   severityOf,
   type InspectionResult,
 } from '@revize/shared';
-import { IconFileText, IconLock, IconLockOpen } from '@tabler/icons-react';
+import { IconFileText, IconLock, IconLockOpen, IconPencil } from '@tabler/icons-react';
 import { useParams } from '@tanstack/react-router';
 import { useMemo, useState, type FormEvent } from 'react';
 import {
@@ -291,6 +292,7 @@ export function InspectionDetailPage() {
             <Table.Th>Závada</Table.Th>
             <Table.Th>Zapsal</Table.Th>
             <Table.Th>Fotky</Table.Th>
+            <Table.Th aria-label="Upravit" />
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -356,6 +358,11 @@ export function InspectionDetailPage() {
                     }
                   />
                 )}
+              </Table.Td>
+              <Table.Td>
+                <ActionIcon variant="subtle" aria-label={`Upravit ${i.itemNumber}`}>
+                  <IconPencil size={18} />
+                </ActionIcon>
               </Table.Td>
             </Table.Tr>
           ))}

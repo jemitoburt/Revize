@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { buildApp } from './app.js';
 import { bootstrap } from './bootstrap.js';
 import { loadConfig } from './config.js';
@@ -8,6 +9,15 @@ import { ExifToolMetadataWriter } from './infra/exiftool-metadata-writer.js';
 import { LocalDiskStorage } from './infra/local-disk-storage.js';
 import { SharpImageProcessor } from './infra/sharp-image-processor.js';
 import { checkPhotoFiles } from './infra/check-photo-files.js';
+
+// Build time of the image (apps/api/Dockerfile), shown in the office under Nastavení.
+try {
+  process.env.REVIZE_BUILT_AT = (
+    await readFile(new URL('./build-time.txt', import.meta.url), 'utf8')
+  ).trim();
+} catch {
+  // not built by the image (development)
+}
 
 const config = loadConfig();
 const database = createDatabase(config.DATABASE_URL, config.DATABASE_PASSWORD);

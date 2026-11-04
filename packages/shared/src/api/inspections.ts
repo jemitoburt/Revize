@@ -232,3 +232,19 @@ export const closeInspectionSchema = z.object({
 export const reopenInspectionSchema = z.object({
   reason: z.string().trim().min(3, 'Uveďte důvod znovuotevření').max(500),
 });
+
+/** `GET /server-status` (settings.manage): build time of the API and the state of the photo files. */
+export const serverStatusSchema = z.object({
+  /** When the running API was built (ISO), null when unknown (dev, demo). */
+  apiBuiltAt: z.string().nullable(),
+  photos: z.number().int(),
+  /** Photos known to the database whose file is not in the storage. */
+  missingFiles: z.number().int(),
+  /** Photos stored with the item (nameplate) / with a defect / with the inspection. */
+  byOwner: z.object({
+    item: z.number().int(),
+    result: z.number().int(),
+    inspection: z.number().int(),
+  }),
+});
+export type ServerStatus = z.infer<typeof serverStatusSchema>;

@@ -21,9 +21,11 @@ import {
   useLogoUrl,
   useOrganization,
   useUpdateOrganization,
+  useServerStatus,
   useUploadLogo,
 } from '../api/hooks.js';
 import { AnchorLink } from '../components/links.js';
+import { formatDateTime } from '../lib/format.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
 const FIELDS: { key: keyof OrganizationSettings; label: string; description?: string }[] = [
@@ -175,6 +177,47 @@ function SettingsForm({ organization }: { organization: Organization }) {
 }
 
 /** Company details, logo and texts of the protocol (permission settings.manage). */
+function ServerStatusPanel() {
+  const status = useServerStatus();
+  const webBuiltAt = import.meta.env.VITE_BUILT_AT as string | undefined;
+  return (
+    <Paper withBorder p="md">
+      <Stack gap={6}>
+        <Text fw={600}>Stav serveru</Text>
+        <Text size="sm">
+          Aplikace v prohlížeči sestavena: {webBuiltAt ? formatDateTime(webBuiltAt) : '–'}
+        </Text>
+        {status.isPending && <Loader size="sm" />}
+        {status.error && <Text c="red">{status.error.message}</Text>}
+        {status.data && (
+          <>
+            <Text size="sm">
+              Server (API) sestaven:{' '}
+              {status.data.apiBuiltAt ? formatDateTime(status.data.apiBuiltAt) : 'neznámo'}
+            </Text>
+            <Text size="sm">
+              Fotky v databázi: {status.data.photos} (u závad {status.data.byOwner.result}, u
+              artiklů {status.data.byOwner.item}, celkové fotky kontrol{' '}
+              {status.data.byOwner.inspection})
+            </Text>
+            {status.data.missingFiles > 0 ? (
+              <Alert color="red" title="Chybí soubory fotek">
+                {status.data.missingFiles} z {status.data.photos} fotek nemá na serveru soubor.
+                Úložiště souborů (svazek /data/files) se nejspíš při nasazení ztratilo nebo není
+                připojené – viz příručka provozu.
+              </Alert>
+            ) : (
+              <Text size="sm" c="teal">
+                Soubory všech fotek jsou na serveru.
+              </Text>
+            )}
+          </>
+        )}
+      </Stack>
+    </Paper>
+  );
+}
+
 export function SettingsPage() {
   const organization = useOrganization();
   if (organization.isPending) return <Loader />;
@@ -188,6 +231,7 @@ export function SettingsPage() {
       </Text>
       <Logo organization={organization.data} />
       <SettingsForm key={organization.data.updatedAt} organization={organization.data} />
+      <ServerStatusPanel />
     </Stack>
   );
 }

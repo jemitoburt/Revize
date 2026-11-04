@@ -147,6 +147,11 @@ scripts/smoke-test.sh https://<adresa> <admin-email> '<heslo>'
 
 ## Běžná správa
 
+- **Nastavení → Stav serveru** (administrátor) ukáže, kdy byla sestavena aplikace v prohlížeči
+  a server (API) – po nasazení tak poznáte, že běží nová verze – a kolik fotek v databázi nemá
+  soubor na disku. Chybějící soubory znamenají, že se svazek `files` (`/data/files`) při
+  nasazení ztratil nebo není připojený. Totéž API zapíše do logu hned po startu.
+
 | Úkol                                   | Příkaz                                                                                                                          |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
 | Stav služeb                            | `docker compose ps`                                                                                                             |

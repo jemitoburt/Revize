@@ -5,6 +5,7 @@ import {
   listPhotosQuerySchema,
   movePhotoSchema,
   photoSchema,
+  serverStatusSchema,
   uploadPhotoFieldsSchema,
 } from '@revize/shared';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
@@ -117,6 +118,18 @@ export const photosRoutes: FastifyPluginAsyncZod<{ photos: PhotosService }> = as
       },
     },
     (req) => photos.move(authOf(req), req.params.id, req.body),
+  );
+  app.get(
+    '/server-status',
+    {
+      preHandler: requirePermission('settings.manage'),
+      schema: {
+        tags: ['Provoz'],
+        summary: 'Verze API a stav souborů fotek (chybějící soubory)',
+        response: { 200: serverStatusSchema },
+      },
+    },
+    (req) => photos.status(authOf(req)),
   );
   app.delete(
     '/photos/:id',

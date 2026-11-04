@@ -21,6 +21,7 @@ export interface TestContext {
   app: App;
   database: Database;
   config: Config;
+  files: LocalDiskStorage;
   /** Empties all tables and creates the organization with the administrator again. */
   reset(options?: { seedDemo?: boolean }): Promise<void>;
   login(email: string, password: string): Promise<{ token: string; cookie: string }>;
@@ -37,10 +38,11 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
   });
   const database = createDatabase(config.DATABASE_URL);
   const filesDir = await mkdtemp(join(tmpdir(), 'revize-files-'));
+  const files = new LocalDiskStorage(filesDir);
   const app = await buildApp({
     config,
     db: database.db,
-    files: new LocalDiskStorage(filesDir),
+    files,
     images: new SharpImageProcessor(),
     pdf: new ChromiumPdfRenderer(),
     metadata: new ExifToolMetadataWriter(),
@@ -51,6 +53,7 @@ export async function createTestContext(env: Record<string, string> = {}): Promi
     app,
     database,
     config,
+    files,
     async reset(options = {}) {
       const { rows } = await database.pool.query<{ tablename: string }>(
         `select tablename from pg_tables where schemaname = 'public'`,

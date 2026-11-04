@@ -10,6 +10,7 @@ COPY tsconfig.base.json ./
 COPY packages/shared packages/shared
 COPY apps/api apps/api
 RUN pnpm --filter @revize/api build \
+ && date -u '+%Y-%m-%dT%H:%M:%SZ' > apps/api/dist/build-time.txt \
  && pnpm --filter @revize/api deploy --legacy --prod /out
 
 FROM node:22-alpine

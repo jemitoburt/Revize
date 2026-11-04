@@ -18,6 +18,7 @@ import type {
   Location,
   Organization,
   Photo,
+  ServerStatus,
   PhotoOwner,
   RecordResultInput,
   Site,
@@ -279,6 +280,11 @@ export const useCreateItem = () =>
     (body: In<typeof createItemSchema>) => api.post<Item>('/items', body),
     [['items'], ['customers'], ['sites'], ['locations'], ['equipment-types']],
   );
+export const useServerStatus = () =>
+  useQuery<ServerStatus, ApiRequestError>({
+    queryKey: ['server-status'],
+    queryFn: () => api.get('/server-status'),
+  });
 export const useItem = (id: string | null) =>
   useQuery<Item, ApiRequestError>({
     queryKey: ['items', 'one', id],

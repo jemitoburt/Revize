@@ -37,7 +37,11 @@ export default defineConfig(({ mode }) => {
     worker: { format: 'es' as const },
     server: { proxy },
     preview: { proxy },
-    define: { 'import.meta.env.VITE_DEMO': JSON.stringify(demo ? 'true' : 'false') },
+    define: {
+      'import.meta.env.VITE_DEMO': JSON.stringify(demo ? 'true' : 'false'),
+      // Shown under Nastavení → Stav serveru, to tell which version the browser runs.
+      'import.meta.env.VITE_BUILT_AT': JSON.stringify(new Date().toISOString()),
+    },
     resolve: demo
       ? {
           alias: [

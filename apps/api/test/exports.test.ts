@@ -7,6 +7,7 @@ import { exiftool } from 'exiftool-vendored';
 import { strFromU8, unzipSync } from 'fflate';
 import sharp from 'sharp';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { photo as photoTable } from '../src/db/schema.js';
 import { DEMO_INSPECTOR } from '../src/seed/demo.js';
 import { ADMIN, bearer, createTestContext, type TestContext } from './helpers.js';
 
@@ -164,6 +165,21 @@ describe('inspection exports', () => {
       await rm(dir, { recursive: true, force: true });
     }
   }, 60_000);
+
+  it('reports the photo files in Nastavení → Stav serveru', async () => {
+    await inspection();
+    const status = await api('GET', '/api/server-status');
+    expect(status.statusCode, status.body).toBe(200);
+    expect(status.json()).toMatchObject({
+      photos: 4,
+      missingFiles: 0,
+      byOwner: { item: 1, result: 2, inspection: 1 },
+    });
+    // A lost file is counted.
+    const [row] = await ctx.database.db.select().from(photoTable).limit(1);
+    await ctx.files.delete(row!.storageKey);
+    expect((await api('GET', '/api/server-status')).json()).toMatchObject({ missingFiles: 1 });
+  });
 
   it('moves a photo between the item and its defect (office)', async () => {
     const { id, items, nameplate } = await inspection();

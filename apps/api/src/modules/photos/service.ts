@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import {
   PHOTO_LIMITS,
   type Photo,
+  type ServerStatus,
   type listPhotosQuerySchema,
   type uploadPhotoFieldsSchema,
 } from '@revize/shared';
@@ -17,6 +18,11 @@ import { recordAudit } from '../audit/service.js';
 import { inspectionClosed, lockInspection } from '../inspections/service.js';
 
 type PhotoRow = typeof photo.$inferSelect;
+
+/** Set by main.ts from the file the API image writes at build time (Dockerfile). */
+function buildTime(): string | null {
+  return globalThis.process?.env?.REVIZE_BUILT_AT || null;
+}
 
 const EXTENSIONS: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -253,6 +259,30 @@ export function createPhotosService(db: Db, files: FileStorage, images: ImagePro
         });
         return toDto(await getJoined(tx, auth, id));
       });
+    },
+
+    /** Photos of the organization and how many of their files are missing in the storage. */
+    async status(auth: AuthContext): Promise<ServerStatus> {
+      const rows = await db
+        .select({
+          key: photo.storageKey,
+          itemId: photo.itemId,
+          resultId: photo.inspectionResultId,
+        })
+        .from(photo)
+        .where(eq(photo.organizationId, auth.organizationId));
+      let missingFiles = 0;
+      for (const row of rows) if (!(await files.exists(row.key))) missingFiles += 1;
+      return {
+        apiBuiltAt: buildTime(),
+        photos: rows.length,
+        missingFiles,
+        byOwner: {
+          item: rows.filter((r) => r.itemId).length,
+          result: rows.filter((r) => r.resultId).length,
+          inspection: rows.filter((r) => !r.itemId && !r.resultId).length,
+        },
+      };
     },
 
     async delete(auth: AuthContext, id: string): Promise<void> {
