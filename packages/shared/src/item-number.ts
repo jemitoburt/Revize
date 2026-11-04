@@ -48,6 +48,29 @@ export function designationOf(value: string | null | undefined): {
   return { designation, designationKey: key };
 }
 
+/**
+ * The letter parts of designations, most frequent first, for quick keys on the field number pad:
+ * ["Ž-01", "Ž-02", "NH01", "AG01", "01-ŽLS"] → ["Ž", "NH", "AG", "ŽLS"] (upper case; the case of
+ * a designation does not matter when it is found). At most `limit` keys.
+ */
+export function designationTokens(designations: readonly (string | null)[], limit = 12): string[] {
+  const counts = new Map<string, number>();
+  for (const designation of designations) {
+    if (!designation) continue;
+    const seen = new Set<string>();
+    for (const match of designation.matchAll(/\p{L}+/gu)) {
+      const token = match[0].toLocaleUpperCase('cs');
+      if (seen.has(token)) continue;
+      seen.add(token);
+      counts.set(token, (counts.get(token) ?? 0) + 1);
+    }
+  }
+  return [...counts]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'cs'))
+    .slice(0, limit)
+    .map(([token]) => token);
+}
+
 /** Numeric order of item numbers (so that "999" sorts before "1000"). */
 export function compareItemNumbers(a: string, b: string): number {
   return a.length - b.length || a.localeCompare(b);

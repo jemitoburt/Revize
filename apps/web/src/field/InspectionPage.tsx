@@ -21,6 +21,7 @@ import {
 import {
   LOCATION_SEPARATOR,
   canonicalItemNumber,
+  designationTokens,
   normalizeDesignation,
   findScannedItem,
   newId,
@@ -220,6 +221,11 @@ export function InspectionPage() {
   const itemsQuery = useInspectionItems(inspectionId);
   const types = useEquipmentTypes(true);
   const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
+  // Quick keys of the number pad: the letter parts of the designations in this inspection.
+  const designationKeys = useMemo(
+    () => designationTokens(items.map((i) => i.designation)),
+    [items],
+  );
   const typeById = useMemo(() => new Map((types.data ?? []).map((t) => [t.id, t])), [types.data]);
 
   const [filter, setFilter] = useState<Filter>('unchecked');
@@ -488,10 +494,21 @@ export function InspectionPage() {
       <NumberPad
         opened={padOpen}
         onClose={() => setPadOpen(false)}
+        tokens={designationKeys}
         onNumber={(digits, confirmed) => {
           const target = parseScanPayload(digits);
           const found = target ? findScannedItem(items, target) : null;
-          if (!found) {
+          // While typing, a designation opens only when no longer one starts with it
+          // ("AG01" waits while there is an "AG010").
+          const wanted = normalizeDesignation(digits);
+          const ambiguous =
+            !confirmed &&
+            target?.kind !== 'digits' &&
+            items.some((i) => {
+              const key = i.designation ? normalizeDesignation(i.designation) : '';
+              return key.length > wanted.length && key.startsWith(wanted);
+            });
+          if (!found || ambiguous) {
             if (confirmed) scanFeedback.failure();
             return false;
           }

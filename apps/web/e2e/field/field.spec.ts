@@ -43,6 +43,16 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await sheet(page).getByRole('button', { name: 'Vyhovuje', exact: true }).click();
   await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
 
+  // The designation (A1-01) from a quick key + digits, without the keyboard; opens by itself.
+  await page.getByRole('button', { name: 'Číslo', exact: true }).click();
+  await page.getByRole('button', { name: 'Označení A', exact: true }).click();
+  for (const digit of '101') {
+    await page.getByRole('dialog').getByRole('button', { name: digit, exact: true }).click();
+  }
+  await expect(sheet(page).getByTestId('designation')).toHaveText('A1-01');
+  await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
+  await expect(sheet(page)).toBeHidden();
+
   // Camera: the fake camera shows the QR label of 10001.
   await page.getByRole('button', { name: 'Skenovat' }).click();
   await expect(sheet(page).getByRole('heading', { name: '10001', exact: true })).toBeVisible({

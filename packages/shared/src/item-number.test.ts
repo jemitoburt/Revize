@@ -2,9 +2,19 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalItemNumber,
   compareItemNumbers,
+  designationTokens,
   isValidItemNumber,
   normalizeDesignation,
 } from './item-number.js';
+
+describe('designation keys for the number pad', () => {
+  it('collects the letter parts, most frequent first', () => {
+    expect(
+      designationTokens(['Ž-01', 'ž-02', 'NH01', 'AG01', 'AG02', '01-ŽLS', null, '15']),
+    ).toEqual(['AG', 'Ž', 'NH', 'ŽLS']);
+    expect(designationTokens(['A1-01', 'B2-01'], 1)).toEqual(['A']);
+  });
+});
 
 describe('item number', () => {
   it('accepts číslo TZ up to 5 digits and ignores leading zeros', () => {

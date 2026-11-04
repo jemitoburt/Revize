@@ -35,6 +35,10 @@ techniků současně. Stačí v ní zapsat první výsledek.
   - Pětimístné číslo se otevře samo po páté číslici.
   - Čtyřmístné číslo zadejte s nulou na začátku (`04001`).
   - Jiné délky potvrďte **OK**.
+  - **Označení** bez klávesnice: nad číslicemi jsou tlačítka s písmennými částmi označení
+    artiklů v kontrole (např. **Ž**, **NH**, **AG**, **ŽLS**). Zadejte je v pořadí jako na
+    štítku: **AG** + 01 najde AG01, 01 + **ŽLS** najde 01-ŽLS (pomlčky a mezery se nepočítají).
+    Artikl se otevře sám, jakmile označení jednoznačně odpovídá; jinak potvrďte **OK**.
 - **Bluetooth čtečka** v režimu klávesnice funguje kdykoli, když je otevřená kontrola. Najde
   artikl podle QR kódu, čísla TZ i označení.
 - **Neznámý kód:** aplikace nabídne **Založit artikl s tímto kódem**. QR kód se předvyplní.
