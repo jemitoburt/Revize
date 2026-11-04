@@ -426,7 +426,7 @@ export async function renderProtocolDocx(
           height: { value: mm(20), rule: 'atLeast' },
           children: [
             cell(lines(['Kontrolu provedl'], { bold: true }), { grey: true }),
-            cell(lines([data.leadInspector, c.certification].filter(Boolean))),
+            cell(lines([data.leadInspector, ...c.certification.split('\n')].filter(Boolean))),
           ],
         }),
         new TableRow({

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EQUIPMENT_TYPE_PRESETS } from './equipment-presets.js';
 import {
   addMonths,
+  certificationLines,
   inspectionIntervalOf,
   nextInspectionDateOf,
   placeOf,
@@ -21,6 +22,24 @@ describe('protocol text and dates', () => {
   it('uses the inspection-wide next date, otherwise the type interval', () => {
     expect(nextInspectionDateOf('2026-11-03', 12, null)).toBe('2027-11-03');
     expect(nextInspectionDateOf('2026-11-03', 12, '2027-06-30')).toBe('2027-06-30');
+  });
+
+  it('prints the authorization for the types of the protocol', () => {
+    const types = [
+      { id: 'a', name: 'Vázací prostředky' },
+      { id: 'b', name: 'Regál' },
+    ];
+    expect(certificationLines('Obecné č. 1', {}, types)).toEqual(['Obecné č. 1']);
+    expect(certificationLines('', { a: 'VP 12/2025' }, [types[0]!])).toEqual(['VP 12/2025']);
+    expect(certificationLines('Obecné č. 1', { a: 'VP 12/2025' }, types)).toEqual([
+      'Vázací prostředky: VP 12/2025',
+      'Obecné č. 1',
+    ]);
+    expect(certificationLines('', { a: 'VP', b: 'OK' }, types)).toEqual([
+      'Vázací prostředky: VP',
+      'Regál: OK',
+    ]);
+    expect(certificationLines('', {}, types)).toEqual([]);
   });
 
   it('takes the interval of the item, else the nearest location, the site, the type', () => {

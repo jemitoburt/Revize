@@ -57,6 +57,24 @@ export function inspectionIntervalOf(
   return typeDefault;
 }
 
+/**
+ * The technician's authorization under the signature: per equipment type of the protocol
+ * ("Vázací prostředky: Osvědčení č. 12/2025"; a one-type protocol just the text), the general
+ * one for the types without their own (alone when no type has one).
+ */
+export function certificationLines(
+  general: string,
+  perType: Readonly<Record<string, string>>,
+  types: readonly { id: string; name: string }[],
+): string[] {
+  const own = types.filter((t) => perType[t.id]);
+  if (!own.length) return general ? [general] : [];
+  if (types.length === 1) return [perType[types[0]!.id]!];
+  const lines = own.map((t) => `${t.name}: ${perType[t.id]}`);
+  if (general && own.length < types.length) lines.push(general);
+  return lines;
+}
+
 export function nextInspectionDateOf(
   inspectionDate: string,
   intervalMonths: number,
@@ -705,7 +723,12 @@ ${
 <h2>Při výsledku kontroly nevyhovuje<br>musí být technické vybavení okamžitě vyřazeno z užívání</h2>
 <table class="signatures">
   <tr><td class="grey">Kontrolu provedl</td><td>${escape(data.leadInspector)}${
-    c.certification ? `<br>${escape(c.certification)}` : ''
+    c.certification
+      ? `<br>${c.certification
+          .split('\n')
+          .map((line) => escape(line))
+          .join('<br>')}`
+      : ''
   }</td></tr>
   <tr><td class="grey">S výsledkem kontroly byl seznámen</td><td></td></tr>
 </table>

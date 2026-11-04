@@ -13,6 +13,7 @@ import {
   Title,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { CertificationFields } from '../components/CertificationFields.js';
 import { ROLES, ROLE_LABELS, type Role, type User } from '@revize/shared';
 import { useState, type FormEvent } from 'react';
 import type { ApiRequestError } from '../api/client.js';
@@ -33,6 +34,7 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
   const [role, setRole] = useState<Role>(user?.role ?? 'inspector');
   const [active, setActive] = useState(user?.active ?? true);
   const [certification, setCertification] = useState(user?.certification ?? '');
+  const [certifications, setCertifications] = useState(user?.certifications ?? {});
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -52,12 +54,13 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           role,
           active,
           certification,
+          certifications,
           ...(password ? { password } : {}),
         },
         done,
       );
     } else {
-      create.mutate({ email, displayName, role, password, certification }, done);
+      create.mutate({ email, displayName, role, password, certification, certifications }, done);
     }
   };
 
@@ -80,12 +83,12 @@ function UserForm({ user, onDone }: { user: User | null; onDone: () => void }) {
           error={errors.displayName}
           onChange={(e) => setDisplayName(e.currentTarget.value)}
         />
-        <TextInput
-          label="Oprávnění technika"
-          description="Tiskne se v protokolu u podpisu, např. „Osvědčení č. 42/2025“"
-          value={certification}
+        <CertificationFields
+          general={certification}
+          perType={certifications}
+          onGeneral={setCertification}
+          onPerType={setCertifications}
           error={errors.certification}
-          onChange={(e) => setCertification(e.currentTarget.value)}
         />
         <Select
           label="Role"

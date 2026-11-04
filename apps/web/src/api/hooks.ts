@@ -94,7 +94,11 @@ function useApiMutation<TVars, TResult>(
 /** Own profile (Můj účet): the authorization printed in protocols. */
 export function useUpdateProfile() {
   const client = useQueryClient();
-  return useMutation<CurrentUser, ApiRequestError, { certification: string }>({
+  return useMutation<
+    CurrentUser,
+    ApiRequestError,
+    { certification: string; certifications?: Record<string, string> }
+  >({
     mutationFn: (body) => api.patch<CurrentUser>('/auth/me', body),
     onSuccess: (me) => client.setQueryData(['me'], me),
   });

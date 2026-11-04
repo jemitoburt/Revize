@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PERMISSIONS, ROLES } from '../permissions.js';
-import { idSchema } from './common.js';
+import { certificationSchema, certificationsSchema, idSchema } from './common.js';
 
 /** No length rule (the user's decision 2026-11-03); logins stay rate-limited. */
 export const passwordSchema = z.string().min(1, 'Zadejte heslo').max(200);
@@ -30,11 +30,13 @@ export const currentUserSchema = z.object({
   permissions: z.array(z.enum(PERMISSIONS)),
   /** The own authorization, printed under the signature in the protocol. */
   certification: z.string(),
+  certifications: z.record(z.string(), z.string()),
 });
 
 /** `PATCH /auth/me`: the own profile (Můj účet). */
 export const updateProfileRequestSchema = z.object({
-  certification: z.string().trim().max(300),
+  certification: certificationSchema,
+  certifications: certificationsSchema.optional(),
 });
 export type CurrentUser = z.infer<typeof currentUserSchema>;
 

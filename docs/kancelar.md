@@ -103,7 +103,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      (u předběžného protokolu dnešní) a verze 1, po každém znovuotevření o 1 víc. Vyplněné
      hodnoty platí pro všechny protokoly.
    - **Oprávnění technika** má každý uživatel ve svém profilu (**Můj účet → Profil technika**,
-     administrátor i v Uživatelé). Pod podpisem se tiskne oprávnění vedoucího technika kontroly.
+     administrátor i v Uživatelé): **obecné** a **pro každý typ vybavení** zvlášť (vázací
+     prostředky, regály…). Pod podpisem se tiskne oprávnění vedoucího technika pro typy
+     v protokolu: u jednoho typu jen jeho oprávnění, u více typů po řádcích „Typ: oprávnění“;
+     typy bez vlastního oprávnění použijí obecné.
    - Logo (PNG/JPEG), datum vydání a verze formuláře (hlavička stránek), text v zápatí stránek
      a doplňující text na konec protokolu.
    - Text o rozsahu kontroly je u každého typu vybavení v **Typy vybavení → Text protokolu**.

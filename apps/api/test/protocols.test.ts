@@ -229,6 +229,18 @@ describe('organization settings and protocol', () => {
     const { id } = await inspectionWithResults();
     const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
     expect(html).toContain('Osvědčení č. 42/2025');
+    // Per equipment type: a ladder protocol prints the ladder authorization alone.
+    const perType = await api('PATCH', '/api/auth/me', {
+      certification: 'Osvědčení č. 42/2025',
+      certifications: { [ladderTypeId]: 'Žebříky č. 7/2026' },
+    });
+    expect(perType.statusCode, perType.body).toBe(200);
+    const ladders = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
+    expect(ladders).toContain('Žebříky č. 7/2026');
+    expect(ladders).not.toContain('Osvědčení č. 42/2025');
+    expect((await api('GET', '/api/auth/me')).json()).toMatchObject({
+      certifications: { [ladderTypeId]: 'Žebříky č. 7/2026' },
+    });
     // Each user has their own; an administrator sets it in Uživatelé too.
     expect((await api('GET', '/api/auth/me', undefined, technik)).json()).toMatchObject({
       certification: '',

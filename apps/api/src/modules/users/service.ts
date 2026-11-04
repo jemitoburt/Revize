@@ -23,6 +23,7 @@ export function toUserDto(row: UserRow): User {
     active: row.active,
     lastLoginAt: row.lastLoginAt?.toISOString() ?? null,
     certification: row.certification,
+    certifications: row.certifications,
     createdAt: row.createdAt.toISOString(),
     version: row.version,
   };
@@ -57,6 +58,7 @@ export function createUsersService(db: Db) {
           displayName: input.displayName,
           role: input.role,
           certification: input.certification,
+          certifications: input.certifications,
           passwordHash: await hashPassword(input.password),
         });
         await recordAudit(tx, {

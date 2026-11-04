@@ -1,10 +1,8 @@
 import { z } from 'zod';
 import { ROLES } from '../permissions.js';
 import { emailSchema, passwordSchema } from './auth.js';
+import { certificationSchema, certificationsSchema } from './common.js';
 import { idSchema } from './common.js';
-
-/** E.g. "Osvědčení č. 123/2024 (ČSN EN 15635)". */
-export const certificationSchema = z.string().trim().max(300);
 
 export const userSchema = z.object({
   id: idSchema,
@@ -15,6 +13,8 @@ export const userSchema = z.object({
   lastLoginAt: z.string().nullable(),
   /** The technician's authorization (under the signature in the protocol). */
   certification: z.string(),
+  /** Authorization per equipment type (type id → text), printed in protocols of that type. */
+  certifications: z.record(z.string(), z.string()),
   createdAt: z.string(),
   version: z.number().int(),
 });
@@ -28,6 +28,7 @@ export const createUserRequestSchema = z.object({
   role: z.enum(ROLES),
   password: passwordSchema,
   certification: certificationSchema.default(''),
+  certifications: certificationsSchema.default({}),
 });
 
 export const updateUserRequestSchema = z
@@ -36,6 +37,7 @@ export const updateUserRequestSchema = z
     role: z.enum(ROLES),
     active: z.boolean(),
     certification: certificationSchema,
+    certifications: certificationsSchema,
     /** Admin password reset; ends all sessions of the user. */
     password: passwordSchema,
     /** Optimistic locking: the version the client edited. */

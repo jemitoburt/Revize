@@ -12,3 +12,10 @@ export const apiErrorSchema = z.object({
     .optional(),
 });
 export type ApiError = z.infer<typeof apiErrorSchema>;
+
+/** E.g. "Osvědčení č. 123/2024 (ČSN EN 15635)". */
+export const certificationSchema = z.string().trim().max(300);
+/** Per equipment type; empty texts are dropped. */
+export const certificationsSchema = z
+  .record(z.uuid(), certificationSchema)
+  .transform((map) => Object.fromEntries(Object.entries(map).filter(([, text]) => text !== '')));

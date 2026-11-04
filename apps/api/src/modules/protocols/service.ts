@@ -10,6 +10,7 @@ import {
   fileNamePart,
   fillProtocolTemplate,
   formatDate,
+  certificationLines,
   nextInspectionDateOf,
   PROTOCOL_PDF_MARGINS,
   protocolPageFooter,
@@ -236,6 +237,7 @@ export function createProtocolsService(
         closedAt: inspectionTable.closedAt,
         reopenedCount: inspectionTable.reopenedCount,
         certification: appUser.certification,
+        certifications: appUser.certifications,
       })
       .from(inspectionTable)
       .innerJoin(appUser, eq(appUser.id, inspectionTable.leadInspectorId))
@@ -256,7 +258,12 @@ export function createProtocolsService(
         web: settings.web,
         logo: await dataUrl(org.logoKey, org.logoMimeType ?? 'image/png'),
         footer: settings.protocolFooter,
-        certification: issued?.certification ?? '',
+        // The lead technician's authorization for the types of this protocol.
+        certification: certificationLines(
+          issued?.certification ?? '',
+          issued?.certifications ?? {},
+          types.map((t) => ({ id: t.id, name: t.name })),
+        ).join('\n'),
         issueDate,
         version,
         pageFooter: settings.pageFooter,

@@ -31,6 +31,7 @@ export function toCurrentUser(row: UserRow): CurrentUser {
     organizationId: row.organizationId,
     permissions: [...permissionsOf(role)],
     certification: row.certification,
+    certifications: row.certifications,
   };
 }
 
@@ -97,6 +98,7 @@ export function createAuthService(db: Db, config: Config) {
           .update(appUser)
           .set({
             certification: input.certification,
+            ...(input.certifications ? { certifications: input.certifications } : {}),
             updatedAt: new Date(),
             version: user.version + 1,
           })
@@ -108,8 +110,11 @@ export function createAuthService(db: Db, config: Config) {
           action: 'user.profile',
           entityType: 'user',
           entityId: user.id,
-          before: { certification: user.certification },
-          after: { certification: input.certification },
+          before: { certification: user.certification, certifications: user.certifications },
+          after: {
+            certification: input.certification,
+            certifications: input.certifications ?? user.certifications,
+          },
         });
         return row!;
       });

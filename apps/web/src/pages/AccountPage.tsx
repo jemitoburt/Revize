@@ -1,30 +1,38 @@
-import { Button, Paper, PasswordInput, Stack, Text, TextInput, Title } from '@mantine/core';
+import { Button, Paper, PasswordInput, Stack, Text, Title } from '@mantine/core';
 import { useState, type FormEvent } from 'react';
 import { useChangePassword, useMe, useUpdateProfile } from '../api/hooks.js';
+import { CertificationFields } from '../components/CertificationFields.js';
 import { notifyError, notifySaved } from '../lib/notify.js';
 
 /** The own authorization, printed under the signature of the protocols one leads. */
-function ProfileForm({ certification: saved }: { certification: string }) {
+function ProfileForm({
+  certification: savedGeneral,
+  certifications: savedPerType,
+}: {
+  certification: string;
+  certifications: Record<string, string>;
+}) {
   const update = useUpdateProfile();
-  const [certification, setCertification] = useState(saved);
+  const [general, setGeneral] = useState(savedGeneral);
+  const [perType, setPerType] = useState(savedPerType);
   return (
     <Paper withBorder p="md">
       <form
         onSubmit={(event) => {
           event.preventDefault();
           update.mutate(
-            { certification },
+            { certification: general, certifications: perType },
             { onSuccess: () => notifySaved(), onError: notifyError },
           );
         }}
       >
         <Stack>
           <Title order={4}>Profil technika</Title>
-          <TextInput
-            label="Oprávnění technika"
-            description="Tiskne se v protokolu u podpisu kontrol, které vedete, např. „Osvědčení č. 42/2025“"
-            value={certification}
-            onChange={(e) => setCertification(e.currentTarget.value)}
+          <CertificationFields
+            general={general}
+            perType={perType}
+            onGeneral={setGeneral}
+            onPerType={setPerType}
           />
           <Button type="submit" loading={update.isPending}>
             Uložit
@@ -66,7 +74,13 @@ export function AccountPage() {
       <Text>
         {me.data?.displayName} · {me.data?.email}
       </Text>
-      {me.data && <ProfileForm key={me.data.certification} certification={me.data.certification} />}
+      {me.data && (
+        <ProfileForm
+          key={JSON.stringify([me.data.certification, me.data.certifications])}
+          certification={me.data.certification}
+          certifications={me.data.certifications}
+        />
+      )}
       <Paper withBorder p="md">
         <form onSubmit={submit}>
           <Stack>
