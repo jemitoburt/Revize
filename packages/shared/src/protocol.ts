@@ -344,9 +344,16 @@ export function protocolDefectGroups(data: ProtocolData): DefectGroup[] {
   });
 }
 
+/** How the protocol names an item number: "TZ: 10001" (the číslo TZ of the label). */
+export function protocolItemNumber(itemNumber: string): string {
+  return `TZ: ${itemNumber}`;
+}
+
 /** Title of a compact defect card: number, designation and the rest of the location. */
 export function defectCardTitle(d: ProtocolDefect): string {
-  return [d.itemNumber, d.designation, placeOf(d.location).rest].filter(Boolean).join(' · ');
+  return [protocolItemNumber(d.itemNumber), d.designation, placeOf(d.location).rest]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /** Heading of a severity group: the level, how many and what it means (once, not per card). */
@@ -601,7 +608,7 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     // "nehodící se škrtněte": the answer that does not apply is struck through.
     const yes = safeToOperate(i.outcome) === true;
     const answered = i.outcome !== 'unchecked';
-    return `<tr><td>${escape(i.itemNumber)}</td><td>${
+    return `<tr><td>${escape(protocolItemNumber(i.itemNumber))}</td><td>${
       i.designation ? `<strong>${escape(i.designation)}</strong> ` : ''
     }${escape(i.details)}${
       i.location ? `<div class="where">${escape(i.location)}</div>` : ''

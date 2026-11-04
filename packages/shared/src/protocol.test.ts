@@ -143,7 +143,8 @@ describe('renderProtocolHtml', () => {
     expect(html.indexOf('Červené riziko (1)')).toBeGreaterThan(html.indexOf('photo-pages'));
     expect(html.indexOf('Červené riziko (1)')).toBeLessThan(html.indexOf('Žluté riziko (1)'));
     expect(html).toContain('<h3 class="place">Hala A</h3>');
-    expect(html).toContain('<div class="t">10002 · Řada 1</div>');
+    expect(html).toContain('<div class="t">TZ: 10002 · Řada 1</div>');
+    expect(html).toContain('<td>TZ: 10001</td>');
     expect(placeOf('Hala A › Řada 1 › Pozice 4')).toEqual({
       place: 'Hala A',
       rest: 'Řada 1 › Pozice 4',
