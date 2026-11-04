@@ -68,6 +68,10 @@ test('demo field mode: a technician records results and photos in the browser', 
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Vyfotit' }).click();
   await (await chooser).setFiles('e2e/.generated/defect.jpg');
+  await page
+    .getByRole('dialog', { name: 'Upravit fotku' })
+    .getByRole('button', { name: 'Uložit fotku' })
+    .click();
   await expect(page.getByText('Celkové fotky kontroly (1)')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Zobrazit fotku' }).locator('img')).toBeVisible();
 
