@@ -20,6 +20,7 @@ import type {
   Organization,
   Photo,
   ServerStatus,
+  AuditEntry,
   ClosePreview,
   MergePlan,
   MergeTypesRequest,
@@ -47,7 +48,14 @@ import type {
   updateSiteSchema,
   updateUserRequestSchema,
 } from '@revize/shared';
-import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+  type QueryKey,
+} from '@tanstack/react-query';
 import type { z } from 'zod';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { enqueue } from '../offline/outbox.js';
@@ -138,6 +146,30 @@ export function useChangePassword() {
 
 // ---------- users ----------
 
+const AUDIT_PAGE = 100;
+/** Historie změn: the audit log, newest first, 100 records per page. */
+export const useAudit = (filters: {
+  entityType?: string;
+  actorId?: string;
+  from?: string;
+  to?: string;
+}) =>
+  useInfiniteQuery<
+    AuditEntry[],
+    ApiRequestError,
+    InfiniteData<AuditEntry[]>,
+    QueryKey,
+    string | null
+  >({
+    queryKey: ['audit', filters],
+    initialPageParam: null,
+    queryFn: ({ pageParam }) =>
+      api.get(
+        `/audit${queryString({ ...filters, before: pageParam ?? undefined, limit: AUDIT_PAGE })}`,
+      ),
+    getNextPageParam: (last) =>
+      last.length === AUDIT_PAGE ? last[last.length - 1]!.id : undefined,
+  });
 export const useUsers = () =>
   useQuery<User[], ApiRequestError>({ queryKey: ['users'], queryFn: () => api.get('/users') });
 export const useCreateUser = () =>

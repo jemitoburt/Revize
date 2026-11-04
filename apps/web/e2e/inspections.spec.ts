@@ -167,6 +167,13 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   const item = await (await page.request.get(`/api/items/${byNumber['30001']}`)).json();
   expect(item.nextInspectionDate).toBe('2027-11-03');
 
+  // Historie změn: who closed the inspection.
+  await page.getByRole('navigation').getByRole('link', { name: 'Historie změn' }).click();
+  await page.getByRole('combobox', { name: 'Oblast' }).click();
+  await page.getByRole('option', { name: 'Kontroly', exact: true }).click();
+  await expect(page.getByTestId('audit')).toContainText('Uzavření kontroly');
+  await expect(page.getByTestId('audit')).toContainText('Kontrola 03/11/2026');
+
   // M8: the item not checked in the last closed inspection, and the history of a checked one.
   await page.goto('/artikly');
   await page.getByRole('combobox', { name: 'Poslední kontrola' }).click();
@@ -179,7 +186,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(page.getByTestId('item-history')).toContainText('03/11/2026');
   await expect(page.getByTestId('item-history')).toContainText('prasklý svar');
   await page.keyboard.press('Escape');
-  await page.goBack();
+  await page.goto(`/kontroly/${inspectionId}`);
 
   await page.getByRole('button', { name: 'Protokol' }).click();
   await expect(

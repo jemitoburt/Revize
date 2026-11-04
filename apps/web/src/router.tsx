@@ -13,6 +13,7 @@ import { FieldHomePage } from './field/FieldHomePage.js';
 import { FieldLayout } from './field/FieldLayout.js';
 import { InspectionPage } from './field/InspectionPage.js';
 import { AccountPage } from './pages/AccountPage.js';
+import { AuditPage } from './pages/AuditPage.js';
 import { CustomerPage } from './pages/CustomerPage.js';
 import { CustomersPage } from './pages/CustomersPage.js';
 import { EquipmentTypePage } from './pages/EquipmentTypePage.js';
@@ -142,6 +143,12 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+const auditRoute = createRoute({
+  getParentRoute: () => appRoute,
+  path: '/historie-zmen',
+  component: AuditPage,
+});
+
 const accountRoute = createRoute({
   getParentRoute: () => appRoute,
   path: '/ucet',
@@ -164,6 +171,7 @@ const routeTree = rootRoute.addChildren([
     inspectionsRoute,
     inspectionDetailRoute,
     settingsRoute,
+    auditRoute,
     accountRoute,
   ]),
 ]);

@@ -56,12 +56,16 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      se stejným názvem ve Stažených souborech.
    - Hromadné akce na zaškrtnutých artiklech: přesun, stav, datum příští kontroly, vyřazení
      z evidence.
-6. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace
+6. **Historie změn** (administrátor, oprávnění `audit.read`): kdo, kdy a co změnil – artikly,
+   výsledky kontrol, fotky (i smazané a přesunuté), typy vybavení, zákazníci, uživatelé
+   i přihlášení. Filtry podle oblasti, uživatele a data, u změn je vidět původní a nová hodnota.
+   Záznamy nejdou upravit ani smazat. Starší záznamy načte tlačítko _Načíst starší_.
+7. **Uživatelé:** technici (role Technik) a další administrátoři. Reset hesla a deaktivace
    uživatele okamžitě odhlásí ze všech zařízení. **Smazat uživatele** (v jeho úpravě, s
    potvrzením) účet zruší: nepřihlásí se a zmizí ze seznamu. Jeho jméno zůstane u provedených
    kontrol a v auditu a e-mail jde použít pro nový účet. Vlastní účet ani posledního
    administrátora smazat nejde.
-7. **Import (XLSX/CSV):**
+8. **Import (XLSX/CSV):**
    - Zvolte zákazníka, provozovnu a typ vybavení. **Stáhnout šablonu** dá XLSX se správnými
      sloupci, číselníky jako rozbalovací seznam a listem _Nápověda_.
    - Nahrajte soubor (XLSX nebo CSV do 10 MB a 20 000 řádků). CSV může být v UTF-8 i ve
@@ -93,7 +97,7 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Importovat:** proběhne najednou v jedné transakci, takže buď vše, nebo nic. Chybějící
      umístění se založí, artikly bez čísla dostanou další volná čísla. Každý artikl má záznam
      v auditu.
-8. **Nastavení** (administrátor):
+9. **Nastavení** (administrátor):
    - Název firmy, IČO, adresa a kontakty.
    - **Datum vydání** a **Verze** v hlavičce stránek: prázdné = datum uzavření kontroly
      (u předběžného protokolu dnešní) a verze 1, po každém znovuotevření o 1 víc. Vyplněné
@@ -104,66 +108,66 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      a doplňující text na konec protokolu.
    - Text o rozsahu kontroly je u každého typu vybavení v **Typy vybavení → Text protokolu**.
      Používá zástupné údaje (Naše firma, Zákazník, Provozovna, Datum kontroly…).
-9. **Kontroly:**
-   - Přehled otevřených a uzavřených kontrol s postupem a počtem závad. Řádek otevře detail
-     s výsledky všech artiklů (filtry Závady a Nezkontrolované).
-   - **Klepnutím na řádek** se otevře artikl: jde opravit výsledek (výsledek, popis závady,
-     zahrnutí do protokolu), prohlížet, přidávat a mazat fotky a přesouvat je mezi _Fotky
-     závady_ (tisknou se do protokolu) a _Fotky artiklu_ (štítek, celkový pohled – netisknou
-     se), a upravit artikl (označení, pole, umístění). Výsledek a fotky jdou měnit jen
-     u otevřené kontroly, oprava se zapíše jako nový výsledek a do auditu.
-   - **Příští kontrola** se u otevřené kontroly ukazuje podle intervalů (datum kontroly + interval).
-     Při uzavření dostane každý artikl příští kontrolu podle svého intervalu: **artikl → hala
-     (umístění) → provozovna → typ vybavení** (výchozí 12 měsíců). Interval se nastavuje u artiklu
-     (Interval kontrol), u umístění (menu umístění → Upravit) a u provozovny. Vyplněné datum
-     v dialogu uzavření platí pro všechny artikly.
-   - **Uzavření kontroly** smaže ze serveru fotky závad z předchozích kontrol stejných artiklů
-     (nahradí je fotky nové kontroly). Dialog ukáže, kolik jich bude, a připomene zálohu přes
-     Export → Fotky (ZIP) u předchozí kontroly. Vypnout to jde v Nastavení.
-   - Ve sloupci **Fotky** je u závady s fotkami zaškrtávátko **do protokolu**: vypnuté fotky se
-     do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
-     změna se zapíše do auditu.
-   - **Kontrola více typů najednou:** v terénu se při zahájení zvolí více typů vybavení (nebo
-     žádný = všechny). V kanceláři v náhledu protokolu **Typy vybavení v protokolu**: prázdné =
-     všechny typy v jednom protokolu s texty všech kategorií, nebo libovolná kombinace, nebo
-     jeden typ (soubor má typ v názvu). **Stáhnout → PDF – každý typ zvlášť (ZIP)** vytvoří
-     zvláštní protokol pro každý typ najednou.
-   - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
-     dvěma stranami na list (A4 na šířku; Příloha 1 na šířku dostane celý list sama) a Word (DOCX, dá se dál upravovat). Dokud kontrola
-     není uzavřená, je protokol označený jako předběžný.
-   - **Rozvržení protokolu** se volí samo, aby měl protokol co nejméně stran:
-     - Když se tabulka vybavení vejde na první stranu, je v protokolu. Když ne, protokol na ni
-       jen odkáže („Kontrolované vybavení viz Příloha 1 – tabulka kontrolovaného vybavení“)
-       a vytiskne ji na konci na A4 na šířku se zvolenými sloupci (číslo TZ, označení, typ,
-       umístění, schopno bezpečného provozu, poznámka…). Nezpůsobilé vybavení je tučně
-       a červeně. Přepínač _Tabulku vybavení vždy jako Přílohu 1_ ji tam dá vždy.
-     - Závady jsou seskupené podle závažnosti (červené, bránící bezpečnému provozu, žluté, zelené, nebránící bezpečnému provozu – co znamenají,
-       je napsáno jednou u skupiny) a pak podle pracoviště (hala). Karty jsou kompaktní: číslo TZ,
-       označení, řada a pozice, popis a fotky, v jednom až třech sloupcích.
-     - Přepínač **Co nejkratší protokol** (zapamatuje se) vždy zvolí nejmenší fotky (3,5 cm)
-       a víc sloupců závad, i když by se protokol vešel do 8 stran.
-     - Volba _Všechny / Červené a žluté / Jen červené_ je vidět jen u kontrol s regály.
-     - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
-       U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají
-       v rozlišení 300 dpi přesně podle tištěné velikosti, mírně oříznuté (až na čtverec), aby
-       se dvě vešly vedle sebe.
-     - Karty závad tečou v novinových sloupcích (1–3), takže malé skupiny nenechávají prázdná
-       místa.
-     - Volba **Všechny závady / Červené a žluté / Jen červené** určuje, které závady dostanou
-       v protokolu kartu s fotkami. Tabulka vybavení dál uvádí výsledky všech artiklů.
-     - Varování a podpisy se vejdou-li, pokračují na první straně a závady na straně s texty.
-     - **Stáhnout → Jen příloha 1** vytiskne tabulku samostatně (PDF nebo Word).
-     - Výběr sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
-       až se odešlou (stav „Vše odesláno“).
-   - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
-     kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
-     Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
-   - **Znovu otevřít:** jen s uvedením důvodu, zapíše se do auditu.
-   - **Export:**
-     - _Výsledky – Excel_: list se souhrnem a list pro každý typ vybavení s jeho poli.
-     - _Výsledky – CSV_: jedna tabulka, otevře se rovnou v českém Excelu.
-     - _Fotky (ZIP s popisy)_: fotky závad pojmenované podle čísla artiklu (`10001_01.jpg`),
-       fotky artiklů (`10001_artikl_01.jpg`),
-       fotky kontroly (`kontrola_01.jpg`) a seznam `fotky.csv`. Popis (artikl, umístění,
-       závada, technik) je zapsaný přímo ve fotce (EXIF/IPTC), takže ho ukáže i prohlížeč fotek.
-       V ukázce na GitHub Pages fotky popis nemají.
+10. **Kontroly:**
+    - Přehled otevřených a uzavřených kontrol s postupem a počtem závad. Řádek otevře detail
+      s výsledky všech artiklů (filtry Závady a Nezkontrolované).
+    - **Klepnutím na řádek** se otevře artikl: jde opravit výsledek (výsledek, popis závady,
+      zahrnutí do protokolu), prohlížet, přidávat a mazat fotky a přesouvat je mezi _Fotky
+      závady_ (tisknou se do protokolu) a _Fotky artiklu_ (štítek, celkový pohled – netisknou
+      se), a upravit artikl (označení, pole, umístění). Výsledek a fotky jdou měnit jen
+      u otevřené kontroly, oprava se zapíše jako nový výsledek a do auditu.
+    - **Příští kontrola** se u otevřené kontroly ukazuje podle intervalů (datum kontroly + interval).
+      Při uzavření dostane každý artikl příští kontrolu podle svého intervalu: **artikl → hala
+      (umístění) → provozovna → typ vybavení** (výchozí 12 měsíců). Interval se nastavuje u artiklu
+      (Interval kontrol), u umístění (menu umístění → Upravit) a u provozovny. Vyplněné datum
+      v dialogu uzavření platí pro všechny artikly.
+    - **Uzavření kontroly** smaže ze serveru fotky závad z předchozích kontrol stejných artiklů
+      (nahradí je fotky nové kontroly). Dialog ukáže, kolik jich bude, a připomene zálohu přes
+      Export → Fotky (ZIP) u předchozí kontroly. Vypnout to jde v Nastavení.
+    - Ve sloupci **Fotky** je u závady s fotkami zaškrtávátko **do protokolu**: vypnuté fotky se
+      do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
+      změna se zapíše do auditu.
+    - **Kontrola více typů najednou:** v terénu se při zahájení zvolí více typů vybavení (nebo
+      žádný = všechny). V kanceláři v náhledu protokolu **Typy vybavení v protokolu**: prázdné =
+      všechny typy v jednom protokolu s texty všech kategorií, nebo libovolná kombinace, nebo
+      jeden typ (soubor má typ v názvu). **Stáhnout → PDF – každý typ zvlášť (ZIP)** vytvoří
+      zvláštní protokol pro každý typ najednou.
+    - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
+      dvěma stranami na list (A4 na šířku; Příloha 1 na šířku dostane celý list sama) a Word (DOCX, dá se dál upravovat). Dokud kontrola
+      není uzavřená, je protokol označený jako předběžný.
+    - **Rozvržení protokolu** se volí samo, aby měl protokol co nejméně stran:
+      - Když se tabulka vybavení vejde na první stranu, je v protokolu. Když ne, protokol na ni
+        jen odkáže („Kontrolované vybavení viz Příloha 1 – tabulka kontrolovaného vybavení“)
+        a vytiskne ji na konci na A4 na šířku se zvolenými sloupci (číslo TZ, označení, typ,
+        umístění, schopno bezpečného provozu, poznámka…). Nezpůsobilé vybavení je tučně
+        a červeně. Přepínač _Tabulku vybavení vždy jako Přílohu 1_ ji tam dá vždy.
+      - Závady jsou seskupené podle závažnosti (červené, bránící bezpečnému provozu, žluté, zelené, nebránící bezpečnému provozu – co znamenají,
+        je napsáno jednou u skupiny) a pak podle pracoviště (hala). Karty jsou kompaktní: číslo TZ,
+        označení, řada a pozice, popis a fotky, v jednom až třech sloupcích.
+      - Přepínač **Co nejkratší protokol** (zapamatuje se) vždy zvolí nejmenší fotky (3,5 cm)
+        a víc sloupců závad, i když by se protokol vešel do 8 stran.
+      - Volba _Všechny / Červené a žluté / Jen červené_ je vidět jen u kontrol s regály.
+      - Fotky mají kolem 5 cm na výšku (nejlépe se čtou), dokud má protokol nejvýš 8 stran.
+        U delších protokolů se volí nejmenší rozměry, nikdy ale pod 3,5 cm. Fotky se vkládají
+        v rozlišení 300 dpi přesně podle tištěné velikosti, mírně oříznuté (až na čtverec), aby
+        se dvě vešly vedle sebe.
+      - Karty závad tečou v novinových sloupcích (1–3), takže malé skupiny nenechávají prázdná
+        místa.
+      - Volba **Všechny závady / Červené a žluté / Jen červené** určuje, které závady dostanou
+        v protokolu kartu s fotkami. Tabulka vybavení dál uvádí výsledky všech artiklů.
+      - Varování a podpisy se vejdou-li, pokračují na první straně a závady na straně s texty.
+      - **Stáhnout → Jen příloha 1** vytiskne tabulku samostatně (PDF nebo Word).
+      - Výběr sloupců si prohlížeč pamatuje. Fotky z iPadu se v protokolu objeví,
+        až se odešlou (stav „Vše odesláno“).
+    - **Uzavřít kontrolu:** výsledky se uzamknou a zkontrolované artikly dostanou datum příští
+      kontroly. Je to buď zadané datum, nebo datum kontroly plus interval typu (obvykle 12 měsíců).
+      Nezkontrolované artikly se v protokolu uvedou jako nezkontrolované.
+    - **Znovu otevřít:** jen s uvedením důvodu, zapíše se do auditu.
+    - **Export:**
+      - _Výsledky – Excel_: list se souhrnem a list pro každý typ vybavení s jeho poli.
+      - _Výsledky – CSV_: jedna tabulka, otevře se rovnou v českém Excelu.
+      - _Fotky (ZIP s popisy)_: fotky závad pojmenované podle čísla artiklu (`10001_01.jpg`),
+        fotky artiklů (`10001_artikl_01.jpg`),
+        fotky kontroly (`kontrola_01.jpg`) a seznam `fotky.csv`. Popis (artikl, umístění,
+        závada, technik) je zapsaný přímo ve fotce (EXIF/IPTC), takže ho ukáže i prohlížeč fotek.
+        V ukázce na GitHub Pages fotky popis nemají.

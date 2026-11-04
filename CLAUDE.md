@@ -151,4 +151,6 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   the item, result or not checked), item list and database export filters `due`
   (overdue/30/60/90) and `lastInspection=unchecked` (`itemStateFilters`), history in the item
   drawers; merging equipment types (`POST /equipment-types/merge`, `planTypeMerge`).
-- Next: audit view in the office (optional); M1 decision PWA vs Capacitor.
+- Audit view – done: office page Historie změn (`/historie-zmen`, `audit.read`), `GET /audit` filters
+  (entityType, actorId, from/to, paging `before`), Czech labels and diffs in `packages/shared/src/audit.ts`.
+- Next: M1 decision PWA vs Capacitor.

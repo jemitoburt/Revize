@@ -6,6 +6,7 @@ import {
   IconClipboardCheck,
   IconClipboardList,
   IconFileImport,
+  IconHistory,
   IconLadder,
   IconListDetails,
   IconLogout,
@@ -33,6 +34,7 @@ const NAV: { to: string; label: string; icon: typeof IconUser; permission: Permi
   { to: '/typy', label: 'Typy vybavení', icon: IconLadder, permission: 'equipmentType.read' },
   { to: '/uzivatele', label: 'Uživatelé', icon: IconUsers, permission: 'user.manage' },
   { to: '/nastaveni', label: 'Nastavení', icon: IconSettings, permission: 'settings.manage' },
+  { to: '/historie-zmen', label: 'Historie změn', icon: IconHistory, permission: 'audit.read' },
   {
     to: '/teren',
     label: 'Kontroly v terénu',
