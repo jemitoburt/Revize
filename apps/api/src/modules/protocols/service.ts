@@ -282,6 +282,7 @@ export function createProtocolsService(
           options.equipmentTypeId,
           options.columns,
           options.forceAppendix,
+          options.severities,
         ),
         { part: options.part },
       );
@@ -302,6 +303,7 @@ export function createProtocolsService(
         options.equipmentTypeId,
         options.columns,
         options.forceAppendix,
+        options.severities,
       );
       const bytes = await pdf.render(
         renderProtocolHtml(data, { pageFrame: false, part: options.part }),
@@ -330,6 +332,7 @@ export function createProtocolsService(
         options.equipmentTypeId,
         options.columns,
         options.forceAppendix,
+        options.severities,
       );
       return {
         data: await renderProtocolDocx(data, options.part),

@@ -307,11 +307,17 @@ export const SEVERITY_GROUP_TITLE: Record<'red' | 'amber' | 'green', string> = {
   green: 'Zelené riziko',
 };
 
-/** The note column: the defect and its risk level, or "Nezkontrolováno". Plain text lines. */
+/**
+ * The note column: the defect with its risk level in short ("Ohnutý sloupek – červené riziko"),
+ * or "Nezkontrolováno". What a level means is said once, in the heading of the defect section.
+ */
 export function protocolNoteLines(i: ProtocolItem): string[] {
   if (i.outcome === 'unchecked') return ['Nezkontrolováno'];
   if (!isDefect(i.outcome)) return [];
-  return [i.defectDescription ?? '', SEVERITY_LABELS[i.outcome].protocol].filter(Boolean);
+  const risk = SEVERITY_GROUP_TITLE[i.outcome].toLowerCase();
+  return [
+    i.defectDescription ? `${i.defectDescription} – ${risk}` : SEVERITY_GROUP_TITLE[i.outcome],
+  ];
 }
 
 /** The layout decisions for this protocol (table on page 1 or Příloha 1, photo size, columns). */

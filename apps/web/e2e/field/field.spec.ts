@@ -96,8 +96,24 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   expect(defectPhoto.height).toBeGreaterThan(defectPhoto.width);
   expect(defectPhoto.width).toBeLessThan(1200);
   expect(defectPhoto.height).toBeLessThan(1600);
+  // A photo added to the saved defect is sent even when the card is just closed.
+  const another = page.waitForEvent('filechooser');
+  await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
+  await (await another).setFiles(PHOTO);
+  await page
+    .getByRole('dialog', { name: 'Upravit fotku' })
+    .getByRole('button', { name: 'Uložit fotku' })
+    .click();
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
   await expect(sheet(page)).toBeHidden();
+  await expect
+    .poll(async () => {
+      const list = (await (
+        await page.request.get(`/api/photos?inspectionId=${inspectionId}&itemId=${defectItem.id}`)
+      ).json()) as { owner: string }[];
+      return list.filter((p) => p.owner === 'result').length;
+    })
+    .toBe(2);
 
   // The designation finds the item too (scanner or keyboard), case and dashes ignored.
   await wedgeScan(page, 'a101');

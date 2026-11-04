@@ -183,6 +183,19 @@ function SheetBody({
     const edit = await photoEditor.edit(file);
     if (!edit) return;
     try {
+      // The defect is already recorded: the photo goes to it straight away (through the
+      // outbox), so it cannot be forgotten on the device when the card is just closed.
+      if (current?.outcome === 'defect') {
+        await upload.mutateAsync({
+          id: newId(),
+          file: await preparePhoto(file, edit),
+          owner: 'result',
+          itemId: item.id,
+          inspectionId,
+          takenAt: new Date().toISOString(),
+        });
+        return;
+      }
       await saveDraftPhoto({
         id: newId(),
         blob: await preparePhoto(file, edit),

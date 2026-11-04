@@ -186,7 +186,12 @@ describe('organization settings and protocol', () => {
   });
 
   it('renders the protocol as HTML and PDF, draft until closed', async () => {
-    const { id } = await inspectionWithResults();
+    const { id, items } = await inspectionWithResults();
+    await api(
+      'PUT',
+      `/api/inspections/${id}/results/${items[2]!.id}`,
+      result('defect', { severity: 'amber', defectDescription: 'Uvolněná patka' }),
+    );
     const html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
     expect(html).toContain('Protokol o kontrole technického vybavení');
     expect(html).toContain('PŘEDBĚŽNÝ PROTOKOL');
@@ -198,8 +203,16 @@ describe('organization settings and protocol', () => {
     expect(html).toMatch(/style="height:50mm;width:\d+(\.\d)?mm"/);
     // Only red defects get cards: the green one is left out of the cards.
     const redOnly = (await api('GET', `/api/inspections/${id}/protocol.html?defects=red`)).body;
+    expect(html).toContain('Žluté riziko (1)');
     expect(redOnly).toContain('Červené riziko (1)');
-    expect(redOnly).not.toContain('Zelené riziko (');
+    expect(redOnly).not.toContain('Žluté riziko (');
+    // The table on page 1 names the level in short only.
+    expect(html).toContain('Prasklá příčka – červené riziko');
+    expect(html).toContain('Uvolněná patka – žluté riziko');
+    // PDF and Word follow the choice too.
+    const redDocx = await api('GET', `/api/inspections/${id}/protocol.docx?defects=red`);
+    const allDocx = await api('GET', `/api/inspections/${id}/protocol.docx`);
+    expect(redDocx.rawPayload.length).toBeLessThan(allDocx.rawPayload.length);
     expect(html).toContain('data:image/jpeg;base64,');
     // Only the protocol text of the type in the protocol.
     expect(html).toContain('<h3>Žebříky a schůdky</h3>');
