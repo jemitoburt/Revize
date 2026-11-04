@@ -83,7 +83,7 @@ test('office: company settings, inspection overview, protocol PDF, close and reo
   await expect(preview.getByText('PŘEDBĚŽNÝ PROTOKOL')).toBeVisible();
   await expect(preview.getByText('Revize Novák s.r.o.').first()).toBeVisible();
   await expect(preview.getByText('Osvědčení č. 42/2025')).toBeVisible();
-  await expect(preview.getByText('Nevyhovuje (1)')).toBeVisible();
+  await expect(preview.getByText('Závady bránící bezpečnému provozu (1)')).toBeVisible();
   await expect(preview.locator('.defect img')).toHaveCount(0);
   // Three items fit on page 1: the table is in the protocol. Forced, it becomes Příloha 1
   // (A4 landscape, preset columns) and the protocol only refers to it.

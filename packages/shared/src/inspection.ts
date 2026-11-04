@@ -93,7 +93,27 @@ export function severityOf(result: LabelledResult): Severity | null {
 }
 
 /** Results of types without risk levels (everything but racks): fit or unfit. */
-export const FIT_LABELS = { ok: 'Vyhovuje', defect: 'Nevyhovuje' } as const;
+export const FIT_LABELS = {
+  ok: 'Vyhovuje',
+  /** A defect that does not prevent safe operation (stored as `green`): recorded, stays in use. */
+  minor: 'Závada – provoz možný',
+  /** A defect preventing safe operation (stored as `red`): taken out of service. */
+  defect: 'Nevyhovuje',
+} as const;
+
+/**
+ * Wording of the two kinds of defects of types without risk levels, after the rules for
+ * revisions (vyhl. 85/1978 Sb.: „závady, které brání bezpečnému a spolehlivému provozu“).
+ */
+export const FIT_DEFECT_TITLES = {
+  minor: 'Závady nebránící bezpečnému provozu',
+  unfit: 'Závady bránící bezpečnému provozu',
+} as const;
+
+/** Fit / unfit types: a `green` defect is minor (safe to operate), any other is unfit. */
+export function isMinorDefect(result: LabelledResult): boolean {
+  return result.outcome === 'defect' && severityOf(result) === 'green';
+}
 
 /**
  * Label of a result as shown in lists and the protocol. `riskLevels`: the type rates defects
@@ -101,7 +121,10 @@ export const FIT_LABELS = { ok: 'Vyhovuje', defect: 'Nevyhovuje' } as const;
  */
 export function outcomeLabel(result: LabelledResult | null, riskLevels = true): string {
   if (!result) return OUTCOME_LABELS.unchecked;
-  if (!riskLevels) return FIT_LABELS[result.outcome];
+  if (!riskLevels) {
+    if (result.outcome === 'ok') return FIT_LABELS.ok;
+    return isMinorDefect(result) ? FIT_LABELS.minor : FIT_LABELS.defect;
+  }
   const severity = severityOf(result);
   if (!severity) return OUTCOME_LABELS.ok;
   if (severity === 'red') return OUTCOME_LABELS.outOfService;

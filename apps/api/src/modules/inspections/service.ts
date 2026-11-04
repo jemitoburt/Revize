@@ -429,19 +429,25 @@ export function createInspectionsService(db: Db) {
         await addInspector(tx, inspectionId, auth.userId);
 
         const recordedAt = new Date(input.recordedAt);
-        // Types without the risk levels of ČSN EN 15635 are fit / unfit: a defect means unfit,
-        // stored as the highest level (out of service, always in the protocol).
+        // Types without the risk levels of ČSN EN 15635: a defect either does not prevent safe
+        // operation (stored as green, stays in use) or it does (unfit, stored as red: out of
+        // service). Both are always in the protocol.
         const [targetType] = await tx
           .select({ riskLevels: equipmentType.riskLevels })
           .from(equipmentType)
           .where(eq(equipmentType.id, target.equipmentTypeId));
-        const unfit = input.outcome === 'defect' && targetType?.riskLevels === false;
+        const fitUnfit = input.outcome === 'defect' && targetType?.riskLevels === false;
+        const severity = fitUnfit
+          ? input.severity === 'green'
+            ? ('green' as const)
+            : ('red' as const)
+          : input.severity;
         const values = {
           outcome: input.outcome,
           defectDescription: input.outcome === 'defect' ? input.defectDescription : null,
-          takenOutOfService: unfit || input.takenOutOfService,
-          severity: unfit ? ('red' as const) : input.severity,
-          includeInProtocol: unfit || input.includeInProtocol,
+          takenOutOfService: fitUnfit ? severity === 'red' : input.takenOutOfService,
+          severity,
+          includeInProtocol: fitUnfit || input.includeInProtocol,
           photosInProtocol: input.photosInProtocol,
           recordedAt,
           recordedBy: auth.userId,

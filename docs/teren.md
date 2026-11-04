@@ -59,9 +59,15 @@ techniků současně. Stačí v ní zapsat první výsledek.
       zapíše se do auditu).
   - U zelené a žluté je zaškrtávátko **Zahrnout do protokolu** (výchozí zapnuté). Červená
     závada je v protokolu vždy.
-- **Ostatní vybavení** (žebříky, pevné žebříky…): jen **Vyhovuje** / **Nevyhovuje**.
-  Nevyhovující artikl se vyřadí z užívání až do opravy (jako červená u regálů) a v protokolu je
-  vždy. Popište závadu a klepněte na **Uložit – nevyhovuje**.
+- **Ostatní vybavení** (žebříky, pevné žebříky…):
+  - **Vyhovuje** uloží výsledek jedním klepnutím.
+  - **Závada – provoz možný:** závada nebránící bezpečnému provozu (např. chybí štítek,
+    opotřebení). Vybavení zůstává v provozu, závada se zapíše do protokolu i s fotkami
+    („schopno bezpečného provozu: ANO“).
+  - **Nevyhovuje:** závada bránící bezpečnému provozu. Artikl se vyřadí z užívání až do opravy
+    (jako červená u regálů), v protokolu je „NE“.
+  - Obě závady jsou v protokolu vždy, každá ve své skupině. Popište závadu a klepněte na
+    **Uložit závadu** / **Uložit – nevyhovuje**.
 - U každé závady je zaškrtávátko **Zahrnout fotky do protokolu** (výchozí zapnuté). Vypnuté:
   fotky zůstanou u výsledku (export, kancelář), ale do protokolu se netisknou. Změnit to jde
   i v kanceláři.

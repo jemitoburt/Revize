@@ -108,6 +108,7 @@ function Body({
       ]
     : [
         { value: 'ok', label: FIT_LABELS.ok },
+        { value: 'green', label: FIT_LABELS.minor },
         { value: 'red', label: FIT_LABELS.defect },
       ];
 

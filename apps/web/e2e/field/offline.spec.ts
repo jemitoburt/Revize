@@ -40,6 +40,9 @@ test('without a connection results and photos stay on the device, survive a relo
     .click();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
   await sheet(page).getByLabel('Popis závady').fill('Uvolněná příčka');
+  // Ladders: a defect not preventing safe operation (default after "K závadě") or unfit.
+  await expect(sheet(page).getByRole('button', { name: 'Závada – provoz možný' })).toBeVisible();
+  await sheet(page).getByRole('button', { name: 'Nevyhovuje' }).click();
   await sheet(page).getByRole('button', { name: 'Uložit – nevyhovuje' }).click();
   await expect(page.getByTestId('progress')).toHaveText('2 / 3 zkontrolováno');
   await expect(page.getByTestId('sync-status')).toHaveText('Neodesláno: 3');

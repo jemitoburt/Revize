@@ -77,7 +77,7 @@ const SEVERITY_COLORS = { green: 'teal', amber: 'yellow', red: 'red' } as const;
 
 function resultColor(result: InspectionResult, riskLevels = true) {
   const severity = severityOf(result);
-  if (!riskLevels) return severity ? 'red' : 'green';
+  if (!riskLevels) return severity === 'green' ? 'yellow' : severity ? 'red' : 'green';
   return severity ? SEVERITY_COLORS[severity] : 'green';
 }
 

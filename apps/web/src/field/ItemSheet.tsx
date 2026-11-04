@@ -118,9 +118,11 @@ function SheetBody({
   const [description, setDescription] = useState(current?.defectDescription ?? '');
   const [includeInProtocol, setIncludeInProtocol] = useState(current?.includeInProtocol ?? true);
   const [photosInProtocol, setPhotosInProtocol] = useState(current?.photosInProtocol ?? true);
-  // Racks: risk levels of ČSN EN 15635; other types: fit / unfit (unfit = out of service).
+  // Racks: risk levels of ČSN EN 15635. Other types: fit, a defect not preventing safe operation
+  // (stored as green) or unfit (stored as red, out of service).
   const riskLevels = type?.riskLevels ?? true;
-  const unfit = !riskLevels && choice?.outcome === 'defect';
+  const unfit = !riskLevels && choice?.outcome === 'defect' && choice.severity === 'red';
+  const minor = !riskLevels && choice?.outcome === 'defect' && choice.severity === 'green';
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [busyItemPhoto, setBusyItemPhoto] = useState(false);
   // Photos on this device: drafts (defect photos before the result is saved) and unsent ones.
@@ -257,7 +259,7 @@ function SheetBody({
             onClick={() => {
               modals.close(id);
               if (choice?.outcome !== 'defect') {
-                setChoice({ outcome: 'defect', severity: riskLevels ? 'amber' : 'red' });
+                setChoice({ outcome: 'defect', severity: riskLevels ? 'amber' : 'green' });
               }
               void addDefectPhoto();
             }}
@@ -319,7 +321,7 @@ function SheetBody({
       )}
 
       <Divider label="Výsledek kontroly" labelPosition="left" />
-      <SimpleGrid cols={riskLevels ? { base: 2, sm: 4 } : 2} spacing="sm">
+      <SimpleGrid cols={riskLevels ? { base: 2, sm: 4 } : { base: 1, sm: 3 }} spacing="sm">
         <Button
           size={phone ? 'lg' : 'xl'}
           color="green"
@@ -337,8 +339,20 @@ function SheetBody({
         {!riskLevels && (
           <Button
             size={phone ? 'lg' : 'xl'}
+            color="yellow"
+            variant={minor ? 'filled' : 'light'}
+            leftSection={<IconAlertTriangle />}
+            disabled={readOnly}
+            onClick={() => setChoice({ outcome: 'defect', severity: 'green' })}
+          >
+            {FIT_LABELS.minor}
+          </Button>
+        )}
+        {!riskLevels && (
+          <Button
+            size={phone ? 'lg' : 'xl'}
             color="red"
-            variant={choice?.outcome === 'defect' ? 'filled' : 'light'}
+            variant={unfit ? 'filled' : 'light'}
             leftSection={<IconBan />}
             disabled={readOnly}
             onClick={() => setChoice({ outcome: 'defect', severity: 'red' })}
@@ -367,8 +381,10 @@ function SheetBody({
         <Stack gap="sm">
           <Text size="sm" c="dimmed">
             {unfit
-              ? 'Nevyhovující vybavení se vyřadí z užívání až do opravy.'
-              : SEVERITY_LABELS[choice.severity].hint}
+              ? 'Závada bránící bezpečnému provozu: vybavení se vyřadí z užívání až do opravy.'
+              : minor
+                ? 'Závada nebránící bezpečnému provozu: vybavení zůstává v provozu, závada se zapíše do protokolu i s fotkami.'
+                : SEVERITY_LABELS[choice.severity].hint}
           </Text>
           <Textarea
             label={
@@ -393,7 +409,7 @@ function SheetBody({
             disabled={readOnly}
             onChange={(e) => setPhotosInProtocol(e.currentTarget.checked)}
           />
-          {choice.severity !== 'red' && (
+          {riskLevels && choice.severity !== 'red' && (
             <Checkbox
               size="md"
               label="Zahrnout do protokolu"
@@ -414,7 +430,11 @@ function SheetBody({
           <Button
             size="lg"
             color={
-              choice.severity === 'red' ? 'red' : choice.severity === 'amber' ? 'yellow' : 'teal'
+              choice.severity === 'red'
+                ? 'red'
+                : choice.severity === 'amber' || minor
+                  ? 'yellow'
+                  : 'teal'
             }
             loading={saving}
             disabled={readOnly}

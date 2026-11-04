@@ -30,3 +30,16 @@ a u závady volba, zda se fotky tisknou do protokolu (i z kanceláře).
 - Starší výsledky žebříků se žlutou nebo zelenou úrovní se zobrazí jako „Nevyhovuje“ (podle
   typu), uložená úroveň zůstává v datech.
 - Přepnutím příznaku u typu se změní jen zobrazení a nové zápisy, uložené výsledky se nepřepisují.
+
+## Doplnění: závady nebránící bezpečnému provozu (2026-11-04)
+
+- Typy bez úrovní rizika mají tři výsledky: **Vyhovuje**, **Závada – provoz možný** a
+  **Nevyhovuje**. Formulace skupin v protokolu vychází z předpisů o revizích (vyhl. 85/1978 Sb.:
+  „závady, které brání bezpečnému a spolehlivému provozu“) a z formuláře protokolu („schopno
+  bezpečného provozu“): **Závady nebránící bezpečnému provozu** a **Závady bránící bezpečnému
+  provozu**.
+- Závada nebránící provozu se ukládá jako `severity = green` (bez vyřazení), nevyhovuje jako
+  `red`. Server to vynutí podle typu (jiná úroveň → `red`) a obě jsou v protokolu vždy
+  (`include_in_protocol`), fotky řídí `photos_in_protocol`.
+- V protokolu skupina `minor` (ANO v tabulce) a `unfit` (NE); výběr „jen červené“ se jich
+  netýká.

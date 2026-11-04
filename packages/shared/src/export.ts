@@ -6,7 +6,13 @@ import type { InspectionItem } from './api/inspections.js';
 import { LOCATION_SEPARATOR } from './api/master-data.js';
 import { formatDate, formatDateTime } from './dates.js';
 import type { FieldDefinition } from './equipment-fields.js';
-import { FIT_LABELS, outcomeLabel, SEVERITY_LABELS, severityOf } from './inspection.js';
+import {
+  FIT_DEFECT_TITLES,
+  FIT_LABELS,
+  outcomeLabel,
+  SEVERITY_LABELS,
+  severityOf,
+} from './inspection.js';
 
 /** A cell: text, number (kept as a number for Excel) or empty. */
 export type ExportCell = string | number | null;
@@ -125,7 +131,13 @@ export function photoCaption(
     item.designation ? `označení ${item.designation}` : '',
     typeName,
     item.locationPath.join(LOCATION_SEPARATOR),
-    severity ? (riskLevels ? SEVERITY_LABELS[severity].protocol : FIT_LABELS.defect) : '',
+    severity
+      ? riskLevels
+        ? SEVERITY_LABELS[severity].protocol
+        : severity === 'green'
+          ? FIT_DEFECT_TITLES.minor
+          : FIT_LABELS.defect
+      : '',
     item.result?.defectDescription ?? '',
   ]
     .filter(Boolean)
@@ -329,14 +341,18 @@ export function appendixRow(
         // As in the protocol table: ok and green = ANO, yellow and red = NE.
         if (!item.result) return '';
         const severity = severityOf(item.result);
-        if (!riskLevels) return severity ? 'NE' : 'ANO';
+        if (!riskLevels) return severity && severity !== 'green' ? 'NE' : 'ANO';
         return !severity || severity === 'green' ? 'ANO' : 'NE';
       }
       case 'note': {
         if (!item.result) return 'Nezkontrolováno';
         const severity = severityOf(item.result);
         // Short: the meaning of the levels is explained with the defect groups.
-        const level = riskLevels ? RISK_SHORT[severity ?? 'green'] : 'nevyhovuje';
+        const level = riskLevels
+          ? RISK_SHORT[severity ?? 'green']
+          : severity === 'green'
+            ? 'závada nebránící bezpečnému provozu'
+            : 'nevyhovuje';
         return severity ? [item.result.defectDescription, level].filter(Boolean).join(' – ') : '';
       }
       case 'nextInspection':

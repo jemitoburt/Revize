@@ -48,7 +48,7 @@ type Filter = 'all' | 'defects' | 'unchecked';
 const SEVERITY_COLOR = { green: 'teal', amber: 'yellow', red: 'red' } as const;
 const color = (r: InspectionResult, riskLevels = true) => {
   const severity = severityOf(r);
-  if (!riskLevels) return severity ? 'red' : 'green';
+  if (!riskLevels) return severity === 'green' ? 'yellow' : severity ? 'red' : 'green';
   return severity ? SEVERITY_COLOR[severity] : 'green';
 };
 

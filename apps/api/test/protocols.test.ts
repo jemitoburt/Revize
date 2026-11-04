@@ -210,10 +210,30 @@ describe('organization settings and protocol', () => {
       result('defect', { severity: 'amber', defectDescription: 'Uvolněná patka' }),
     );
     expect(amber.json()).toMatchObject({ severity: 'red', takenOutOfService: true });
+    // A defect not preventing safe operation (green): recorded, stays in use, always printed.
+    const minor = await api(
+      'PUT',
+      `/api/inspections/${id}/results/${items[3]!.id}`,
+      result('defect', {
+        severity: 'green',
+        defectDescription: 'Chybí štítek',
+        includeInProtocol: false,
+      }),
+    );
+    expect(minor.json()).toMatchObject({
+      severity: 'green',
+      takenOutOfService: false,
+      includeInProtocol: true,
+    });
     let html = (await api('GET', `/api/inspections/${id}/protocol.html`)).body;
-    expect(html).toContain('Nevyhovuje (2)');
+    expect(html).toContain('Závady bránící bezpečnému provozu (2)');
+    expect(html).toContain('Závady nebránící bezpečnému provozu (1)');
     expect(html).not.toContain('riziko');
     expect(html).toContain('Uvolněná patka – nevyhovuje');
+    expect(html).toContain('Chybí štítek – závada nebránící bezpečnému provozu');
+    // Only red defects chosen: the fit / unfit groups stay.
+    const redOnly = (await api('GET', `/api/inspections/${id}/protocol.html?defects=red`)).body;
+    expect(redOnly).toContain('Závady nebránící bezpečnému provozu (1)');
     expect(html).toContain('data:image/jpeg;base64,');
 
     // The office leaves the photos of one defect out of the protocol (audited).

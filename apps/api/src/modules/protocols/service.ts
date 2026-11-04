@@ -49,8 +49,14 @@ function printedResult(
   if (!result) return { outcome: 'unchecked', defectDescription: null };
   const severity = severityOf(result);
   if (!severity) return { outcome: 'ok', defectDescription: null };
-  // Types without risk levels: any defect is "unfit" (always printed).
-  if (!riskLevels) return { outcome: 'unfit', defectDescription: result.defectDescription };
+  // Types without risk levels: a defect preventing safe operation ("unfit") or not ("minor",
+  // stored as green); both always printed, with their photos.
+  if (!riskLevels) {
+    return {
+      outcome: severity === 'green' ? 'minor' : 'unfit',
+      defectDescription: result.defectDescription,
+    };
+  }
   if (!result.includeInProtocol) return { outcome: 'ok', defectDescription: null };
   return { outcome: severity, defectDescription: result.defectDescription };
 }
@@ -93,7 +99,7 @@ function appendixOf(
         i.result !== null &&
         (riskLevelsOf(i)
           ? ['amber', 'red'].includes(severityOf(i.result) ?? '')
-          : i.result.outcome === 'defect'),
+          : i.result.outcome === 'defect' && severityOf(i.result) !== 'green'),
     })),
   };
 }

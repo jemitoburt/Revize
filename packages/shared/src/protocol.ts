@@ -14,7 +14,7 @@ import {
   planProtocolLayout,
   type ProtocolLayout,
 } from './protocol-layout.js';
-import { SEVERITY_LABELS } from './inspection.js';
+import { FIT_DEFECT_TITLES, SEVERITY_LABELS } from './inspection.js';
 
 export const PROTOCOL_PLACEHOLDERS = [
   ['firma', 'Naše firma'],
@@ -80,7 +80,7 @@ export interface ProtocolItem {
    * Result as printed. A minor defect the technician left out of the protocol is printed as
    * `ok` without its note (`includeInProtocol`, decided by the service that builds the data).
    */
-  outcome: 'ok' | 'green' | 'amber' | 'red' | 'unfit' | 'unchecked';
+  outcome: 'ok' | 'green' | 'amber' | 'red' | 'unfit' | 'minor' | 'unchecked';
   defectDescription: string | null;
   /** data: URLs of defect photo thumbnails. */
   photos: string[];
@@ -212,11 +212,11 @@ export function protocolTextHtml(text: string): string {
 }
 
 /** Defect levels in the protocol: the risk levels of racks, or "unfit" (other types). */
-export type DefectLevel = 'red' | 'unfit' | 'amber' | 'green';
-const DEFECT_LEVELS: readonly DefectLevel[] = ['red', 'unfit', 'amber', 'green'];
+export type DefectLevel = 'red' | 'unfit' | 'amber' | 'green' | 'minor';
+const DEFECT_LEVELS: readonly DefectLevel[] = ['red', 'unfit', 'amber', 'green', 'minor'];
 const isDefect = (o: ProtocolItem['outcome']): o is DefectLevel =>
-  o === 'green' || o === 'amber' || o === 'red' || o === 'unfit';
-const SEVERITY_ORDER = { red: 0, unfit: 1, amber: 2, green: 3 } as const;
+  o === 'green' || o === 'amber' || o === 'red' || o === 'unfit' || o === 'minor';
+const SEVERITY_ORDER = { red: 0, unfit: 1, amber: 2, green: 3, minor: 4 } as const;
 
 /**
  * "Schopno bezpečného provozu": ok and green = ANO, yellow and red = NE, unchecked = none
@@ -224,7 +224,7 @@ const SEVERITY_ORDER = { red: 0, unfit: 1, amber: 2, green: 3 } as const;
  */
 export function safeToOperate(outcome: ProtocolItem['outcome']): boolean | null {
   if (outcome === 'unchecked') return null;
-  return outcome === 'ok' || outcome === 'green';
+  return outcome === 'ok' || outcome === 'green' || outcome === 'minor';
 }
 
 export type ProtocolDefect = ProtocolItem & {
@@ -288,6 +288,7 @@ export function protocolDefectGroups(data: ProtocolData): DefectGroup[] {
   const shown: readonly DefectLevel[] = [
     ...(data.defectSeverities ?? ['red', 'amber', 'green']),
     'unfit',
+    'minor',
   ];
   return DEFECT_LEVELS.flatMap((severity) => {
     if (!shown.includes(severity)) return [];
@@ -312,14 +313,25 @@ export function defectCardTitle(d: ProtocolDefect): string {
 /** Heading of a severity group: the level, how many and what it means (once, not per card). */
 export const SEVERITY_GROUP_TITLE: Record<DefectLevel, string> = {
   red: 'Červené riziko',
-  unfit: 'Nevyhovuje',
+  unfit: FIT_DEFECT_TITLES.unfit,
+  minor: FIT_DEFECT_TITLES.minor,
   amber: 'Žluté riziko',
   green: 'Zelené riziko',
 };
 
+/** The level next to a defect in the equipment table (short). */
+const NOTE_LEVEL: Record<DefectLevel, string> = {
+  red: 'červené riziko',
+  amber: 'žluté riziko',
+  green: 'zelené riziko',
+  unfit: 'nevyhovuje',
+  minor: 'závada nebránící bezpečnému provozu',
+};
+
 /** What a defect group means, printed once next to its heading. */
 export function defectGroupMeaning(level: DefectLevel): string {
-  if (level === 'unfit') return 'nesmí se používat, vyřadit z užívání až do opravy.';
+  if (level === 'unfit') return 'nevyhovuje, vyřadit z užívání až do opravy.';
+  if (level === 'minor') return 'schopno bezpečného provozu, závadu odstranit v rámci údržby.';
   return SEVERITY_LABELS[level].protocol.replace(/^[^–]*–\s*/, '');
 }
 
@@ -330,7 +342,7 @@ export function defectGroupMeaning(level: DefectLevel): string {
 export function protocolNoteLines(i: ProtocolItem): string[] {
   if (i.outcome === 'unchecked') return ['Nezkontrolováno'];
   if (!isDefect(i.outcome)) return [];
-  const risk = SEVERITY_GROUP_TITLE[i.outcome].toLowerCase();
+  const risk = NOTE_LEVEL[i.outcome];
   return [
     i.defectDescription ? `${i.defectDescription} – ${risk}` : SEVERITY_GROUP_TITLE[i.outcome],
   ];
@@ -538,7 +550,7 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
 
   const row = (i: ProtocolItem) => {
     // "nehodící se škrtněte": the answer that does not apply is struck through.
-    const yes = i.outcome === 'ok' || i.outcome === 'green';
+    const yes = safeToOperate(i.outcome) === true;
     const answered = i.outcome !== 'unchecked';
     return `<tr><td>${escape(i.itemNumber)}</td><td>${
       i.designation ? `<strong>${escape(i.designation)}</strong> ` : ''
