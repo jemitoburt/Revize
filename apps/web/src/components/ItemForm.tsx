@@ -14,6 +14,7 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_SEPARATOR,
   buildFieldValuesSchema,
+  missingRequiredFields,
   newId,
   type Item,
   type ItemStatus,
@@ -150,13 +151,18 @@ export function ItemForm({
     ([key]) => !FORM_KEYS.includes(key) && !visibleFieldKeys.has(key),
   );
 
+  const missing = type ? missingRequiredFields(type.fieldDefinitions, values) : [];
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const next: Record<string, string> = {};
     if (!siteId) next.siteId = 'Vyberte provozovnu';
     if (!typeId) next.equipmentTypeId = 'Vyberte typ vybavení';
     if (statusChanged && !reason.trim()) next.reason = 'Uveďte důvod změny stavu';
-    const parsed = type ? buildFieldValuesSchema(type.fieldDefinitions).safeParse(values) : null;
+    // Missing required values do not block saving (the item is incomplete, see the warning);
+    // wrong values do.
+    const parsed = type
+      ? buildFieldValuesSchema(type.fieldDefinitions, { allowMissing: true }).safeParse(values)
+      : null;
     if (parsed && !parsed.success) {
       for (const issue of parsed.error.issues)
         next[`fieldValues.${String(issue.path[0])}`] ??= issue.message;
@@ -329,6 +335,12 @@ export function ItemForm({
           <Text c="dimmed" size="sm">
             Po výběru typu se zobrazí jeho pole.
           </Text>
+        )}
+        {missing.length > 0 && (
+          <Alert color="yellow" data-testid="item-incomplete">
+            Chybí povinné údaje: {missing.join(', ')}. Artikl se uloží jako neúplný a půjde ho
+            doplnit později (filtr Neúplné v Artiklech).
+          </Alert>
         )}
 
         {item && (

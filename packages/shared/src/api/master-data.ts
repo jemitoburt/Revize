@@ -248,6 +248,8 @@ export const itemSchema = z.object({
   nextInspectionDate: z.string().nullable(),
   /** Own interval of the item; null = from its location, site or type. */
   inspectionIntervalMonths: z.number().int().nullable(),
+  /** Required fields of its type without a value (the item was saved incomplete). */
+  missingFields: z.array(z.string()),
   retired: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -312,6 +314,11 @@ export const listItemsQuerySchema = z.object({
   due: z.enum(ITEM_DUE_FILTERS).optional(),
   /** `unchecked`: not checked in the last closed inspection of its site (that covered its type). */
   lastInspection: z.enum(['unchecked']).optional(),
+  /** `true`: only items with a required field of their type left empty. */
+  incomplete: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
   sort: z.enum(ITEM_SORTS).default('location'),
   limit: z.coerce.number().int().min(1).max(1000).default(200),
   offset: z.coerce.number().int().min(0).default(0),

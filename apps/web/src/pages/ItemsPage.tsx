@@ -9,6 +9,7 @@ import {
   Paper,
   Select,
   Stack,
+  Switch,
   Table,
   Text,
   TextInput,
@@ -171,6 +172,7 @@ export function ItemsPage() {
     status: search.status,
     due: search.due,
     lastInspection: search.lastInspection,
+    incomplete: search.incomplete,
     q: search.q,
     sort: search.sort ?? 'location',
     limit: PAGE_SIZE,
@@ -222,6 +224,7 @@ export function ItemsPage() {
               status: search.status,
               due: search.due,
               lastInspection: search.lastInspection,
+              incomplete: search.incomplete ? 'true' : undefined,
             }}
           />
           {canWrite && <Button onClick={() => openItem(null)}>Nový artikl</Button>}
@@ -308,6 +311,12 @@ export function ItemsPage() {
             onChange={(v) =>
               setSearch({ lastInspection: (v as ItemsSearch['lastInspection']) ?? undefined })
             }
+          />
+          <Switch
+            label="Jen neúplné"
+            mb={6}
+            checked={search.incomplete === true}
+            onChange={(e) => setSearch({ incomplete: e.currentTarget.checked || undefined })}
           />
           <TextInput
             label="Hledat"
@@ -411,6 +420,16 @@ export function ItemsPage() {
                 ) : (
                   <Badge color="green" variant="light">
                     v provozu
+                  </Badge>
+                )}
+                {item.missingFields.length > 0 && (
+                  <Badge
+                    color="yellow"
+                    variant="light"
+                    ml={4}
+                    title={item.missingFields.join(', ')}
+                  >
+                    neúplný
                   </Badge>
                 )}
               </Table.Td>

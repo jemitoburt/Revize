@@ -141,8 +141,8 @@ test('items: create with validation and automatic number, 4-digit series, status
   await page.getByRole('option', { name: 'Hala A › Řada 1 › Pozice 2', exact: true }).click();
   await drawer.getByRole('combobox', { name: 'Typ vybavení' }).click();
   await page.getByRole('option', { name: 'Žebřík', exact: true }).click();
-  await drawer.getByRole('button', { name: 'Založit artikl' }).click();
-  await expect(drawer.getByText('Pole „Výrobce“ je povinné')).toBeVisible();
+  // Missing required fields only warn: the item could be saved as incomplete.
+  await expect(drawer.getByTestId('item-incomplete')).toContainText('Výrobce');
 
   await drawer.getByRole('combobox', { name: 'Výrobce' }).fill('Alve');
   await drawer.getByRole('combobox', { name: 'Typ žebříku' }).click();

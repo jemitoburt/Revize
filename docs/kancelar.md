@@ -37,6 +37,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      písmen, mezery a pomlčky se při porovnání nepočítají. Hledat jde podle obojího.
    - Kliknutím na řádek artikl upravíte. Změna stavu (vyřazen z provozu ↔ v provozu) vyžaduje
      důvod a zapíše se do auditu.
+   - **Neúplné artikly:** povinná pole typu vybavení uložení nebrání. Formulář upozorní „Chybí
+     povinné údaje: …“ a artikl se uloží; v seznamu má štítek _neúplný_ (najetím myší je vidět,
+     co chybí) a přepínač **Jen neúplné** je vyfiltruje (i pro Export evidence). Nutná je jen
+     provozovna a typ vybavení; číslo TZ se při nevyplnění přidělí samo. Chybná hodnota (např.
+     text v číselném poli) se dál odmítne.
    - **Filtry podle kontrol:** _Příští kontrola_ (po termínu, do 30 / 60 / 90 dní) a _Poslední
      kontrola → Nezkontrolované v poslední kontrole_ (artikl existoval při poslední uzavřené
      kontrole své provozovny, která zahrnovala jeho typ, ale nemá v ní výsledek). Filtry platí

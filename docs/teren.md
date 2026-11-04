@@ -43,6 +43,9 @@ techniků současně. Stačí v ní zapsat první výsledek.
   Umístění se uloží do iPadu a odešle se před artiklem, takže funguje i bez signálu. Upravit nebo
   přesunout umístění jde jen v kanceláři.
 
+Nový artikl jde v terénu uložit i bez povinných údajů (např. když chybí štítek s výrobcem);
+kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
+
 ## Karta artiklu
 
 - Ukazuje číslo, typ, umístění, QR kód, hodnoty polí a případný dřívější výsledek v této kontrole.

@@ -87,6 +87,10 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
     status: z.enum(ITEM_STATUSES).optional(),
     due: z.enum(ITEM_DUE_FILTERS).optional(),
     lastInspection: z.enum(['unchecked']).optional(),
+    incomplete: z
+      .enum(['true', 'false'])
+      .transform((v) => v === 'true')
+      .optional(),
   });
   const records = requirePermission('export.read');
   app.get(

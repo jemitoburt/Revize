@@ -1,6 +1,7 @@
 import {
   applyDefaultProducts,
   buildFieldValuesSchema,
+  missingRequiredFields,
   canonicalItemNumber,
   designationOf,
   newId,
@@ -24,7 +25,12 @@ import { recordAudit } from '../audit/service.js';
 import { locationNames, pathNamesOf } from '../locations/service.js';
 
 type ItemRow = typeof item.$inferSelect;
-type Joined = { item: ItemRow; typeName: string; pathIds: string[] | null };
+type Joined = {
+  item: ItemRow;
+  typeName: string;
+  typeFields: (typeof equipmentType.$inferSelect)['fieldDefinitions'];
+  pathIds: string[] | null;
+};
 
 const numberTaken = () =>
   new AppError(409, 'item_number_taken', 'Toto číslo TZ už v evidenci existuje.', [
@@ -74,12 +80,23 @@ function mapUniqueViolation(error: unknown): never {
 export function itemStateFilters(query: {
   due?: ItemDueFilter | undefined;
   lastInspection?: 'unchecked' | undefined;
+  incomplete?: boolean | undefined;
 }): SQL[] {
   const filters: SQL[] = [];
   if (query.due === 'overdue') {
     filters.push(sql`${item.nextInspectionDate} < current_date`);
   } else if (query.due) {
     filters.push(sql`${item.nextInspectionDate} <= current_date + ${Number(query.due)}::int`);
+  }
+  if (query.incomplete) {
+    // A required, not archived field of its type without a value.
+    filters.push(sql`exists (
+      select 1 from equipment_type t, jsonb_array_elements(t.field_definitions) f
+      where t.id = "item"."equipment_type_id"
+        and coalesce((f->>'required')::boolean, false)
+        and not coalesce((f->>'archived')::boolean, false)
+        and coalesce("item"."field_values"->>(f->>'key'), '') in ('', '[]')
+    )`);
   }
   if (query.lastInspection === 'unchecked') {
     // The last closed inspection of the item's site that covered its type (no scope = all
@@ -110,7 +127,7 @@ export function createItemsService(db: Db) {
       tx,
       rows.flatMap((r) => r.pathIds ?? []),
     );
-    return rows.map(({ item: row, typeName, pathIds }) => ({
+    return rows.map(({ item: row, typeName, typeFields, pathIds }) => ({
       id: row.id,
       customerId: row.customerId,
       siteId: row.siteId,
@@ -125,6 +142,7 @@ export function createItemsService(db: Db) {
       status: row.status as ItemStatus,
       nextInspectionDate: row.nextInspectionDate,
       inspectionIntervalMonths: row.inspectionIntervalMonths,
+      missingFields: missingRequiredFields(typeFields, row.fieldValues),
       retired: row.retiredAt !== null,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
@@ -134,7 +152,12 @@ export function createItemsService(db: Db) {
 
   const joined = (tx: DbOrTx) =>
     tx
-      .select({ item, typeName: equipmentType.name, pathIds: location.pathIds })
+      .select({
+        item,
+        typeName: equipmentType.name,
+        typeFields: equipmentType.fieldDefinitions,
+        pathIds: location.pathIds,
+      })
       .from(item)
       .innerJoin(equipmentType, eq(equipmentType.id, item.equipmentTypeId))
       .leftJoin(location, eq(location.id, item.locationId));
@@ -198,7 +221,8 @@ export function createItemsService(db: Db) {
     values: Record<string, unknown>,
   ) {
     // Empty fields with a default product (bay load) are filled like in the form and import.
-    const parsed = buildFieldValuesSchema(definitions).safeParse(
+    // Required fields may stay empty: the item is saved as incomplete (`missingFields`).
+    const parsed = buildFieldValuesSchema(definitions, { allowMissing: true }).safeParse(
       applyDefaultProducts(definitions, values),
     );
     if (parsed.success) return parsed.data;

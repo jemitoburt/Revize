@@ -340,12 +340,13 @@ describe('items', () => {
     const paths = response.json().issues.map((i: { path: string[] }) => i.path.join('.'));
     expect(paths).toEqual(
       expect.arrayContaining([
-        'fieldValues.manufacturer',
         'fieldValues.ladder_type',
         'fieldValues.rungs',
         'fieldValues.colour',
       ]),
     );
+    // A missing required value alone does not block saving (the item is incomplete).
+    expect(paths).not.toContain('fieldValues.manufacturer');
   });
 
   it('lists with location subtree filter, search and numeric location order', async () => {

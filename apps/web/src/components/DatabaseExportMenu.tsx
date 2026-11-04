@@ -13,6 +13,7 @@ export interface DatabaseExportMenuProps {
     status?: string;
     due?: string;
     lastInspection?: string;
+    incomplete?: string;
   };
 }
 

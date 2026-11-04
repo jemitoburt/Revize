@@ -65,6 +65,7 @@ export interface DatabaseQuery {
   status?: 'in_service' | 'out_of_service';
   due?: ItemDueFilter;
   lastInspection?: 'unchecked';
+  incomplete?: boolean;
 }
 
 export interface ExportFile<T> {

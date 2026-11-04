@@ -324,6 +324,7 @@ export type ItemQuery = {
   status?: ItemStatus;
   due?: 'overdue' | '30' | '60' | '90';
   lastInspection?: 'unchecked';
+  incomplete?: boolean;
   q?: string;
   includeRetired?: boolean;
   sort?: z.output<typeof listItemsQuerySchema>['sort'];

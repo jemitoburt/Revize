@@ -180,7 +180,14 @@ const isEmpty = (value: unknown) =>
  * fields are dropped. Values of archived fields are preserved untouched; unknown keys are
  * rejected so that typos in imports do not silently disappear.
  */
-export function buildFieldValuesSchema(definitions: readonly FieldDefinition[]) {
+/**
+ * `allowMissing`: required fields may stay empty (the item is saved, `missingRequiredFields`
+ * names what is missing); the given values are still checked.
+ */
+export function buildFieldValuesSchema(
+  definitions: readonly FieldDefinition[],
+  options: { allowMissing?: boolean } = {},
+) {
   const active = definitions.filter((field) => !field.archived);
   const archivedKeys = new Set(definitions.filter((f) => f.archived).map((f) => f.key));
 
@@ -195,7 +202,7 @@ export function buildFieldValuesSchema(definitions: readonly FieldDefinition[]) 
     for (const field of active) {
       const value = input[field.key];
       if (isEmpty(value)) {
-        if (field.required) {
+        if (field.required && !options.allowMissing) {
           ctx.addIssue({
             code: 'custom',
             path: [field.key],
@@ -218,6 +225,17 @@ export function buildFieldValuesSchema(definitions: readonly FieldDefinition[]) 
     }
     return output;
   });
+}
+
+/** Labels of the required (not archived) fields without a value: the item is incomplete. */
+export function missingRequiredFields(
+  definitions: readonly FieldDefinition[],
+  values: Readonly<Record<string, unknown>>,
+): string[] {
+  return definitions
+    .filter((f) => f.required && !f.archived && isEmpty(values[f.key]))
+    .sort((a, b) => a.order - b.order)
+    .map((f) => f.label);
 }
 
 function formatFieldValue(field: FieldDefinition, value: unknown): string {

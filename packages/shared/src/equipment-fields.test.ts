@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildFieldValuesSchema,
   applyDefaultProducts,
+  missingRequiredFields,
   displayFields,
   fieldDefinitionsSchema,
   type FieldDefinition,
@@ -143,5 +144,24 @@ describe('applyDefaultProducts', () => {
       '1.defaultProduct',
       '1.defaultProduct',
     ]);
+  });
+});
+
+describe('incomplete items', () => {
+  const defs = fieldDefinitionsSchema.parse([
+    { key: 'manufacturer', label: 'Výrobce', kind: 'text', required: true, order: 0 },
+    { key: 'rungs', label: 'Počet příček', kind: 'integer', required: true, order: 1 },
+    { key: 'note', label: 'Poznámka', kind: 'text', order: 2 },
+  ]);
+  it('saves without required values when allowed and names what is missing', () => {
+    expect(buildFieldValuesSchema(defs).safeParse({ note: 'x' }).success).toBe(false);
+    const parsed = buildFieldValuesSchema(defs, { allowMissing: true }).safeParse({ note: 'x' });
+    expect(parsed).toMatchObject({ success: true, data: { note: 'x' } });
+    // Wrong values are still refused.
+    expect(
+      buildFieldValuesSchema(defs, { allowMissing: true }).safeParse({ rungs: 'many' }).success,
+    ).toBe(false);
+    expect(missingRequiredFields(defs, { note: 'x', rungs: 8 })).toEqual(['Výrobce']);
+    expect(missingRequiredFields(defs, { manufacturer: 'Alve', rungs: 8 })).toEqual([]);
   });
 });
