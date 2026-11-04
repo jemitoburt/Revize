@@ -111,6 +111,11 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - Ve sloupci **Fotky** je u závady s fotkami zaškrtávátko **do protokolu**: vypnuté fotky se
      do protokolu netisknou (zůstávají v exportu). Jde měnit, dokud je kontrola otevřená;
      změna se zapíše do auditu.
+   - **Kontrola více typů najednou:** v terénu se při zahájení zvolí více typů vybavení (nebo
+     žádný = všechny). V kanceláři v náhledu protokolu **Typy vybavení v protokolu**: prázdné =
+     všechny typy v jednom protokolu s texty všech kategorií, nebo libovolná kombinace, nebo
+     jeden typ (soubor má typ v názvu). **Stáhnout → PDF – každý typ zvlášť (ZIP)** vytvoří
+     zvláštní protokol pro každý typ najednou.
    - **Protokol:** náhled přesně v podobě tisku, **Tisk** a **Stáhnout**: PDF (A4), PDF se
      dvěma stranami na list (A4 na šířku; Příloha 1 na šířku dostane celý list sama) a Word (DOCX, dá se dál upravovat). Dokud kontrola
      není uzavřená, je protokol označený jako předběžný.

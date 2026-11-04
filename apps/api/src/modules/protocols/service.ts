@@ -40,6 +40,7 @@ import type { ImageProcessor } from '../../infra/image-processor.js';
 import type { PdfRenderer } from '../../infra/pdf-renderer.js';
 import type { InspectionsService } from '../inspections/service.js';
 import { organizationOf, settingsOf } from '../organization/service.js';
+import { zipSync } from 'fflate';
 import { renderProtocolDocx } from './docx.js';
 import { twoPagesPerSheet } from './two-up.js';
 
@@ -133,7 +134,8 @@ export function createProtocolsService(
   async function build(
     auth: AuthContext,
     inspectionId: string,
-    equipmentTypeId?: string,
+    /** Equipment types in the protocol (empty = all of the inspection). */
+    equipmentTypeIds: readonly string[] = [],
     /** Columns of Příloha 1 (none = the preset columns). */
     columns: readonly string[] = [],
     forceAppendix = false,
@@ -141,9 +143,9 @@ export function createProtocolsService(
     shortest = false,
   ): Promise<ProtocolData> {
     const inspection = await inspections.get(auth, inspectionId);
-    // A protocol of one equipment type contains only its items and its protocol text.
+    // A protocol of some equipment types contains only their items and their protocol texts.
     const items = (await inspections.items(auth, inspectionId)).filter(
-      (i) => !equipmentTypeId || i.equipmentTypeId === equipmentTypeId,
+      (i) => !equipmentTypeIds.length || equipmentTypeIds.includes(i.equipmentTypeId),
     );
     const org = await organizationOf(db, auth);
     const settings = settingsOf(org);
@@ -330,13 +332,24 @@ export function createProtocolsService(
     return { ...data, sections, overviewPhotos: await all(data.overviewPhotos, 1) };
   }
 
+  /** `protokol-Provozovna-Brno-2026-11-03` (+ `-Zebrik` for a protocol of one type). */
+  const baseName = (data: ProtocolData, options: ProtocolOptions) =>
+    [
+      options.part === 'appendix' ? 'priloha-1' : 'protokol',
+      fileNamePart(data.site.name),
+      data.inspectionDate,
+      ...(options.equipmentTypeIds?.length && data.sections.length === 1
+        ? [fileNamePart(data.sections[0]!.typeName)]
+        : []),
+    ].join('-');
+
   return {
     async html(auth: AuthContext, inspectionId: string, options: ProtocolOptions = {}) {
       return renderProtocolHtml(
         await build(
           auth,
           inspectionId,
-          options.equipmentTypeId,
+          options.equipmentTypeIds,
           options.columns,
           options.forceAppendix,
           options.severities,
@@ -358,7 +371,7 @@ export function createProtocolsService(
       const data = await build(
         auth,
         inspectionId,
-        options.equipmentTypeId,
+        options.equipmentTypeIds,
         options.columns,
         options.forceAppendix,
         options.severities,
@@ -372,10 +385,9 @@ export function createProtocolsService(
           margin: PROTOCOL_PDF_MARGINS,
         },
       );
-      const slug = fileNamePart(data.site.name);
       return {
         data: options.twoUp ? await twoPagesPerSheet(bytes) : bytes,
-        fileName: `${options.part === 'appendix' ? 'priloha-1' : 'protokol'}-${slug}-${data.inspectionDate}${options.twoUp ? '-2-na-list' : ''}.pdf`,
+        fileName: `${baseName(data, options)}${options.twoUp ? '-2-na-list' : ''}.pdf`,
       };
     },
 
@@ -388,7 +400,7 @@ export function createProtocolsService(
       const data = await build(
         auth,
         inspectionId,
-        options.equipmentTypeId,
+        options.equipmentTypeIds,
         options.columns,
         options.forceAppendix,
         options.severities,
@@ -396,8 +408,29 @@ export function createProtocolsService(
       );
       return {
         data: await renderProtocolDocx(data, options.part),
-        fileName: `${options.part === 'appendix' ? 'priloha-1' : 'protokol'}-${fileNamePart(data.site.name)}-${data.inspectionDate}.docx`,
+        fileName: `${baseName(data, options)}.docx`,
       };
+    },
+
+    /** One PDF protocol per equipment type of the inspection (or of the chosen ones), as ZIP. */
+    async pdfPerType(
+      auth: AuthContext,
+      inspectionId: string,
+      options: ProtocolOptions & { twoUp?: boolean } = {},
+    ): Promise<{ data: Uint8Array; fileName: string }> {
+      const items = await inspections.items(auth, inspectionId);
+      const typeIds = [...new Set(items.map((i) => i.equipmentTypeId))].filter(
+        (id) => !options.equipmentTypeIds?.length || options.equipmentTypeIds.includes(id),
+      );
+      const files: Record<string, Uint8Array> = {};
+      let base = 'protokoly';
+      for (const typeId of typeIds) {
+        // One after another: Chromium renders one PDF at a time.
+        const file = await this.pdf(auth, inspectionId, { ...options, equipmentTypeIds: [typeId] });
+        files[file.fileName] = file.data;
+        base = file.fileName.replace(/^protokol-/, 'protokoly-').replace(/-[^-]+\.pdf$/, '');
+      }
+      return { data: zipSync(files, { level: 0 }), fileName: `${base}.zip` };
     },
 
     /** Columns that can be chosen for the appendix (fixed ones and the types' fields). */
@@ -414,7 +447,8 @@ export function createProtocolsService(
 
 /** Options of a protocol: one equipment type only, Příloha 1 columns and use, one part only. */
 export interface ProtocolOptions {
-  equipmentTypeId?: string;
+  /** Equipment types in the protocol (empty = all of the inspection). */
+  equipmentTypeIds?: string[];
   columns?: string[];
   /** Příloha 1 even when the table fits on the first page. */
   forceAppendix?: boolean;

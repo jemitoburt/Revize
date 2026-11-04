@@ -5,9 +5,11 @@ import { authOf, requirePermission } from '../../auth/plugin.js';
 import type { ProtocolsService } from './service.js';
 
 const params = z.object({ id: idSchema });
-/** Optional: the protocol of one equipment type only (its text and its items). */
+/** Optional: the protocol of some equipment types only (their texts and their items). */
 const querystring = z.object({
+  /** One type (older clients); `equipmentTypeIds` takes several, comma separated. */
   equipmentTypeId: idSchema.optional(),
+  equipmentTypeIds: z.string().max(2000).optional(),
   /** Columns of Příloha 1, comma separated (see protocol-columns); empty = preset columns. */
   columns: z.string().max(2000).optional(),
   /** `always`: the equipment table as Příloha 1 even when it fits on the first page. */
@@ -26,6 +28,7 @@ const SEVERITIES_OF = {
 } as const;
 const optionsOf = (q: {
   equipmentTypeId?: string;
+  equipmentTypeIds?: string;
   columns?: string;
   appendix: 'auto' | 'always';
   part: 'all' | 'appendix';
@@ -34,7 +37,10 @@ const optionsOf = (q: {
 }) => ({
   shortest: q.size === 'shortest',
   severities: [...SEVERITIES_OF[q.defects]],
-  equipmentTypeId: q.equipmentTypeId,
+  equipmentTypeIds: [
+    ...(q.equipmentTypeId ? [q.equipmentTypeId] : []),
+    ...(q.equipmentTypeIds ? q.equipmentTypeIds.split(',').filter(Boolean) : []),
+  ],
   columns: q.columns ? q.columns.split(',').filter(Boolean) : [],
   forceAppendix: q.appendix === 'always',
   part: q.part,
@@ -80,6 +86,29 @@ export const protocolsRoutes: FastifyPluginAsyncZod<{ protocols: ProtocolsServic
       });
       return reply
         .header('content-type', 'application/pdf')
+        .header('cache-control', 'no-store')
+        .header('content-disposition', `attachment; filename="${fileName}"`)
+        .send(Buffer.from(data.buffer, data.byteOffset, data.byteLength));
+    },
+  );
+  app.get(
+    '/inspections/:id/protocols.zip',
+    {
+      preHandler: read,
+      schema: {
+        tags,
+        summary: 'Protokol zvlášť pro každý typ vybavení kontroly (PDF v ZIP)',
+        params,
+        querystring: pdfQuery,
+      },
+    },
+    async (req, reply) => {
+      const { data, fileName } = await protocols.pdfPerType(authOf(req), req.params.id, {
+        ...optionsOf(req.query),
+        twoUp: req.query.layout === 'two-up',
+      });
+      return reply
+        .header('content-type', 'application/zip')
         .header('cache-control', 'no-store')
         .header('content-disposition', `attachment; filename="${fileName}"`)
         .send(Buffer.from(data.buffer, data.byteOffset, data.byteLength));

@@ -7,7 +7,6 @@ import {
   Modal,
   MultiSelect,
   SegmentedControl,
-  Select,
   Stack,
   Switch,
   Text,
@@ -79,7 +78,8 @@ export function ProtocolPreview({
   opened,
   onClose,
 }: ProtocolPreviewProps) {
-  const [typeId, setTypeId] = useState<string | null>(null);
+  /** Types in the protocol: empty = all types of the inspection in one protocol. */
+  const [typeIds, setTypeIds] = useState<string[]>([]);
   const columnOptions = useProtocolColumns(inspectionId, opened);
   const [withList, setWithList] = useState(false);
   /** Defects with cards and photos: all, red and yellow, or only red. */
@@ -87,11 +87,13 @@ export function ProtocolPreview({
   const [columns, setColumns] = useState<string[]>(loadColumns);
   const [shortest, setShortest] = useState(loadShortest);
   // The choice of red / yellow defects only applies to types with risk levels (racks).
-  const hasRiskLevels = types.some((t) => (!typeId || t.id === typeId) && t.riskLevels);
+  const hasRiskLevels = types.some(
+    (t) => (!typeIds.length || typeIds.includes(t.id)) && t.riskLevels,
+  );
   const shownDefects = hasRiskLevels ? defects : 'all';
   const html = useProtocolHtml(
     inspectionId,
-    typeId,
+    typeIds,
     opened,
     columns,
     withList,
@@ -105,7 +107,7 @@ export function ProtocolPreview({
     setDownloading(true);
     downloadFile(
       `/inspections/${inspectionId}/${file}${queryString({
-        equipmentTypeId: typeId,
+        equipmentTypeIds: typeIds.join(',') || undefined,
         columns: columns.join(',') || undefined,
         appendix: withList ? 'always' : undefined,
         defects: shownDefects === 'all' ? undefined : shownDefects,
@@ -131,16 +133,14 @@ export function ProtocolPreview({
         )}
         <Group justify="space-between">
           {types.length > 1 ? (
-            <Select
-              aria-label="Typ vybavení protokolu"
-              w={260}
-              data={[
-                { value: '', label: 'Všechny typy v jednom protokolu' },
-                ...types.map((t) => ({ value: t.id, label: `Jen ${t.name}` })),
-              ]}
-              value={typeId ?? ''}
-              onChange={(v) => setTypeId(v || null)}
-              allowDeselect={false}
+            <MultiSelect
+              label="Typy vybavení v protokolu"
+              placeholder="Všechny typy v jednom protokolu"
+              w={360}
+              data={types.map((t) => ({ value: t.id, label: t.name }))}
+              value={typeIds}
+              onChange={setTypeIds}
+              clearable
             />
           ) : (
             <span />
@@ -166,6 +166,13 @@ export function ProtocolPreview({
                     <Menu.Item onClick={() => download('protocol.pdf', {}, `${base}.pdf`)}>
                       PDF (A4)
                     </Menu.Item>
+                    {types.length > 1 && typeIds.length !== 1 && (
+                      <Menu.Item
+                        onClick={() => download('protocols.zip', {}, `${base}-podle-typu.zip`)}
+                      >
+                        PDF – každý typ zvlášť (ZIP)
+                      </Menu.Item>
+                    )}
                     <Menu.Item
                       onClick={() =>
                         download('protocol.pdf', { layout: 'two-up' }, `${base}-2-na-list.pdf`)

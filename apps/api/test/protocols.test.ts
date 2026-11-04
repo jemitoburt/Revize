@@ -192,6 +192,37 @@ describe('organization settings and protocol', () => {
     expect(onlyRacks).not.toContain('<h3>Žebříky a schůdky</h3>');
   });
 
+  it('combines several types in one protocol or makes one protocol per type', async () => {
+    const id = newId();
+    // An inspection of all types of the site (ladders and racks).
+    await api('PUT', `/api/inspections/${id}`, { siteId, inspectionDate: '2026-11-03' });
+    const types = (await api('GET', '/api/equipment-types')).json<{ id: string; name: string }[]>();
+    const rack = types.find((t) => t.name === 'Regál')!.id;
+    const both = (
+      await api(
+        'GET',
+        `/api/inspections/${id}/protocol.html?equipmentTypeIds=${ladderTypeId},${rack}`,
+      )
+    ).body;
+    // The texts of all chosen categories.
+    expect(both).toContain('<h3>Žebříky a schůdky</h3>');
+    expect(both).toContain('<h3>Regály</h3>');
+    const ladderOnly = await api(
+      'GET',
+      `/api/inspections/${id}/protocol.pdf?equipmentTypeIds=${ladderTypeId}`,
+    );
+    expect(ladderOnly.headers['content-disposition']).toContain(
+      'protokol-Provozovna-Brno-2026-11-03-Zebrik.pdf',
+    );
+    const perType = await api('GET', `/api/inspections/${id}/protocols.zip`);
+    expect(perType.statusCode).toBe(200);
+    const files = Object.keys(unzipSync(new Uint8Array(perType.rawPayload))).sort();
+    expect(files).toEqual([
+      'protokol-Provozovna-Brno-2026-11-03-Regal.pdf',
+      'protokol-Provozovna-Brno-2026-11-03-Zebrik.pdf',
+    ]);
+  }, 60_000);
+
   it("prints the lead technician's own authorization from the profile", async () => {
     const saved = await api('PATCH', '/api/auth/me', { certification: 'Osvědčení č. 42/2025' });
     expect(saved.json()).toMatchObject({ certification: 'Osvědčení č. 42/2025' });

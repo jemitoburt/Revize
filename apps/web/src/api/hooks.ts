@@ -750,7 +750,8 @@ export const useReopenInspection = () =>
 /** The protocol as HTML (preview in an iframe, printing in the demo). */
 export const useProtocolHtml = (
   inspectionId: string,
-  equipmentTypeId: string | null,
+  /** Equipment types in the protocol; empty = all of the inspection in one protocol. */
+  equipmentTypeIds: readonly string[],
   enabled: boolean,
   /** Columns of the appendix (equipment list for the customer); empty = no appendix. */
   columns: readonly string[] = [],
@@ -765,7 +766,7 @@ export const useProtocolHtml = (
     queryKey: [
       'protocol',
       inspectionId,
-      equipmentTypeId,
+      equipmentTypeIds.join(','),
       columns.join(','),
       forceAppendix,
       defects,
@@ -775,7 +776,7 @@ export const useProtocolHtml = (
       (
         await fetchBlob(
           `/inspections/${inspectionId}/protocol.html${queryString({
-            equipmentTypeId,
+            equipmentTypeIds: equipmentTypeIds.join(',') || undefined,
             columns: columns.join(',') || undefined,
             appendix: forceAppendix ? 'always' : undefined,
             defects: defects === 'all' ? undefined : defects,
