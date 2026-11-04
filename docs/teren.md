@@ -65,7 +65,9 @@ techniků současně. Stačí v ní zapsat první výsledek.
 - U každé závady je zaškrtávátko **Zahrnout fotky do protokolu** (výchozí zapnuté). Vypnuté:
   fotky zůstanou u výsledku (export, kancelář), ale do protokolu se netisknou. Změnit to jde
   i v kanceláři.
-- **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Zůstávají
+- **Fotky artiklu** (výrobní štítek, celkový pohled) jdou přidat i u artiklu v pořádku. Když
+  artikl ještě nemá výsledek nebo má závadu, aplikace se po klepnutí na **Vyfotit** zeptá, zda
+  fotka patří **k závadě** (tiskne se do protokolu) nebo **k artiklu**. Zůstávají
   u artiklu i pro další kontroly.
 - Hned po vyfocení se otevře **Upravit fotku**: tlačítky **Doleva** / **Doprava** fotku otočíte
   o 90°, tažením rohů ji oříznete (tažením uprostřed výřez posunete), **Celá** výřez zruší.

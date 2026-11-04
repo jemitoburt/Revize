@@ -28,16 +28,18 @@ test('without a connection results and photos stay on the device, survive a relo
   await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
 
   await page.getByTestId('item-20002').click();
-  await sheet(page).getByRole('button', { name: 'Nevyhovuje' }).click();
-  await sheet(page).getByLabel('Popis závady').fill('Uvolněná příčka');
+  // The photo first: before a result is chosen only "Fotky artiklu" can take one, so the app
+  // asks where it belongs; "K závadě" opens the defect form with the photo.
+  await sheet(page).getByRole('button', { name: 'Vyfotit' }).click();
   const chooser = page.waitForEvent('filechooser');
-  await sheet(page).getByRole('button', { name: 'Vyfotit' }).first().click();
+  await page.getByRole('button', { name: 'K závadě (tiskne se do protokolu)' }).click();
   await (await chooser).setFiles(PHOTO);
   await page
     .getByRole('dialog', { name: 'Upravit fotku' })
     .getByRole('button', { name: 'Uložit fotku' })
     .click();
   await expect(sheet(page).getByText('Fotky závady (1)')).toBeVisible();
+  await sheet(page).getByLabel('Popis závady').fill('Uvolněná příčka');
   await sheet(page).getByRole('button', { name: 'Uložit – nevyhovuje' }).click();
   await expect(page.getByTestId('progress')).toHaveText('2 / 3 zkontrolováno');
   await expect(page.getByTestId('sync-status')).toHaveText('Neodesláno: 3');

@@ -28,6 +28,7 @@ import {
 import { IconAlertTriangle, IconBan, IconCheck } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '@mantine/hooks';
+import { modals } from '@mantine/modals';
 import {
   useDeletePhoto,
   useDeleteResult,
@@ -237,6 +238,47 @@ function SheetBody({
     }
   };
 
+  // Photos of a defect are taken from "Fotky artiklu" easily (it is the only photo button until
+  // a result is chosen) and would then miss the protocol: unless the item is fine, ask.
+  const askWherePhotoBelongs = () => {
+    if (readOnly || (current?.outcome === 'ok' && !choice)) {
+      void addItemPhoto();
+      return;
+    }
+    const id = modals.open({
+      title: 'Ke které části fotka patří?',
+      zIndex: 400,
+      centered: true,
+      children: (
+        <Stack>
+          <Button
+            size="lg"
+            color="red"
+            onClick={() => {
+              modals.close(id);
+              if (choice?.outcome !== 'defect') {
+                setChoice({ outcome: 'defect', severity: riskLevels ? 'amber' : 'red' });
+              }
+              void addDefectPhoto();
+            }}
+          >
+            K závadě (tiskne se do protokolu)
+          </Button>
+          <Button
+            size="lg"
+            variant="default"
+            onClick={() => {
+              modals.close(id);
+              void addItemPhoto();
+            }}
+          >
+            K artiklu (výrobní štítek, celkový pohled)
+          </Button>
+        </Stack>
+      ),
+    });
+  };
+
   const confirmDelete = (photo: Photo) => {
     if (!window.confirm('Smazat fotku?')) return;
     deletePhoto.mutate({ id: photo.id }, { onError: notifyError });
@@ -394,7 +436,7 @@ function SheetBody({
         photos={itemPhotos}
         local={localItem}
         busy={busyItemPhoto}
-        onAdd={() => void addItemPhoto()}
+        onAdd={askWherePhotoBelongs}
         onDelete={confirmDelete}
         onDeleteLocal={(p) => void cancelPhoto(p.id)}
       />
