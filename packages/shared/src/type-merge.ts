@@ -123,7 +123,7 @@ export function planTypeMerge(
         required: false,
         options: values,
         suggestions: [],
-        order: order++,
+        order,
         archived: false,
       });
       addedFields.push(options.kindField.label);
