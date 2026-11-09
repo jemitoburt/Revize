@@ -24,13 +24,21 @@ export function findScannedItem<T extends ScanCandidate>(
 ): T | null {
   const byQr = items.find((i) => i.qrCode !== null && i.qrCode === target.code);
   if (byQr) return byQr;
+  const wanted = normalizeDesignation(target.code);
+  const byDesignation = () =>
+    wanted
+      ? (items.find((i) => i.designation && normalizeDesignation(i.designation) === wanted) ?? null)
+      : null;
+  // "TZ01" may be a designation as well as a label text for číslo TZ 1: the designation wins.
+  if (/\p{L}/u.test(target.code)) {
+    const designated = byDesignation();
+    if (designated) return designated;
+  }
   if (target.kind === 'digits') {
     const byNumber = items.find((i) => i.itemNumber === target.itemNumber);
     if (byNumber) return byNumber;
   }
-  const wanted = normalizeDesignation(target.code);
-  if (!wanted) return null;
-  return items.find((i) => i.designation && normalizeDesignation(i.designation) === wanted) ?? null;
+  return byDesignation();
 }
 
 /** Progress of an inspection from its working list (the server computes the same in SQL). */

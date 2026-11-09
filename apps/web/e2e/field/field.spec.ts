@@ -132,6 +132,13 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
   await expect(sheet(page)).toBeHidden();
 
+  // A label with a číslo TZ that is not in the records yet (as printed: "TZ: 20 002").
+  await wedgeScan(page, 'TZ: 20 002');
+  await expect(
+    page.getByRole('button', { name: 'Založit artikl s číslem TZ 20002' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Pokračovat' }).click();
+
   // A Bluetooth scanner reads an unknown label: create the item with that code.
   await wedgeScan(page, 'R20001');
   await expect(page.getByText('nepatří žádnému artiklu')).toBeVisible();

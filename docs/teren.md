@@ -42,6 +42,12 @@ techniků současně. Stačí v ní zapsat první výsledek.
 - **Bluetooth čtečka** v režimu klávesnice funguje kdykoli, když je otevřená kontrola. Najde
   artikl podle QR kódu, čísla TZ i označení.
 - **Neznámý kód:** aplikace nabídne **Založit artikl s tímto kódem**. QR kód se předvyplní.
+  Je-li v kódu číslo TZ (štítek z tiskárny), nabídne **Založit artikl s číslem TZ …** a předvyplní
+  číslo TZ.
+- **QR kódy na štítcích:** stačí, když tiskárna do QR kódu vloží jen číslo TZ (`12447`). Aplikace
+  přečte i text jako na štítku (`TZ: 12 447`, `TZ12447`). V aplikaci se pak nic nepáruje, artikl
+  se najde podle čísla TZ. Doporučení pro tisk: kód aspoň 15–20 mm, korekce chyb Q, kolem volný
+  okraj, matný povrch.
 - **Nové umístění:** ve formuláři nového artiklu je pod polem Umístění tlačítko **Nové
   umístění**. Vyberete nadřazené umístění (např. Hala A) a napíšete název (např. Řada 9).
   Umístění se uloží do iPadu a odešle se před artiklem, takže funguje i bez signálu. Upravit nebo

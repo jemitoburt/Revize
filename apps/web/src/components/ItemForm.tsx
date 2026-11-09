@@ -47,6 +47,7 @@ export interface ItemFormProps {
     siteId?: string;
     locationId?: string;
     equipmentTypeId?: string;
+    itemNumber?: string;
     qrCode?: string;
   };
   /** Field mode: customer and site come from the inspection and cannot be changed. */
@@ -94,7 +95,7 @@ export function ItemForm({
   const [typeId, setTypeId] = useState<string | null>(
     item?.equipmentTypeId ?? defaults.equipmentTypeId ?? null,
   );
-  const [itemNumber, setItemNumber] = useState(item?.itemNumber ?? '');
+  const [itemNumber, setItemNumber] = useState(item?.itemNumber ?? defaults.itemNumber ?? '');
   const [qrCode, setQrCode] = useState(item?.qrCode ?? defaults.qrCode ?? '');
   const [designation, setDesignation] = useState(item?.designation ?? '');
   // Client id of a new item: a repeated save (e.g. after a timeout) cannot create it twice.

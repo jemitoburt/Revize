@@ -236,7 +236,9 @@ export function InspectionPage() {
   const [scanning, setScanning] = useState(false);
   const [padOpen, setPadOpen] = useState(false);
   const [unknown, setUnknown] = useState<string | null>(null);
-  const [newItem, setNewItem] = useState<{ qrCode?: string } | null>(null);
+  const unknownTarget = unknown ? parseScanPayload(unknown) : null;
+  const unknownNumber = unknownTarget?.kind === 'digits' ? unknownTarget.itemNumber : null;
+  const [newItem, setNewItem] = useState<{ qrCode?: string; itemNumber?: string } | null>(null);
   const [photosOpen, setPhotosOpen] = useState(false);
   const [finishing, setFinishing] = useState(false);
 
@@ -537,11 +539,18 @@ export function InspectionPage() {
               <Button
                 size="md"
                 onClick={() => {
-                  setNewItem({ qrCode: unknown ?? undefined });
+                  // A číslo TZ (the label's number) goes to Číslo TZ, anything else is a QR code.
+                  setNewItem(
+                    unknownNumber
+                      ? { itemNumber: unknownNumber }
+                      : { qrCode: unknown ?? undefined },
+                  );
                   setUnknown(null);
                 }}
               >
-                Založit artikl s tímto kódem
+                {unknownNumber
+                  ? `Založit artikl s číslem TZ ${unknownNumber}`
+                  : 'Založit artikl s tímto kódem'}
               </Button>
             )}
           </Group>
@@ -568,6 +577,7 @@ export function InspectionPage() {
                 ? { equipmentTypeId: data.equipmentTypeIds[0] }
                 : {}),
               ...(newItem.qrCode ? { qrCode: newItem.qrCode } : {}),
+              ...(newItem.itemNumber ? { itemNumber: newItem.itemNumber } : {}),
             }}
             onCreateLocation={(parent, name) => createLocation.mutateAsync({ parent, name })}
             onCreate={async (body, locationPath) => {

@@ -25,6 +25,13 @@ describe('findScannedItem', () => {
     // "4001" is also the QR code of item 10002: the QR code wins.
     expect(findScannedItem(items, parseScanPayload('4001')!)?.itemNumber).toBe('10002');
     expect(findScannedItem(items, parseScanPayload('010001')!)?.itemNumber).toBe('10001');
+    // The label text as printed (or encoded by the print shop).
+    expect(findScannedItem(items, parseScanPayload('TZ: 10 001')!)?.itemNumber).toBe('10001');
+    // A designation that looks like label text still means the designation.
+    const tz = [...items, { itemNumber: '1', qrCode: null, designation: null }];
+    tz.push({ itemNumber: '777', qrCode: null, designation: 'TZ-01' });
+    expect(findScannedItem(tz, parseScanPayload('TZ01')!)?.itemNumber).toBe('777');
+    expect(findScannedItem(tz, parseScanPayload('TZ: 1')!)?.itemNumber).toBe('1');
     expect(findScannedItem(items, parseScanPayload('https://x.cz/q/R10001')!)?.itemNumber).toBe(
       '10001',
     );

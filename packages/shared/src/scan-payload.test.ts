@@ -15,6 +15,18 @@ describe('parseScanPayload', () => {
     });
   });
 
+  it('reads the číslo TZ as printed on a label', () => {
+    for (const printed of ['TZ: 12 447', 'TZ12447', 'tz 12447', 'TZ-12447', '12 447']) {
+      expect(parseScanPayload(printed)).toEqual({
+        kind: 'digits',
+        code: printed,
+        itemNumber: '12447',
+      });
+    }
+    expect(parseScanPayload('TZ: 123456')).toEqual({ kind: 'qr', code: 'TZ: 123456' });
+    expect(parseScanPayload('TZA1')).toEqual({ kind: 'qr', code: 'TZA1' });
+  });
+
   it('extracts the code from a label URL', () => {
     expect(parseScanPayload('https://revize.example.ts.net/q/AB12CD')).toEqual({
       kind: 'qr',

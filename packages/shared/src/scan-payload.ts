@@ -14,6 +14,8 @@ export type ScanTarget =
   { kind: 'qr'; code: string } | { kind: 'digits'; code: string; itemNumber: string };
 
 // scheme://host[:port]/any/prefix/q/<code>[/][?query][#hash]
+// The text of a printed label: "TZ: 12 447", "TZ12447" or "12 447" (thousands separated).
+const LABEL_NUMBER = /^(?:TZ\s*[:.#-]?\s*)?(\d[\d ]*)$/i;
 const QR_URL = /^https?:\/\/[^/?#]+(?:\/[^?#]*)?\/q\/([^/?#]+)\/?(?:[?#].*)?$/i;
 
 export function parseScanPayload(raw: string): ScanTarget | null {
@@ -23,7 +25,8 @@ export function parseScanPayload(raw: string): ScanTarget | null {
   const fromUrl = extractCodeFromUrl(value);
   if (fromUrl !== null) return { kind: 'qr', code: fromUrl };
 
-  const itemNumber = canonicalItemNumber(value);
+  const digits = LABEL_NUMBER.exec(value)?.[1]?.replaceAll(' ', '');
+  const itemNumber = digits ? canonicalItemNumber(digits) : null;
   if (itemNumber !== null) return { kind: 'digits', code: value, itemNumber };
 
   return { kind: 'qr', code: value };
