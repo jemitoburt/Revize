@@ -628,6 +628,46 @@ export function useCreateFieldItem(inspectionId: string) {
   });
 }
 
+/** Field edit of an item (outbox): only the changed fields, without a version (later wins). */
+export type FieldItemChanges = Omit<In<typeof updateItemSchema>, 'version'>;
+
+export function useUpdateFieldItem(inspectionId: string) {
+  const client = useQueryClient();
+  return useMutation<
+    void,
+    Error,
+    { id: string; itemNumber: string; changes: FieldItemChanges; preview: Partial<InspectionItem> }
+  >({
+    mutationFn: async ({ id, itemNumber, changes, preview }) => {
+      // A location created in the field (still on the device) has to reach the server first.
+      const newLocation = changes.locationId
+        ? await localDb.outbox
+            .filter(
+              (c) => c.kind === 'location' && (c.body as { id: string }).id === changes.locationId,
+            )
+            .first()
+        : undefined;
+      await enqueue({
+        id: newId(),
+        kind: 'item',
+        method: 'PATCH',
+        path: `/items/${id}`,
+        body: changes,
+        group: `item:${id}`,
+        ...(newLocation ? { dependsOn: [newLocation.group] } : {}),
+        preview: { ...preview, id },
+        label: `Úprava artiklu ${itemNumber}`,
+        inspectionId,
+        itemId: id,
+      });
+    },
+    onSuccess: (_, { id, preview }) =>
+      client.setQueryData<InspectionItem[]>(['inspection-items', inspectionId], (items) =>
+        items?.map((i) => (i.id === id ? { ...i, ...preview } : i)),
+      ),
+  });
+}
+
 export const usePhotos = (query: { itemId?: string; inspectionId?: string }) =>
   useQuery<Photo[], ApiRequestError>({
     queryKey: ['photos', query],

@@ -25,7 +25,7 @@ import {
   type Photo,
   type Severity,
 } from '@revize/shared';
-import { IconAlertTriangle, IconBan, IconCheck } from '@tabler/icons-react';
+import { IconAlertTriangle, IconBan, IconCheck, IconPencil } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useMediaQuery } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
@@ -52,6 +52,8 @@ export interface ItemSheetProps {
   onClose: () => void;
   /** After a result was saved (and its photos uploaded). */
   onSaved: (result: InspectionResult) => void;
+  /** Opens the item's details for editing (číslo, označení, umístění, fields). */
+  onEdit?: () => void;
 }
 
 type Choice = { outcome: 'ok' } | { outcome: 'defect'; severity: Severity };
@@ -98,6 +100,7 @@ function SheetBody({
   readOnly,
   onClose,
   onSaved,
+  onEdit,
 }: ItemSheetProps & { item: InspectionItem }) {
   const phone = useMediaQuery('(max-width: 48em)') ?? false;
   const record = useRecordResult(inspectionId);
@@ -295,6 +298,17 @@ function SheetBody({
         </Text>
         {item.qrCode && <Badge variant="light">QR {item.qrCode}</Badge>}
         {item.status === 'out_of_service' && <Badge color="red">Vyřazen z provozu</Badge>}
+        {onEdit && !readOnly && (
+          <Button
+            variant="light"
+            size="md"
+            ml="auto"
+            leftSection={<IconPencil size={18} />}
+            onClick={onEdit}
+          >
+            Upravit údaje
+          </Button>
+        )}
       </Group>
 
       {fields.length > 0 && (

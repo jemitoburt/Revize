@@ -26,6 +26,7 @@ import { useMemo, useState, type FormEvent } from 'react';
 import type { z } from 'zod';
 import type { ApiRequestError } from '../api/client.js';
 import {
+  type FieldItemChanges,
   useCreateItem,
   useCustomers,
   useEquipmentTypes,
@@ -62,6 +63,12 @@ export interface ItemFormProps {
     body: z.input<typeof createItemSchema> & { id: string },
     locationPath: string[],
   ) => Promise<void>;
+  /**
+   * Field mode: stores an edit on the device (outbox) instead of calling the API. Gets only the
+   * changed fields and the location path names for the preview. Status, retirement and the
+   * interval stay with the office.
+   */
+  onUpdate?: (changes: FieldItemChanges, locationPath: string[]) => Promise<void>;
   /** Field mode: adds a location on the device (outbox); offered next to the location select. */
   onCreateLocation?: (parent: Location | null, name: string) => Promise<Location>;
   /** Called with the saved item (not with field-mode items created through `onCreate`). */
@@ -74,6 +81,7 @@ export function ItemForm({
   fixedSite,
   allowedTypeIds,
   onCreate,
+  onUpdate,
   onCreateLocation,
   onDone,
 }: ItemFormProps) {
@@ -191,6 +199,35 @@ export function ItemForm({
       nextInspectionDate: nextInspection || null,
       inspectionIntervalMonths: interval,
     };
+    if (item && onUpdate) {
+      const edited: FieldItemChanges = {
+        locationId,
+        equipmentTypeId: typeId!,
+        itemNumber,
+        designation,
+        qrCode,
+        fieldValues: parsed.data,
+        nextInspectionDate: nextInspection || null,
+      };
+      const before: Record<string, unknown> = {
+        locationId: item.locationId,
+        equipmentTypeId: item.equipmentTypeId,
+        itemNumber: item.itemNumber,
+        designation: item.designation ?? '',
+        qrCode: item.qrCode ?? '',
+        fieldValues: item.fieldValues,
+        nextInspectionDate: item.nextInspectionDate,
+      };
+      const changes = Object.fromEntries(
+        Object.entries(edited).filter(
+          ([key, value]) => stableJson(value) !== stableJson(before[key]),
+        ),
+      ) as FieldItemChanges;
+      if (Object.keys(changes).length === 0) return onDone();
+      const path = locations.data?.find((l) => l.id === locationId)?.pathNames ?? [];
+      onUpdate(changes, path).then(() => onDone(), notifyError);
+      return;
+    }
     if (item) {
       update.mutate(
         {
@@ -293,6 +330,7 @@ export function ItemForm({
             label="Číslo TZ"
             description="4 nebo 5 číslic, v celé evidenci jen jednou; prázdné = další volné"
             inputMode="numeric"
+            autoComplete="off"
             placeholder={item ? undefined : 'automaticky'}
             value={itemNumber}
             error={errors.itemNumber}
@@ -300,6 +338,10 @@ export function ItemForm({
           />
           <TextInput
             label="Označení"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="characters"
+            spellCheck={false}
             description="Např. Ž-01 nebo A1-12 (předvolba a číslo), v provozovně jen jednou"
             value={designation}
             error={errors.designation}
@@ -307,6 +349,10 @@ export function ItemForm({
           />
           <TextInput
             label="QR kód štítku"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="characters"
+            spellCheck={false}
             value={qrCode}
             error={errors.qrCode}
             onChange={(e) => setQrCode(e.currentTarget.value)}
@@ -317,12 +363,14 @@ export function ItemForm({
             error={errors.nextInspectionDate}
             onChange={setNextInspection}
           />
-          <IntervalField
-            value={interval}
-            onChange={setInterval}
-            error={errors.inspectionIntervalMonths}
-            inherited="z umístění (hala), provozovny nebo typu vybavení"
-          />
+          {!onUpdate && (
+            <IntervalField
+              value={interval}
+              onChange={setInterval}
+              error={errors.inspectionIntervalMonths}
+              inherited="z umístění (hala), provozovny nebo typu vybavení"
+            />
+          )}
         </SimpleGrid>
 
         {type ? (
@@ -344,7 +392,7 @@ export function ItemForm({
           </Alert>
         )}
 
-        {item && (
+        {item && !onUpdate && (
           <Stack gap="xs">
             <Text size="sm" fw={500}>
               Stav
@@ -384,5 +432,14 @@ export function ItemForm({
         </Group>
       </Stack>
     </form>
+  );
+}
+
+/** JSON with sorted object keys: the same values compare equal whatever their order. */
+function stableJson(value: unknown): string {
+  return JSON.stringify(value, (_, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => a.localeCompare(b)))
+      : v,
   );
 }

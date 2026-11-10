@@ -129,6 +129,18 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   // The designation finds the item too (scanner or keyboard), case and dashes ignored.
   await wedgeScan(page, 'a101');
   await expect(sheet(page).getByTestId('designation')).toHaveText('A1-01');
+  // Details are edited right in the field (through the outbox, only what changed).
+  await sheet(page).getByRole('button', { name: 'Upravit údaje' }).click();
+  const edit = page.getByRole('dialog').filter({ hasText: 'Upravit artikl 10001' });
+  await edit.getByLabel('Označení', { exact: true }).fill('A1-99');
+  await edit.getByRole('button', { name: 'Uložit', exact: true }).click();
+  await expect(sheet(page).getByTestId('designation')).toHaveText('A1-99');
+  await expect
+    .poll(
+      async () =>
+        (await (await page.request.get('/api/items?q=10001')).json()).items[0].designation,
+    )
+    .toBe('A1-99');
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
   await expect(sheet(page)).toBeHidden();
 

@@ -92,6 +92,10 @@ kancelář ho pak najde přepínačem _Jen neúplné_ a doplní.
   o 90°, tažením rohů ji oříznete (tažením uprostřed výřez posunete), **Celá** výřez zruší.
   **Uložit fotku** ji teprve uloží do zařízení, **Zahodit** ji zahodí. Úprava se provede
   na původní fotce, kvalita se tím nesnižuje.
+- **Upravit údaje** (vpravo nahoře na kartě) otevře formulář artiklu: číslo TZ, označení, QR kód,
+  umístění, typ, příští kontrola a údaje typu (výrobce, nosnost…). Uloží se jen to, co jste
+  změnili, nejdřív do zařízení a pak na server (funguje i bez signálu). Stav, vyřazení z evidence
+  a interval kontrol mění kancelář.
 - Fotku zobrazíte klepnutím na náhled. Tam ji jde i smazat.
 - **Zrušit výsledek** vrátí artikl mezi nezkontrolované. Nejdřív je potřeba smazat fotky
   závady.
@@ -127,3 +131,14 @@ v auditu.
 
 Na GitHub Pages jsou data jen v prohlížeči, ve kterém pracujete. Nezadávejte skutečná data
 zákazníků. Obnovit ukázková data jde v uživatelském menu.
+
+## iPad: klávesnice a Apple Pencil
+
+- **Malá klávesnice nebo jen lišta dole:** iPad ukáže místo klávesnice jen lištu, když je
+  připojená Bluetooth klávesnice nebo **Bluetooth čtečka** (hlásí se jako klávesnice). Klávesnici
+  vyvoláte podržením šipky ⌄ na liště nebo tlačítkem čtečky pro zobrazení klávesnice iOS (u většiny
+  čteček dvojstisk spouště, viz návod čtečky). Malá plovoucí klávesnice se roztáhne zpět
+  roztažením dvěma prsty.
+- Pole pro označení a QR kód píší velkými písmeny a bez opravy slov, číslo TZ otevře číselnou
+  klávesnici.
+- **Apple Pencil:** všechna tlačítka reagují i na tužku, číselník i na rychlé klepání za sebou.

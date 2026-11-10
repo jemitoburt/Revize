@@ -16,3 +16,19 @@
     font-size: max(16px, 1em);
   }
 }
+
+/* Touch and Apple Pencil: no double-tap zoom on controls, so quick taps (number pad, buttons,
+   checkboxes) are never swallowed as a double tap and react without delay. */
+button,
+a,
+label,
+input,
+select,
+textarea,
+[role='button'],
+[role='checkbox'],
+[role='option'],
+[role='tab'],
+[role='radio'] {
+  touch-action: manipulation;
+}

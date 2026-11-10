@@ -290,7 +290,13 @@ export const updateItemSchema = z
     reason: z.string().trim().max(500),
   })
   .partial()
-  .extend({ version });
+  .extend({
+    /**
+     * Omitted by field edits from the outbox: they send only the changed fields and the later
+     * change wins (like results, ADR-0004). The office always sends it.
+     */
+    version: version.optional(),
+  });
 
 export const ITEM_SORTS = ['location', 'itemNumber', 'type', 'nextInspection', 'updated'] as const;
 

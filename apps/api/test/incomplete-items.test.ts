@@ -54,3 +54,20 @@ it('saves an item without required values and lists it as incomplete', async () 
   });
   expect((await api('GET', '/api/items?incomplete=true')).json().items).toEqual([]);
 });
+
+it('takes a field edit without a version (only changed fields, later wins)', async () => {
+  const listed = (await api('GET', '/api/items?q=8801')).json<{
+    items: { id: string; version: number }[];
+  }>().items[0]!;
+  // The field sends what changed, without the version it saw.
+  const edited = await api('PATCH', `/api/items/${listed.id}`, { designation: 'ŽLS-01' });
+  expect(edited.statusCode, edited.body).toBe(200);
+  expect(edited.json().designation).toBe('ŽLS-01');
+  expect(edited.json().fieldValues).toMatchObject({ manufacturer: 'Alve' });
+  // The office still gets a conflict for an edit made on an older version.
+  const stale = await api('PATCH', `/api/items/${listed.id}`, {
+    version: listed.version,
+    designation: 'X',
+  });
+  expect(stale.statusCode).toBe(409);
+});

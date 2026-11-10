@@ -15,7 +15,11 @@ export function applyPending(
   for (const command of [...commands].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0))) {
     if (command.kind === 'item' && command.inspectionId === inspectionId) {
       const preview = command.preview as InspectionItem;
-      if (!byId.has(preview.id)) {
+      const existing = byId.get(preview.id);
+      if (command.method === 'PATCH') {
+        // A field edit: its changed fields over the item (new or from the server).
+        if (existing) Object.assign(existing, preview);
+      } else if (!existing) {
         const added = { ...preview };
         list.push(added);
         byId.set(added.id, added);

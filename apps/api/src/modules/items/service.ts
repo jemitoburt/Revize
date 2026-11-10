@@ -575,8 +575,10 @@ export function createItemsService(db: Db) {
     ): Promise<Item> {
       await db.transaction(async (tx) => {
         const { item: current } = await getJoined(tx, auth, id);
-        if (current.version !== input.version) throw versionConflict();
-        const { version, ...changes } = input;
+        if (input.version !== undefined && current.version !== input.version) {
+          throw versionConflict();
+        }
+        const { version = current.version, ...changes } = input;
         await applyUpdate(tx, auth, current, changes, version);
       });
       return this.get(auth, id);

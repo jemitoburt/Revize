@@ -16,7 +16,7 @@ export interface OutboxRow {
   /** Who recorded it; other users' commands are never sent under a new login. */
   userId: string;
   kind: 'result' | 'result-delete' | 'photo' | 'item' | 'location';
-  method: 'PUT' | 'POST' | 'DELETE';
+  method: 'PUT' | 'POST' | 'PATCH' | 'DELETE';
   path: string;
   /** JSON body, or the text fields of a photo upload. */
   body: unknown;

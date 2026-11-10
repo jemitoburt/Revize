@@ -1,6 +1,7 @@
-import { Button, Group, Modal, SimpleGrid, Stack, Text } from '@mantine/core';
+import { Button, type ButtonProps, Group, Modal, SimpleGrid, Stack, Text } from '@mantine/core';
 import { IconBackspace } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { usePress } from './press.js';
 
 export interface NumberPadProps {
   opened: boolean;
@@ -16,6 +17,14 @@ export interface NumberPadProps {
    * designation like "AG01" or "01-ŽLS" is typed without the keyboard (dashes do not matter).
    */
   tokens?: readonly string[];
+}
+
+/** A key that reacts to quick taps with a finger as well as the Apple Pencil (`usePress`). */
+function PadKey({
+  onPress,
+  ...props
+}: ButtonProps & { onPress: () => void; children: ReactNode; 'aria-label'?: string }) {
+  return <Button {...props} {...usePress(onPress)} />;
 }
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
@@ -74,42 +83,42 @@ export function NumberPad({ opened, onClose, onNumber, tokens = [] }: NumberPadP
         {tokens.length > 0 && (
           <Group gap="xs" justify="center" data-testid="designation-keys">
             {tokens.map((token) => (
-              <Button
+              <PadKey
                 key={token}
                 variant="light"
                 size="lg"
                 miw={64}
                 aria-label={`Označení ${token}`}
-                onClick={() => type(token)}
+                onPress={() => type(token)}
               >
                 {token}
-              </Button>
+              </PadKey>
             ))}
           </Group>
         )}
         <SimpleGrid cols={3} spacing="xs">
           {KEYS.map((key) => (
-            <Button key={key} variant="default" {...big} onClick={() => type(key)}>
+            <PadKey key={key} variant="default" {...big} onPress={() => type(key)}>
               {key}
-            </Button>
+            </PadKey>
           ))}
-          <Button
+          <PadKey
             variant="default"
             {...big}
             aria-label="Smazat číslici"
-            onClick={() => {
-              setDigits(digits.slice(0, -1));
+            onPress={() => {
+              setDigits((current) => current.slice(0, -1));
               setNotFound(false);
             }}
           >
             <IconBackspace />
-          </Button>
-          <Button variant="default" {...big} onClick={() => type('0')}>
+          </PadKey>
+          <PadKey variant="default" {...big} onPress={() => type('0')}>
             0
-          </Button>
-          <Button {...big} onClick={confirm}>
+          </PadKey>
+          <PadKey {...big} onPress={confirm}>
             OK
-          </Button>
+          </PadKey>
         </SimpleGrid>
         <Text size="xs" c="dimmed" ta="center">
           Pětimístné číslo se otevře samo. Čtyřmístné zadejte s nulou na začátku (04001), jiné

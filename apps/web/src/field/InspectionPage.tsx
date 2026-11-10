@@ -52,6 +52,7 @@ import {
   useEquipmentTypes,
   useInspection,
   useCreateFieldItem,
+  useUpdateFieldItem,
   useCreateFieldLocation,
   useInspectionItems,
   useOutbox,
@@ -245,6 +246,9 @@ export function InspectionPage() {
   const outbox = useOutbox();
   const pendingItems = useMemo(() => new Set(outbox.map((c) => c.itemId)), [outbox]);
   const createItem = useCreateFieldItem(inspectionId);
+  const updateItem = useUpdateFieldItem(inspectionId);
+  // The item whose details are edited (the card is closed meanwhile and reopened after).
+  const [editing, setEditing] = useState<{ item: InspectionItem; source: Source } | null>(null);
   // Phones: smaller buttons so the labels fit (the layout is made for the iPad).
   const phone = useMediaQuery('(max-width: 48em)') ?? false;
   const createLocation = useCreateFieldLocation(inspection.data?.siteId ?? '', inspectionId);
@@ -440,6 +444,12 @@ export function InspectionPage() {
           size="md"
           placeholder="Hledat číslo TZ, označení, QR…"
           aria-label="Hledat"
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="characters"
+          spellCheck={false}
           leftSection={<IconSearch size={18} />}
           value={search}
           onChange={(e) => setSearch(e.currentTarget.value)}
@@ -491,6 +501,11 @@ export function InspectionPage() {
         readOnly={readOnly}
         onClose={() => setOpen(null)}
         onSaved={afterSave}
+        onEdit={() => {
+          if (!openItem || !open) return;
+          setEditing({ item: openItem, source: open.source });
+          setOpen(null);
+        }}
       />
 
       <NumberPad
@@ -618,6 +633,88 @@ export function InspectionPage() {
               setOpen({ id: created.id, source: 'scan' });
             }}
             onDone={() => setNewItem(null)}
+          />
+        )}
+      </Drawer>
+
+      <Drawer
+        opened={editing !== null}
+        onClose={() => {
+          if (editing) setOpen({ id: editing.item.id, source: editing.source });
+          setEditing(null);
+        }}
+        title={editing ? `Upravit artikl ${editing.item.itemNumber}` : ''}
+        position="right"
+        size="min(720px, 100%)"
+        zIndex={300}
+      >
+        {editing && (
+          <ItemForm
+            item={{
+              ...editing.item,
+              customerId: data.customerId,
+              siteId: data.siteId,
+              equipmentTypeName: typeById.get(editing.item.equipmentTypeId)?.name ?? '',
+              // Not edited in the field (the office sets the item's own interval).
+              inspectionIntervalMonths: null,
+              missingFields: [],
+              retired: false,
+              createdAt: '',
+              updatedAt: '',
+              version: 0,
+            }}
+            fixedSite
+            allowedTypeIds={data.equipmentTypeIds}
+            onCreateLocation={(parent, name) => createLocation.mutateAsync({ parent, name })}
+            onUpdate={async (changes, locationPath) => {
+              const { item } = editing;
+              const number = changes.itemNumber ? canonicalItemNumber(changes.itemNumber) : null;
+              if (changes.itemNumber !== undefined && !number) {
+                throw new Error('Číslo TZ má 1 až 5 číslic.');
+              }
+              const taken =
+                number && items.find((i) => i.itemNumber === number && i.id !== item.id);
+              if (taken) throw new Error(`Číslo TZ ${number} už má jiný artikl.`);
+              const key = changes.designation ? normalizeDesignation(changes.designation) : '';
+              const sameDesignation =
+                key &&
+                items.find(
+                  (i) =>
+                    i.id !== item.id &&
+                    i.designation &&
+                    normalizeDesignation(i.designation) === key,
+                );
+              if (sameDesignation) {
+                throw new Error(
+                  `Označení ${changes.designation} už má artikl ${sameDesignation.itemNumber}.`,
+                );
+              }
+              await updateItem.mutateAsync({
+                id: item.id,
+                itemNumber: number ?? item.itemNumber,
+                changes,
+                preview: {
+                  ...(number ? { itemNumber: number } : {}),
+                  ...(changes.designation !== undefined
+                    ? { designation: changes.designation || null }
+                    : {}),
+                  ...(changes.qrCode !== undefined ? { qrCode: changes.qrCode || null } : {}),
+                  ...(changes.equipmentTypeId ? { equipmentTypeId: changes.equipmentTypeId } : {}),
+                  ...(changes.locationId !== undefined
+                    ? { locationId: changes.locationId ?? null, locationPath }
+                    : {}),
+                  ...(changes.fieldValues ? { fieldValues: changes.fieldValues } : {}),
+                  ...(changes.nextInspectionDate !== undefined
+                    ? { nextInspectionDate: changes.nextInspectionDate ?? null }
+                    : {}),
+                },
+              });
+              notifySaved(`Artikl ${number ?? item.itemNumber} upraven v zařízení`);
+            }}
+            onDone={() => {
+              setOpen({ id: editing.item.id, source: editing.source });
+              setEditing(null);
+            }}
           />
         )}
       </Drawer>
