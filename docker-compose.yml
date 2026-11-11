@@ -31,6 +31,10 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
+    networks:
+      default:
+        aliases:
+          - revize-api
     restart: unless-stopped
     depends_on:
       db:
