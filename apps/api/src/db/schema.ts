@@ -206,9 +206,9 @@ export const item = pgTable(
       .references(() => equipmentType.id),
     /**
      * Číslo TZ: 4 or 5 digits (older data up to 8), stored without leading zeros, unique in
-     * the organization (ADR-0012).
+     * the organization (ADR-0012). Null = no číslo TZ (racks, or filled in later; ADR-0020).
      */
-    itemNumber: varchar('item_number', { length: 8 }).notNull(),
+    itemNumber: varchar('item_number', { length: 8 }),
     /** Designation such as "Ž-01" (prefix + number), optional. */
     designation: text('designation'),
     /** `normalizeDesignation(designation)`: unique within the site among items in records. */

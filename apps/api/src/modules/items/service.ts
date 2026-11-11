@@ -81,6 +81,7 @@ export function itemStateFilters(query: {
   due?: ItemDueFilter | undefined;
   lastInspection?: 'unchecked' | undefined;
   incomplete?: boolean | undefined;
+  noNumber?: boolean | undefined;
 }): SQL[] {
   const filters: SQL[] = [];
   if (query.due === 'overdue') {
@@ -88,6 +89,7 @@ export function itemStateFilters(query: {
   } else if (query.due) {
     filters.push(sql`${item.nextInspectionDate} <= current_date + ${Number(query.due)}::int`);
   }
+  if (query.noNumber) filters.push(sql`${item.itemNumber} is null`);
   if (query.incomplete) {
     // A required, not archived field of its type without a value.
     filters.push(sql`exists (
@@ -360,8 +362,13 @@ export function createItemsService(db: Db) {
       fieldValues = validateValues(type.fieldDefinitions, input.fieldValues ?? current.fieldValues);
     }
 
+    // Null or empty removes the číslo TZ (ADR-0020).
     const itemNumber =
-      input.itemNumber !== undefined ? canonicalOrFail(input.itemNumber) : undefined;
+      input.itemNumber === undefined
+        ? undefined
+        : input.itemNumber
+          ? canonicalOrFail(input.itemNumber)
+          : null;
     const qrCode = input.qrCode !== undefined ? input.qrCode : undefined;
     const designation =
       input.designation !== undefined ? designationOf(input.designation) : undefined;
@@ -534,9 +541,13 @@ export function createItemsService(db: Db) {
         const type = await typeOf(tx, auth, input.equipmentTypeId, false);
         await checkLocation(tx, auth, input.locationId, input.siteId);
         const fieldValues = validateValues(type.fieldDefinitions, input.fieldValues);
-        const itemNumber = input.itemNumber
-          ? canonicalOrFail(input.itemNumber)
-          : await nextItemNumber(tx, auth);
+        // Omitted: the next free number; null or empty: without číslo TZ (ADR-0020).
+        const itemNumber =
+          input.itemNumber === undefined
+            ? await nextItemNumber(tx, auth)
+            : input.itemNumber
+              ? canonicalOrFail(input.itemNumber)
+              : null;
         const designation = designationOf(input.designation);
         await assertUnique(tx, auth, {
           itemNumber,

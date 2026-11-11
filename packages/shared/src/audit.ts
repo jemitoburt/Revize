@@ -100,6 +100,8 @@ export function auditEntityLabel(
   if (text('itemNumber')) {
     return `Artikl ${text('itemNumber')}${text('designation') ? ` (${text('designation')})` : ''}`;
   }
+  // Items without číslo TZ (ADR-0020) are named by their designation.
+  if (entry.entityType === 'item' && text('designation')) return `Artikl ${text('designation')}`;
   if (entry.entityType === 'inspection' && text('inspectionDate')) {
     const [y, m, d] = text('inspectionDate').split('-');
     return `Kontrola ${d}/${m}/${y}`;

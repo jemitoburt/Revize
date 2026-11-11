@@ -22,6 +22,7 @@ import {
   LOCATION_SEPARATOR,
   canonicalItemNumber,
   designationTokens,
+  itemLabel,
   normalizeDesignation,
   findScannedItem,
   newId,
@@ -89,7 +90,7 @@ function matches(item: InspectionItem, text: string) {
   const digits = q.replace(/^0+/, '');
   const designation = normalizeDesignation(q);
   return (
-    (digits !== '' && item.itemNumber.startsWith(digits)) ||
+    (digits !== '' && (item.itemNumber?.startsWith(digits) ?? false)) ||
     (designation !== '' &&
       item.designation !== null &&
       normalizeDesignation(item.designation).includes(designation)) ||
@@ -120,12 +121,22 @@ function ItemRow({
   const position = item.locationPath.length > 1 ? item.locationPath.at(-1) : null;
   const manufacturer = item.fieldValues.manufacturer;
   return (
-    <UnstyledButton onClick={onOpen} w="100%" data-testid={`item-${item.itemNumber}`}>
+    <UnstyledButton
+      onClick={onOpen}
+      w="100%"
+      data-testid={`item-${item.itemNumber ?? item.designation ?? item.id}`}
+    >
       <Paper withBorder p="sm" radius="md">
         <Group justify="space-between" wrap="nowrap">
           <Group gap="md" wrap="nowrap">
-            <Text ff="monospace" fw={700} fz={22} miw={110}>
-              {item.itemNumber}
+            <Text
+              ff="monospace"
+              fw={700}
+              fz={22}
+              miw={110}
+              c={item.itemNumber ? undefined : 'dimmed'}
+            >
+              {item.itemNumber ?? '–'}
             </Text>
             <div>
               <Text fw={500}>
@@ -255,6 +266,37 @@ export function InspectionPage() {
   const readOnly = inspection.data?.status === 'closed';
   const progress = progressOf(items);
   const openItem = items.find((i) => i.id === open?.id) ?? null;
+  // The last item whose card was open: a label scanned for it (e.g. a rack without číslo TZ)
+  // is offered to that item first.
+  const [lastOpenedId, setLastOpenedId] = useState<string | null>(null);
+  useEffect(() => {
+    if (open) setLastOpenedId(open.id);
+  }, [open]);
+  const withoutNumber = items.filter((i) => i.itemNumber === null);
+  const [assignTo, setAssignTo] = useState<string | null>(null);
+  useEffect(() => {
+    if (unknown === null) return;
+    const last = withoutNumber.find((i) => i.id === lastOpenedId);
+    setAssignTo(last?.id ?? null);
+    // Only when a new unknown code arrives.
+  }, [unknown]);
+  const assignNumber = async () => {
+    const target = withoutNumber.find((i) => i.id === assignTo);
+    if (!target || !unknownNumber) return;
+    try {
+      await updateItem.mutateAsync({
+        id: target.id,
+        label: itemLabel(target),
+        changes: { itemNumber: unknownNumber },
+        preview: { itemNumber: unknownNumber },
+      });
+      notifySaved(`${itemLabel(target)}: číslo TZ ${unknownNumber} uloženo v zařízení`);
+      setUnknown(null);
+      setOpen({ id: target.id, source: 'scan' });
+    } catch (error) {
+      notifyError(error);
+    }
+  };
 
   const halls = useMemo(
     () => [...new Set(items.map((i) => i.locationPath[0]).filter((h): h is string => !!h))],
@@ -546,6 +588,32 @@ export function InspectionPage() {
           <Text>
             Kód <b>{unknown}</b> nepatří žádnému artiklu této kontroly.
           </Text>
+          {!readOnly && unknownNumber && withoutNumber.length > 0 && (
+            <Stack gap="xs" data-testid="assign-number">
+              <Select
+                label={`Přiřadit číslo TZ ${unknownNumber} artiklu bez čísla`}
+                placeholder="Vyberte artikl"
+                searchable
+                size="md"
+                comboboxProps={{ zIndex: 320 }}
+                data={withoutNumber.map((i) => ({
+                  value: i.id,
+                  label: [
+                    i.designation ?? 'bez označení',
+                    typeById.get(i.equipmentTypeId)?.name,
+                    i.locationPath.join(LOCATION_SEPARATOR),
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                }))}
+                value={assignTo}
+                onChange={setAssignTo}
+              />
+              <Button size="md" disabled={!assignTo} onClick={() => void assignNumber()}>
+                Přiřadit číslo TZ {unknownNumber}
+              </Button>
+            </Stack>
+          )}
           <Group justify="flex-end">
             <Button variant="default" size="md" onClick={() => setUnknown(null)}>
               Pokračovat
@@ -605,15 +673,15 @@ export function InspectionPage() {
                 items.find((i) => i.designation && normalizeDesignation(i.designation) === key);
               if (sameDesignation) {
                 throw new Error(
-                  `Označení ${body.designation} už má artikl ${sameDesignation.itemNumber}.`,
+                  `Označení ${body.designation} už má artikl ${itemLabel(sameDesignation)}.`,
                 );
               }
               const created = await createItem.mutateAsync({
                 body,
                 preview: {
                   id: body.id,
-                  // Without a number the server assigns the next free one when it gets the item.
-                  itemNumber: number ?? 'nový',
+                  // Empty: no číslo TZ (filled in later or never, e.g. racks; ADR-0020).
+                  itemNumber: number,
                   designation: body.designation || null,
                   qrCode: body.qrCode || null,
                   equipmentTypeId: body.equipmentTypeId,
@@ -628,7 +696,7 @@ export function InspectionPage() {
                   result: null,
                 },
               });
-              notifySaved(`Artikl ${created.itemNumber} založen v zařízení`);
+              notifySaved(`Artikl ${itemLabel(created)} založen v zařízení`);
               // Record its result right away.
               setOpen({ id: created.id, source: 'scan' });
             }}
@@ -643,7 +711,7 @@ export function InspectionPage() {
           if (editing) setOpen({ id: editing.item.id, source: editing.source });
           setEditing(null);
         }}
-        title={editing ? `Upravit artikl ${editing.item.itemNumber}` : ''}
+        title={editing ? `Upravit artikl ${itemLabel(editing.item)}` : ''}
         position="right"
         size="min(720px, 100%)"
         zIndex={300}
@@ -669,7 +737,8 @@ export function InspectionPage() {
             onUpdate={async (changes, locationPath) => {
               const { item } = editing;
               const number = changes.itemNumber ? canonicalItemNumber(changes.itemNumber) : null;
-              if (changes.itemNumber !== undefined && !number) {
+              // Empty removes the číslo TZ (the item has none, ADR-0020).
+              if (changes.itemNumber && !number) {
                 throw new Error('Číslo TZ má 1 až 5 číslic.');
               }
               const taken =
@@ -686,15 +755,15 @@ export function InspectionPage() {
                 );
               if (sameDesignation) {
                 throw new Error(
-                  `Označení ${changes.designation} už má artikl ${sameDesignation.itemNumber}.`,
+                  `Označení ${changes.designation} už má artikl ${itemLabel(sameDesignation)}.`,
                 );
               }
               await updateItem.mutateAsync({
                 id: item.id,
-                itemNumber: number ?? item.itemNumber,
+                label: itemLabel(item),
                 changes,
                 preview: {
-                  ...(number ? { itemNumber: number } : {}),
+                  ...(changes.itemNumber !== undefined ? { itemNumber: number } : {}),
                   ...(changes.designation !== undefined
                     ? { designation: changes.designation || null }
                     : {}),
@@ -709,7 +778,7 @@ export function InspectionPage() {
                     : {}),
                 },
               });
-              notifySaved(`Artikl ${number ?? item.itemNumber} upraven v zařízení`);
+              notifySaved(`Artikl ${number ?? itemLabel(item)} upraven v zařízení`);
             }}
             onDone={() => {
               setOpen({ id: editing.item.id, source: editing.source });

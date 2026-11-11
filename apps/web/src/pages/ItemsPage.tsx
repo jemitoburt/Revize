@@ -17,7 +17,13 @@ import {
 } from '@mantine/core';
 import { useDebouncedValue, useDisclosure } from '@mantine/hooks';
 import { IconSearch } from '@tabler/icons-react';
-import { ITEM_STATUS_LABELS, LOCATION_SEPARATOR, type Item, type ItemStatus } from '@revize/shared';
+import {
+  ITEM_STATUS_LABELS,
+  LOCATION_SEPARATOR,
+  itemLabel,
+  type Item,
+  type ItemStatus,
+} from '@revize/shared';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import {
@@ -173,6 +179,7 @@ export function ItemsPage() {
     due: search.due,
     lastInspection: search.lastInspection,
     incomplete: search.incomplete,
+    noNumber: search.noNumber,
     q: search.q,
     sort: search.sort ?? 'location',
     limit: PAGE_SIZE,
@@ -225,6 +232,7 @@ export function ItemsPage() {
               due: search.due,
               lastInspection: search.lastInspection,
               incomplete: search.incomplete ? 'true' : undefined,
+              noNumber: search.noNumber ? 'true' : undefined,
             }}
           />
           {canWrite && <Button onClick={() => openItem(null)}>Nový artikl</Button>}
@@ -318,6 +326,12 @@ export function ItemsPage() {
             checked={search.incomplete === true}
             onChange={(e) => setSearch({ incomplete: e.currentTarget.checked || undefined })}
           />
+          <Switch
+            label="Jen bez čísla TZ"
+            mb={6}
+            checked={search.noNumber === true}
+            onChange={(e) => setSearch({ noNumber: e.currentTarget.checked || undefined })}
+          />
           <TextInput
             label="Hledat"
             placeholder="Číslo TZ, označení, QR…"
@@ -401,14 +415,14 @@ export function ItemsPage() {
               {canWrite && (
                 <Table.Td onClick={(e) => e.stopPropagation()}>
                   <Checkbox
-                    aria-label={`Vybrat ${item.itemNumber}`}
+                    aria-label={`Vybrat ${itemLabel(item)}`}
                     checked={selected.has(item.id)}
                     onChange={() => toggle(item.id)}
                   />
                 </Table.Td>
               )}
               <Table.Td fw={700} ff="monospace">
-                {item.itemNumber}
+                {item.itemNumber ?? '–'}
               </Table.Td>
               <Table.Td fw={600}>{item.designation ?? ''}</Table.Td>
               <Table.Td>{item.equipmentTypeName}</Table.Td>
@@ -455,7 +469,7 @@ export function ItemsPage() {
         title={
           editing ? (
             <Group gap="md" wrap="nowrap">
-              <span>Artikl {editing.itemNumber}</span>
+              <span>Artikl {itemLabel(editing)}</span>
               <PrevNext
                 index={rows.findIndex((r) => r.id === editing.id)}
                 total={rows.length}

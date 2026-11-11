@@ -91,6 +91,10 @@ export const exportsRoutes: FastifyPluginAsyncZod<{ exports: ExportsService }> =
       .enum(['true', 'false'])
       .transform((v) => v === 'true')
       .optional(),
+    noNumber: z
+      .enum(['true', 'false'])
+      .transform((v) => v === 'true')
+      .optional(),
   });
   const records = requirePermission('export.read');
   app.get(

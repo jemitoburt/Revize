@@ -72,6 +72,22 @@ export function designationTokens(designations: readonly (string | null)[], limi
 }
 
 /** Numeric order of item numbers (so that "999" sorts before "1000"). */
-export function compareItemNumbers(a: string, b: string): number {
+export function compareItemNumbers(a: string | null, b: string | null): number {
+  // Items without číslo TZ (ADR-0020) come last.
+  if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
   return a.length - b.length || a.localeCompare(b);
+}
+
+/** Shown instead of a missing číslo TZ. */
+export const NO_ITEM_NUMBER = 'bez čísla TZ';
+
+/**
+ * How an item is named in texts (notifications, labels, titles): its číslo TZ, else its
+ * designation, else "bez čísla TZ" (racks have no číslo TZ; ADR-0020).
+ */
+export function itemLabel(item: {
+  itemNumber: string | null;
+  designation?: string | null;
+}): string {
+  return item.itemNumber ?? item.designation ?? NO_ITEM_NUMBER;
 }

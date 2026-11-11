@@ -156,7 +156,13 @@ describe('import', () => {
     const suggestion = (
       await api('GET', `/api/imports/${job.id}/suggestion?equipmentTypeId=${ladder.id}`)
     ).json();
-    const mapping = { siteId: site.id, equipmentTypeId: ladder.id, ...suggestion };
+    // Rows without číslo TZ get the next free number here (off by default: no number).
+    const mapping = {
+      siteId: site.id,
+      equipmentTypeId: ladder.id,
+      ...suggestion,
+      autoNumber: true,
+    };
 
     const blocked = await api('POST', `/api/imports/${job.id}/commit`, { mapping });
     expect(errorCode(blocked)).toBe('import_has_errors');
@@ -379,5 +385,48 @@ describe('import value replacements and defaults', () => {
       replacements: { ladder_type: [{ from: 'Kolo', to: 'Opěrný' }] },
       defaults: { max_load_kg: '150 kg' },
     });
+  });
+});
+
+describe('import without číslo TZ', () => {
+  it('imports racks by designation and later gives them the číslo TZ by designation', async () => {
+    const { site, ladder } = await setup();
+    // One column with číslo TZ in some rows and the designation in others.
+    const csv = 'Číslo;Výrobce\n12447;Alve\n15-RVLS;Alve\n16-RVLS;Alve\n';
+    const job = (await upload('mix.csv', Buffer.from(csv, 'utf8'))).json();
+    const mapping = {
+      siteId: site.id,
+      equipmentTypeId: ladder.id,
+      itemNumber: 0,
+      designation: 0,
+      fields: { manufacturer: 1 },
+    };
+    const done = await api('POST', `/api/imports/${job.id}/commit`, { mapping });
+    expect(done.statusCode, done.body).toBe(200);
+    const listed = (await api('GET', '/api/items?q=RVLS')).json<{
+      items: { itemNumber: string | null; designation: string }[];
+    }>().items;
+    expect(listed.map((i) => [i.itemNumber, i.designation]).sort()).toEqual([
+      [null, '15-RVLS'],
+      [null, '16-RVLS'],
+    ]);
+    const numbered = (await api('GET', '/api/items?q=12447')).json().items[0];
+    expect(numbered).toMatchObject({ itemNumber: '12447', designation: null });
+
+    // A later file brings the číslo TZ: the item without one is found by its designation.
+    const later = 'TZ;Označení\n12448;15-RVLS\n';
+    const job2 = (await upload('cisla.csv', Buffer.from(later, 'utf8'))).json();
+    const update = await api('POST', `/api/imports/${job2.id}/commit`, {
+      mapping: {
+        siteId: site.id,
+        equipmentTypeId: ladder.id,
+        mode: 'upsert',
+        itemNumber: 0,
+        designation: 1,
+      },
+    });
+    expect(update.statusCode, update.body).toBe(200);
+    const updated = (await api('GET', '/api/items?q=15-RVLS')).json().items[0];
+    expect(updated).toMatchObject({ itemNumber: '12448', designation: '15-RVLS' });
   });
 });

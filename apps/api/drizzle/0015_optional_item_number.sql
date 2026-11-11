@@ -1,0 +1,1 @@
+ALTER TABLE "item" ALTER COLUMN "item_number" DROP NOT NULL;

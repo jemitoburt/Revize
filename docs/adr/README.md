@@ -24,3 +24,4 @@ Každé rozhodnutí, které se později těžko mění, má vlastní soubor `NNN
 | [0017](0017-exports.md)                        | Exporty kontroly – XLSX, CSV a ZIP fotek s metadaty             | přijato                         |
 | [0018](0018-risk-levels-racks-only.md)         | Barvy rizika jen u regálů, jinde Vyhovuje / Nevyhovuje          | přijato                         |
 | [0019](0019-inspection-intervals.md)           | Interval kontrol u artiklu, umístění a provozovny               | přijato                         |
+| [0020](0020-optional-item-number.md)           | Artikl bez čísla TZ                                             | přijato                         |

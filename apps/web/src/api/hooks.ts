@@ -325,6 +325,7 @@ export type ItemQuery = {
   due?: 'overdue' | '30' | '60' | '90';
   lastInspection?: 'unchecked';
   incomplete?: boolean;
+  noNumber?: boolean;
   q?: string;
   includeRetired?: boolean;
   sort?: z.output<typeof listItemsQuerySchema>['sort'];
@@ -636,9 +637,9 @@ export function useUpdateFieldItem(inspectionId: string) {
   return useMutation<
     void,
     Error,
-    { id: string; itemNumber: string; changes: FieldItemChanges; preview: Partial<InspectionItem> }
+    { id: string; label: string; changes: FieldItemChanges; preview: Partial<InspectionItem> }
   >({
-    mutationFn: async ({ id, itemNumber, changes, preview }) => {
+    mutationFn: async ({ id, label, changes, preview }) => {
       // A location created in the field (still on the device) has to reach the server first.
       const newLocation = changes.locationId
         ? await localDb.outbox
@@ -656,7 +657,7 @@ export function useUpdateFieldItem(inspectionId: string) {
         group: `item:${id}`,
         ...(newLocation ? { dependsOn: [newLocation.group] } : {}),
         preview: { ...preview, id },
-        label: `Úprava artiklu ${itemNumber}`,
+        label: `Úprava artiklu ${label}`,
         inspectionId,
         itemId: id,
       });

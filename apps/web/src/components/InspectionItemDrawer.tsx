@@ -70,9 +70,11 @@ export function InspectionItemDrawer(props: InspectionItemDrawerProps) {
       title={
         props.item && (
           <Group gap="sm">
-            <Title order={3} ff="monospace">
-              {props.item.itemNumber}
-            </Title>
+            {props.item.itemNumber && (
+              <Title order={3} ff="monospace">
+                {props.item.itemNumber}
+              </Title>
+            )}
             {props.item.designation && <Title order={4}>{props.item.designation}</Title>}
             <Text c="dimmed">{props.type?.name}</Text>
             {props.position && <PrevNext {...props.position} />}

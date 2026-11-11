@@ -14,6 +14,7 @@ import {
   ITEM_STATUS_LABELS,
   LOCATION_SEPARATOR,
   buildFieldValuesSchema,
+  itemLabel,
   missingRequiredFields,
   newId,
   type Item,
@@ -181,7 +182,7 @@ export function ItemForm({
 
     const handlers = {
       onSuccess: (saved: Item) => {
-        notifySaved(item ? 'Artikl uložen' : `Artikl ${saved.itemNumber} založen`);
+        notifySaved(item ? 'Artikl uložen' : `Artikl ${itemLabel(saved)} založen`);
         onDone(saved);
       },
       onError: (error: ApiRequestError) => {
@@ -241,7 +242,8 @@ export function ItemForm({
         handlers,
       );
     } else {
-      const body = { id: createId, ...common, ...(itemNumber.trim() ? { itemNumber } : {}) };
+      // Empty: the item has no číslo TZ (racks; or filled in on site later, ADR-0020).
+      const body = { id: createId, ...common, itemNumber: itemNumber.trim() || null };
       if (onCreate) {
         const path = locations.data?.find((l) => l.id === locationId)?.pathNames ?? [];
         onCreate(body, path).then(() => onDone(), notifyError);
@@ -328,10 +330,10 @@ export function ItemForm({
           />
           <TextInput
             label="Číslo TZ"
-            description="4 nebo 5 číslic, v celé evidenci jen jednou; prázdné = další volné"
+            description="4 nebo 5 číslic, v celé evidenci jen jednou; prázdné = bez čísla TZ"
             inputMode="numeric"
             autoComplete="off"
-            placeholder={item ? undefined : 'automaticky'}
+            placeholder="bez čísla"
             value={itemNumber}
             error={errors.itemNumber}
             onChange={(e) => setItemNumber(e.currentTarget.value.replace(/\D/g, '').slice(0, 5))}

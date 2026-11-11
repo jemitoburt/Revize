@@ -86,7 +86,8 @@ export type InspectionResult = z.infer<typeof inspectionResultSchema>;
 /** One row of the technician's working list: the item and its result in this inspection. */
 export const inspectionItemSchema = z.object({
   id: idSchema,
-  itemNumber: z.string(),
+  /** Null: no číslo TZ (ADR-0020). */
+  itemNumber: z.string().nullable(),
   designation: z.string().nullable(),
   qrCode: z.string().nullable(),
   equipmentTypeId: idSchema,

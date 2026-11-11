@@ -43,7 +43,9 @@ techniků současně. Stačí v ní zapsat první výsledek.
   artikl podle QR kódu, čísla TZ i označení.
 - **Neznámý kód:** aplikace nabídne **Založit artikl s tímto kódem**. QR kód se předvyplní.
   Je-li v kódu číslo TZ (štítek z tiskárny), nabídne **Založit artikl s číslem TZ …** a předvyplní
-  číslo TZ.
+  číslo TZ. Má-li kontrola artikly **bez čísla TZ** (regály, nebo číslo chybělo v evidenci),
+  nabídne i **Přiřadit číslo TZ … artiklu bez čísla**: předvybraný je artikl, jehož kartu jste
+  měli otevřenou naposledy (najděte ho podle označení, pak naskenujte štítek).
 - **QR kódy na štítcích:** stačí, když tiskárna do QR kódu vloží jen číslo TZ (`12447`). Aplikace
   přečte i text jako na štítku (`TZ: 12 447`, `TZ12447`). V aplikaci se pak nic nepáruje, artikl
   se najde podle čísla TZ. Doporučení pro tisk: kód aspoň 15–20 mm, korekce chyb Q, kolem volný

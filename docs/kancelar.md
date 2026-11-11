@@ -31,8 +31,10 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      a „Závady bránící bezpečnému provozu“ (NE, vyřazeno z provozu), vždy i s fotkami.
 5. **Artikly:**
    - Filtrujte zákazníka a provozovnu, pak **Nový artikl**. Pole se nabídnou podle typu.
-   - **Číslo TZ** má 4 nebo 5 číslic a v celé evidenci je jen jednou. Bez čísla se přidělí
-     další volné. `04001` = `4001`.
+   - **Číslo TZ** má 4 nebo 5 číslic a v celé evidenci je jen jednou. `04001` = `4001`.
+     Nepovinné: regály ho nemají a jinde ho můžete doplnit později (i v terénu naskenováním
+     štítku). Artikl bez čísla se zobrazuje podle označení, přepínač **Jen bez čísla TZ** je
+     vyfiltruje (i pro Export evidence).
    - **Označení** (např. Ž-01, u regálu A1-12) je nepovinné a v provozovně jen jednou. Velikost
      písmen, mezery a pomlčky se při porovnání nepočítají. Hledat jde podle obojího.
    - Kliknutím na řádek artikl upravíte. Změna stavu (vyřazen z provozu ↔ v provozu) vyžaduje
@@ -40,7 +42,7 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
    - **Neúplné artikly:** povinná pole typu vybavení uložení nebrání. Formulář upozorní „Chybí
      povinné údaje: …“ a artikl se uloží; v seznamu má štítek _neúplný_ (najetím myší je vidět,
      co chybí) a přepínač **Jen neúplné** je vyfiltruje (i pro Export evidence). Nutná je jen
-     provozovna a typ vybavení; číslo TZ se při nevyplnění přidělí samo. Chybná hodnota (např.
+     provozovna a typ vybavení. Chybná hodnota (např.
      text v číselném poli) se dál odmítne.
    - **Filtry podle kontrol:** _Příští kontrola_ (po termínu, do 30 / 60 / 90 dní) a _Poslední
      kontrola → Nezkontrolované v poslední kontrole_ (artikl existoval při poslední uzavřené
@@ -89,7 +91,19 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      - _Nahradit hodnoty ve sloupci_ ukáže všechny hodnoty sloupce s počtem řádků. Ke každé
        můžete zadat náhradu (např. „Kolo“ → „Opěrný“) a ta platí pro všechny řádky. Velikost
        písmen ani diakritika nehrají roli.
+     - _Vynechat_ u hodnoty ji nenaimportuje (pole zůstane prázdné).
      - Náhrady i hodnoty si systém zapamatuje s mapováním typu pro příští soubor.
+   - **Číslo TZ a Označení** mají také **Hodnoty…** (náhrady a vynechání, sloupec „Převezme se
+     jako“ ukáže, co z hodnoty bude):
+     - Když je v jednom sloupci u některých řádků číslo TZ a u jiných označení, vyberte ten
+       sloupec pro obojí. Platné číslo TZ (`12447`) půjde do čísla, ostatní (`15-RVLS`) do
+       označení.
+     - Hodnota ve sloupci Číslo TZ, která není číslo TZ, se převezme jako označení, pokud ho
+       řádek nemá; jinak se artikl naimportuje bez čísla (varování).
+     - Řádky bez čísla TZ se naimportují bez čísla (regály, nebo číslo doplníte na provozovně).
+       Přepínač _Artiklům bez čísla TZ přidělit další volné číslo_ je ve výchozím stavu
+       vypnutý.
+     - Při aktualizaci se artikl bez čísla najde podle označení a číslo z řádku se mu doplní.
    - **Režim:** _Jen nové artikly_ (existující číslo je chyba), nebo _Nové i aktualizovat
      existující_. Při aktualizaci prázdná buňka hodnotu artiklu nemaže.
    - **Kontrola:** ukáže, co se založí, aktualizuje a které řádky mají chybu a proč. Do databáze
@@ -103,7 +117,7 @@ Přihlášení na `https://<server>/` (účet administrátora z `.env`).
      - _Chyby_ (neplatné nebo duplicitní číslo, obsazený QR kód) opravte v souboru, nebo
        zaškrtněte _Přeskočit řádky s chybami_.
    - **Importovat:** proběhne najednou v jedné transakci, takže buď vše, nebo nic. Chybějící
-     umístění se založí, artikly bez čísla dostanou další volná čísla. Každý artikl má záznam
+     umístění se založí. Každý artikl má záznam
      v auditu.
 9. **Nastavení** (administrátor):
    - Název firmy, IČO, adresa a kontakty.

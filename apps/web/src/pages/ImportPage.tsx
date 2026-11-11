@@ -21,7 +21,11 @@ import {
 } from '@mantine/core';
 import { IconFileSpreadsheet } from '@tabler/icons-react';
 import {
+  DESIGNATION_KEY,
   IMPORT_LIMITS,
+  ITEM_NUMBER_KEY,
+  canonicalItemNumber,
+  type FieldDefinition,
   type ImportJob,
   type ImportMappingInput,
   type ImportReport,
@@ -169,7 +173,7 @@ export function ImportPage() {
                 setMapping({
                   mode: 'create',
                   createMissingLocations: true,
-                  autoNumber: true,
+                  autoNumber: false,
                   locationSeparator: '',
                   ...suggested,
                 });
@@ -320,6 +324,37 @@ export function ImportPage() {
 
       {step === 1 && job && mapping && (
         <Stack>
+          {(valuesOf === ITEM_NUMBER_KEY || valuesOf === DESIGNATION_KEY) && (
+            <ImportFieldValues
+              key={valuesOf}
+              jobId={job.id}
+              field={itemColumnField(valuesOf)}
+              column={valuesOf === ITEM_NUMBER_KEY ? mapping.itemNumber : mapping.designation}
+              replacements={mapping.replacements?.[valuesOf] ?? []}
+              defaultValue=""
+              withDefault={false}
+              describe={
+                valuesOf === ITEM_NUMBER_KEY
+                  ? (value) => {
+                      const number = canonicalItemNumber(value);
+                      if (number) return `číslo TZ ${number}`;
+                      return mapping.designation === mapping.itemNumber ||
+                        mapping.designation === null
+                        ? 'označení'
+                        : 'označení, je-li v řádku prázdné; jinak bez čísla TZ';
+                    }
+                  : undefined
+              }
+              opened
+              onClose={() => setValuesOf(null)}
+              onSave={(replacements) =>
+                setMapping({
+                  ...mapping,
+                  replacements: { ...mapping.replacements, [valuesOf]: replacements },
+                })
+              }
+            />
+          )}
           {valuesOf && fields.some((f) => f.key === valuesOf) && (
             <ImportFieldValues
               key={valuesOf}
@@ -374,12 +409,28 @@ export function ImportPage() {
                   job={job}
                   value={mapping.itemNumber}
                   onChange={(v) => setMapping({ ...mapping, itemNumber: v })}
+                  extra={
+                    <ItemColumnValues
+                      count={mapping.replacements?.[ITEM_NUMBER_KEY]?.length ?? 0}
+                      label="Číslo TZ"
+                      disabled={mapping.itemNumber === null}
+                      onOpen={() => setValuesOf(ITEM_NUMBER_KEY)}
+                    />
+                  }
                 />
                 <ColumnSelect
                   label="Označení (např. Ž-01)"
                   job={job}
                   value={mapping.designation}
                   onChange={(v) => setMapping({ ...mapping, designation: v })}
+                  extra={
+                    <ItemColumnValues
+                      count={mapping.replacements?.[DESIGNATION_KEY]?.length ?? 0}
+                      label="Označení (např. Ž-01)"
+                      disabled={mapping.designation === null}
+                      onOpen={() => setValuesOf(DESIGNATION_KEY)}
+                    />
+                  }
                 />
                 <ColumnSelect
                   label="QR kód"
@@ -461,7 +512,8 @@ export function ImportPage() {
                 }
               />
               <Switch
-                label="Artiklům bez čísla přidělit další volné číslo"
+                label="Artiklům bez čísla TZ přidělit další volné číslo"
+                description="Vypnuto: artikly se naimportují bez čísla TZ (regály, nebo číslo doplníte na provozovně)."
                 checked={mapping.autoNumber}
                 onChange={(e) => setMapping({ ...mapping, autoNumber: e.currentTarget.checked })}
               />
@@ -589,7 +641,12 @@ export function ImportPage() {
                     <Badge color={ACTION_BADGE[r.action][0]}>{ACTION_BADGE[r.action][1]}</Badge>
                   </Table.Td>
                   <Table.Td ff="monospace">
-                    {r.itemNumber ?? (r.action === 'create' ? 'automaticky' : '')}
+                    {r.itemNumber ??
+                      (r.action === 'create'
+                        ? mapping?.autoNumber
+                          ? 'automaticky'
+                          : 'bez čísla'
+                        : '')}
                   </Table.Td>
                   <Table.Td fw={600}>{r.designation ?? ''}</Table.Td>
                   <Table.Td>{r.locationPath.join(' › ')}</Table.Td>
@@ -663,5 +720,46 @@ export function ImportPage() {
         </Paper>
       )}
     </Stack>
+  );
+}
+
+/** Číslo TZ and Označení in the values dialog (replacements only, no value for all items). */
+function itemColumnField(key: string): FieldDefinition {
+  return {
+    key,
+    label: key === ITEM_NUMBER_KEY ? 'Číslo TZ' : 'Označení',
+    kind: 'text',
+    required: false,
+    options: [],
+    suggestions: [],
+    order: 0,
+    archived: false,
+  };
+}
+
+function ItemColumnValues({
+  count,
+  label,
+  disabled,
+  onOpen,
+}: {
+  count: number;
+  label: string;
+  disabled: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <Group gap={6} wrap="nowrap" justify="flex-end">
+      {count > 0 && <Badge variant="light">náhrad: {count}</Badge>}
+      <Button
+        size="xs"
+        variant="subtle"
+        disabled={disabled}
+        aria-label={`Hodnoty pole ${label}`}
+        onClick={onOpen}
+      >
+        Hodnoty…
+      </Button>
+    </Group>
   );
 }

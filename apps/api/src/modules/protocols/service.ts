@@ -213,6 +213,7 @@ export function createProtocolsService(
         const rows: ProtocolItem[] = items
           .filter((i) => i.equipmentTypeId === type.id)
           .map((i) => ({
+            id: i.id,
             itemNumber: i.itemNumber,
             designation: i.designation,
             location: i.locationPath.join(LOCATION_SEPARATOR),
@@ -304,7 +305,7 @@ export function createProtocolsService(
       Math.round(photoBox(columns, layout.photoHeight, count).width * dpmm);
     const shown = new Set(
       protocolDefectGroups(data).flatMap((g) =>
-        g.places.flatMap((p) => p.defects.map((d) => d.itemNumber)),
+        g.places.flatMap((p) => p.defects.map((d) => d.id ?? d.itemNumber)),
       ),
     );
     const resolve = async (ref: string, width: number): Promise<string | null> => {
@@ -331,7 +332,9 @@ export function createProtocolsService(
       for (const item of section.items) {
         items.push({
           ...item,
-          photos: shown.has(item.itemNumber) ? await all(item.photos, layout.defectColumns) : [],
+          photos: shown.has(item.id ?? item.itemNumber)
+            ? await all(item.photos, layout.defectColumns)
+            : [],
         });
       }
       sections.push({ ...section, items });

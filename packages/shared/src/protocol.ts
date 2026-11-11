@@ -107,7 +107,10 @@ export interface ProtocolCompany {
 }
 
 export interface ProtocolItem {
-  itemNumber: string;
+  /** The item's id: tells items apart also when they have no číslo TZ. */
+  id?: string;
+  /** Null: no číslo TZ (racks); the designation is shown in its place. */
+  itemNumber: string | null;
   /** "Ž-01", printed before the description. */
   designation?: string | null;
   location: string;
@@ -345,8 +348,8 @@ export function protocolDefectGroups(data: ProtocolData): DefectGroup[] {
 }
 
 /** How the protocol names an item number: "TZ: 10001" (the číslo TZ of the label). */
-export function protocolItemNumber(itemNumber: string): string {
-  return `TZ: ${itemNumber}`;
+export function protocolItemNumber(itemNumber: string | null): string {
+  return itemNumber ? `TZ: ${itemNumber}` : '';
 }
 
 /** Title of a compact defect card: number, designation and the rest of the location. */
@@ -608,8 +611,10 @@ export function renderProtocolHtml(data: ProtocolData, options: ProtocolHtmlOpti
     // "nehodící se škrtněte": the answer that does not apply is struck through.
     const yes = safeToOperate(i.outcome) === true;
     const answered = i.outcome !== 'unchecked';
-    return `<tr><td>${escape(protocolItemNumber(i.itemNumber))}</td><td>${
-      i.designation ? `<strong>${escape(i.designation)}</strong> ` : ''
+    // Without číslo TZ (racks) the designation identifies the item in the first column.
+    const shownNumber = i.itemNumber ? protocolItemNumber(i.itemNumber) : (i.designation ?? '');
+    return `<tr><td>${escape(shownNumber)}</td><td>${
+      i.designation && i.itemNumber ? `<strong>${escape(i.designation)}</strong> ` : ''
     }${escape(i.details)}${
       i.location ? `<div class="where">${escape(i.location)}</div>` : ''
     }</td><td class="c-yn${answered && !yes ? ' struck' : ''}">ANO</td><td class="c-yn${

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { equipmentTypePreset } from '../equipment-presets.js';
 import { importMappingSchema } from './mapping.js';
-import { buildRowCandidate } from './rows.js';
+import { DESIGNATION_KEY, ITEM_NUMBER_KEY, buildRowCandidate } from './rows.js';
 
 const ladder = equipmentTypePreset('portable_ladder')!.fieldDefinitions;
 const mapping = importMappingSchema.parse({
@@ -42,14 +42,12 @@ describe('buildRowCandidate', () => {
       mapping,
       ladder,
     );
-    // Only the item number is an error; everything else is imported with a warning.
-    expect(candidate.issues.map((i) => [i.column, i.message])).toEqual([
-      [
-        0,
-        '„10001.5“ není číslo TZ (4 nebo 5 číslic) – patří-li do Označení, namapujte sloupec tam',
-      ],
-    ]);
+    // Nothing blocks the row: a value that is not a číslo TZ becomes the designation (the row
+    // has none), everything else is imported with a warning.
+    expect(candidate.issues).toEqual([]);
+    expect(candidate).toMatchObject({ itemNumber: null, designation: '10001.5' });
     const byColumn = Object.fromEntries(candidate.warnings.map((i) => [i.column, i.message]));
+    expect(byColumn[0]).toBe('„10001.5“ není číslo TZ – převzato jako označení');
     expect(byColumn[3]).toContain('není datum');
     expect(byColumn[4]).toContain('Chybí povinná hodnota „Výrobce“');
     expect(byColumn[5]).toContain('nová hodnota číselníku');
@@ -61,11 +59,51 @@ describe('buildRowCandidate', () => {
     ).toBe('10001');
   });
 
-  it('marks empty rows and missing numbers', () => {
+  it('marks empty rows and imports rows without číslo TZ', () => {
     expect(buildRowCandidate(['', null, '', '', '', '', ''], 5, mapping, ladder).empty).toBe(true);
-    const strict = { ...mapping, autoNumber: false };
-    const missing = buildRowCandidate(['', null, '', '', 'Alve', 'Opěrný', 8], 6, strict, ladder);
-    expect(missing.issues).toEqual([{ column: 0, message: 'Chybí číslo TZ' }]);
+    const missing = buildRowCandidate(['', null, '', '', 'Alve', 'Opěrný', 8], 6, mapping, ladder);
+    expect(missing).toMatchObject({ itemNumber: null, issues: [] });
+  });
+
+  it('splits a column that holds číslo TZ in some rows and the designation in others', () => {
+    const mixed = { ...mapping, itemNumber: 0, designation: 0, qrCode: null };
+    const row = (first: string | number) =>
+      buildRowCandidate([first, null, '', '', 'Alve', 'Opěrný', 8], 2, mixed, ladder);
+    expect(row('12447')).toMatchObject({ itemNumber: '12447', designation: null, warnings: [] });
+    expect(row(12447)).toMatchObject({ itemNumber: '12447', designation: null });
+    expect(row('15-RVLS')).toMatchObject({
+      itemNumber: null,
+      designation: '15-RVLS',
+      warnings: [],
+    });
+  });
+
+  it('replaces values of Číslo TZ and Označení like those of fields', () => {
+    const withDesignation = {
+      ...mapping,
+      designation: 1,
+      qrCode: null,
+      replacements: {
+        [ITEM_NUMBER_KEY]: [
+          { from: '15-RVLS', to: '12447' },
+          { from: '???', to: '', skip: true },
+        ],
+        [DESIGNATION_KEY]: [{ from: 'nh 1', to: 'NH01' }],
+      },
+    };
+    const row = (number: string, designation: string) =>
+      buildRowCandidate(
+        [number, designation, '', '', 'Alve', 'Opěrný', 8],
+        2,
+        withDesignation,
+        ladder,
+      );
+    expect(row('15-rvls', 'NH 1')).toMatchObject({ itemNumber: '12447', designation: 'NH01' });
+    expect(row('???', '')).toMatchObject({ itemNumber: null, designation: null, warnings: [] });
+    // Not a číslo TZ while the row has its designation: imported without číslo TZ.
+    const other = row('X-1', 'AG01');
+    expect(other).toMatchObject({ itemNumber: null, designation: 'AG01' });
+    expect(other.warnings[0]?.message).toContain('bude bez čísla TZ');
   });
 });
 

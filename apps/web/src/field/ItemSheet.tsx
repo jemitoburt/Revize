@@ -17,6 +17,7 @@ import {
   newId,
   FIT_LABELS,
   SEVERITY_LABELS,
+  itemLabel,
   outcomeLabel,
   severityOf,
   type EquipmentType,
@@ -74,9 +75,11 @@ export function ItemSheet(props: ItemSheetProps) {
       title={
         props.item && (
           <Group gap="sm">
-            <Title order={2} ff="monospace">
-              {props.item.itemNumber}
-            </Title>
+            {props.item.itemNumber && (
+              <Title order={2} ff="monospace">
+                {props.item.itemNumber}
+              </Title>
+            )}
             {props.item.designation && (
               <Title order={3} data-testid="designation">
                 {props.item.designation}
@@ -185,7 +188,7 @@ function SheetBody({
       notifyError(error);
       return;
     }
-    notifySaved(`${item.itemNumber}: ${outcomeLabel(result, riskLevels)}`);
+    notifySaved(`${itemLabel(item)}: ${outcomeLabel(result, riskLevels)}`);
     onSaved(result);
   };
 

@@ -127,7 +127,7 @@ test('admin adds "Žebřík" from the library and builds a custom "Regál" type'
   await expect(page.getByText('Verze polí 2', { exact: false })).toBeVisible();
 });
 
-test('items: create with validation and automatic number, 4-digit series, status change, bulk move', async ({
+test('items: create with validation and without číslo TZ, 4-digit series, status change, bulk move', async ({
   page,
 }) => {
   await login(page);
@@ -149,10 +149,8 @@ test('items: create with validation and automatic number, 4-digit series, status
   await page.getByRole('option', { name: 'Víceúčelový', exact: true }).click();
   await drawer.getByRole('textbox', { name: 'Počet příček / stupňů na díl' }).fill('9');
   await drawer.getByRole('button', { name: 'Založit artikl' }).click();
-  // Číslo TZ is assigned from the organization's series (other tests add items too).
-  const created = page.getByText(/^Artikl \d{4,5} založen$/);
-  await expect(created).toBeVisible();
-  const autoNumber = (await created.textContent())!.match(/\d+/)![0];
+  // Empty číslo TZ: the item has none (filled in later on site, ADR-0020).
+  await expect(page.getByText('Artikl bez čísla TZ založen')).toBeVisible();
 
   // A 4-digit series item typed with a leading zero, in another position.
   await page.getByRole('button', { name: 'Nový artikl' }).click();
@@ -175,10 +173,16 @@ test('items: create with validation and automatic number, 4-digit series, status
   await expect(rows).toHaveCount(1);
   await page.getByLabel('Hledat').fill('');
   await expect(rows).toHaveCount(2);
+  // Items without číslo TZ on their own.
+  await page.getByLabel('Jen bez čísla TZ').check();
+  await expect(rows).toHaveCount(1);
+  await expect(rows.nth(0)).toContainText('Pozice 2');
+  await page.getByLabel('Jen bez čísla TZ').uncheck();
+  await expect(rows).toHaveCount(2);
 
   // Taking an item out of service needs a reason.
   await rows.nth(0).click();
-  const edit = page.getByRole('dialog', { name: `Artikl ${autoNumber}` });
+  const edit = page.getByRole('dialog', { name: 'Artikl bez čísla TZ' });
   await edit.getByText('Vyřazen z provozu', { exact: true }).click();
   await edit.getByRole('button', { name: 'Uložit' }).click();
   await expect(edit.getByText('Uveďte důvod změny stavu')).toBeVisible();
@@ -211,7 +215,7 @@ test('changing the type of a new item drops values of the previous type', async 
   await page.getByRole('option', { name: 'Regál', exact: true }).click();
   await drawer.getByRole('textbox', { name: 'Nosnost pole' }).fill('1500');
   await drawer.getByRole('button', { name: 'Založit artikl' }).click();
-  await expect(page.getByText(/Artikl \d+ založen/)).toBeVisible();
+  await expect(page.getByText('Artikl bez čísla TZ založen')).toBeVisible();
 });
 
 test('rack bay load is prefilled as level load × levels and can be overwritten', async ({

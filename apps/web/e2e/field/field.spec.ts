@@ -6,7 +6,19 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
 }) => {
   await login(page, 'admin@revize.local', 'admin-heslo-123');
   await expect(page.getByRole('heading', { name: 'Zákazníci' })).toBeVisible();
-  await createData(page.request);
+  const { site, type } = await createData(page.request);
+  // A rack-like item without číslo TZ, known by its designation only (ADR-0020).
+  const rack = await page.request.post('/api/items', {
+    data: {
+      siteId: site.id,
+      locationId: null,
+      equipmentTypeId: type.id,
+      itemNumber: null,
+      designation: 'NH01',
+      fieldValues: { manufacturer: 'Alve', ladder_type: 'Opěrný', rungs: 6 },
+    },
+  });
+  expect(rack.status()).toBe(201);
 
   // A technician (no office rights) lands directly in the field mode.
   await page.request.post('/api/users', {
@@ -32,7 +44,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await choose('Provozovna', 'Sklad Zlín');
   await page.getByRole('button', { name: 'Zahájit', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Sklad Zlín' })).toBeVisible();
-  await expect(page.getByTestId('progress')).toHaveText('0 / 3 zkontrolováno');
+  await expect(page.getByTestId('progress')).toHaveText('0 / 4 zkontrolováno');
 
   // Number pad: a 4-digit number typed with a leading zero opens after the 5th digit.
   await page.getByRole('button', { name: 'Číslo', exact: true }).click();
@@ -41,7 +53,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   }
   await expect(sheet(page).getByRole('heading', { name: '4001', exact: true })).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Vyhovuje', exact: true }).click();
-  await expect(page.getByTestId('progress')).toHaveText('1 / 3 zkontrolováno');
+  await expect(page.getByTestId('progress')).toHaveText('1 / 4 zkontrolováno');
 
   // The designation (A1-01) from a quick key + digits, without the keyboard; opens by itself.
   await page.getByRole('button', { name: 'Číslo', exact: true }).click();
@@ -86,7 +98,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await expect(sheet(page)).toBeHidden();
   // Back in the scanner, which keeps running; close it.
   await page.getByTestId('scanner').getByRole('button', { name: 'Zavřít' }).click();
-  await expect(page.getByTestId('progress')).toHaveText('2 / 3 zkontrolováno');
+  await expect(page.getByTestId('progress')).toHaveText('2 / 4 zkontrolováno');
 
   // The defect and its uploaded photo are on the server.
   await page.getByText('Závady (1)').click();
@@ -144,12 +156,25 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
   await expect(sheet(page)).toBeHidden();
 
-  // A label with a číslo TZ that is not in the records yet (as printed: "TZ: 20 002").
-  await wedgeScan(page, 'TZ: 20 002');
+  // A label with a číslo TZ that is not in the records yet (as printed: "TZ: 19 002").
+  await wedgeScan(page, 'TZ: 19 002');
   await expect(
-    page.getByRole('button', { name: 'Založit artikl s číslem TZ 20002' }),
+    page.getByRole('button', { name: 'Založit artikl s číslem TZ 19002' }),
   ).toBeVisible();
-  await page.getByRole('button', { name: 'Pokračovat' }).click();
+  // …or it is the label of an item that has no číslo TZ yet: assign it.
+  const assign = page.getByTestId('assign-number');
+  await assign.getByRole('combobox').click();
+  await page.getByRole('option', { name: /^NH01/ }).click();
+  await assign.getByRole('button', { name: 'Přiřadit číslo TZ 19002' }).click();
+  await expect(sheet(page).getByRole('heading', { name: '19002', exact: true })).toBeVisible();
+  await expect(sheet(page).getByTestId('designation')).toHaveText('NH01');
+  await expect
+    .poll(
+      async () => (await (await page.request.get('/api/items?q=NH01')).json()).items[0].itemNumber,
+    )
+    .toBe('19002');
+  await sheet(page).getByRole('button', { name: 'Zavřít' }).last().click();
+  await expect(sheet(page)).toBeHidden();
 
   // A Bluetooth scanner reads an unknown label: create the item with that code.
   await wedgeScan(page, 'R20001');
@@ -180,7 +205,7 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   // The new item opens for its result right away.
   await expect(sheet(page).getByRole('heading', { name: '10003', exact: true })).toBeVisible();
   await sheet(page).getByRole('button', { name: 'Vyhovuje', exact: true }).click();
-  await expect(page.getByTestId('progress')).toHaveText('3 / 4 zkontrolováno');
+  await expect(page.getByTestId('progress')).toHaveText('3 / 5 zkontrolováno');
   // Location and item reached the server (the item waited for its location).
   await expect(page.getByText('Vše odesláno')).toBeVisible();
   const created = await (await page.request.get('/api/items?q=10003')).json();
@@ -189,5 +214,5 @@ test('technician inspects a site: number pad, camera, defect with photo, new ite
   // Leaving keeps the inspection open with its progress.
   await page.getByRole('button', { name: 'Ukončit práci' }).click();
   await page.getByRole('button', { name: 'Odejít' }).click();
-  await expect(page.getByText('3 / 4 zkontrolováno')).toBeVisible();
+  await expect(page.getByText('3 / 5 zkontrolováno')).toBeVisible();
 });

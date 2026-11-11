@@ -280,7 +280,7 @@ function itemRow(i: ProtocolItem) {
   const answer = (text: string, struck: boolean) =>
     cell(lines([text], { bold: true, strike: struck, align: AlignmentType.CENTER }));
   const description: ParagraphChild[] = [
-    ...(i.designation ? [run(`${i.designation} `, { bold: true })] : []),
+    ...(i.designation && i.itemNumber ? [run(`${i.designation} `, { bold: true })] : []),
     run(i.details),
     ...(i.location ? [new TextRun({ text: i.location, font: FONT, size: 16, break: 1 })] : []),
   ];
@@ -288,7 +288,7 @@ function itemRow(i: ProtocolItem) {
     cantSplit: true,
     height: { value: mm(9), rule: 'atLeast' },
     children: [
-      cell(lines([protocolItemNumber(i.itemNumber)])),
+      cell(lines([i.itemNumber ? protocolItemNumber(i.itemNumber) : (i.designation ?? '')])),
       cell(new Paragraph({ children: description })),
       answer('ANO', yes === false),
       answer('NE', yes === true),

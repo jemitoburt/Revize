@@ -239,7 +239,8 @@ export const itemSchema = z.object({
   locationPath: z.array(z.string()),
   equipmentTypeId: idSchema,
   equipmentTypeName: z.string(),
-  itemNumber: z.string(),
+  /** Číslo TZ; null = the item has none (racks, or filled in on site later; ADR-0020). */
+  itemNumber: z.string().nullable(),
   /** "Ž-01": prefix and number; unique within the site when set. */
   designation: z.string().nullable(),
   qrCode: z.string().nullable(),
@@ -261,8 +262,11 @@ const itemFields = {
   siteId: idSchema,
   locationId: idSchema.nullable(),
   equipmentTypeId: idSchema,
-  /** Číslo TZ: 4 or 5 digits, unique in the organization; stored without leading zeros. */
-  itemNumber: z.string().trim().max(5, 'Číslo TZ má nejvýš 5 číslic'),
+  /**
+   * Číslo TZ: 4 or 5 digits, unique in the organization; stored without leading zeros.
+   * Null or empty: the item has no číslo TZ (ADR-0020).
+   */
+  itemNumber: z.string().trim().max(5, 'Číslo TZ má nejvýš 5 číslic').nullable(),
   designation: optionalText(50),
   qrCode: optionalText(200),
   fieldValues: z.record(z.string(), z.unknown()),
@@ -273,7 +277,7 @@ const itemFields = {
 export const createItemSchema = z.object({
   id: idSchema.optional(),
   ...itemFields,
-  /** Empty: the next free number of the customer is assigned. */
+  /** Omitted: the next free number is assigned; null or empty: no číslo TZ. */
   itemNumber: itemFields.itemNumber.optional(),
   nextInspectionDate: itemFields.nextInspectionDate.optional(),
   qrCode: itemFields.qrCode,
@@ -322,6 +326,11 @@ export const listItemsQuerySchema = z.object({
   lastInspection: z.enum(['unchecked']).optional(),
   /** `true`: only items with a required field of their type left empty. */
   incomplete: z
+    .enum(['true', 'false'])
+    .transform((v) => v === 'true')
+    .optional(),
+  /** `true`: only items without číslo TZ (ADR-0020). */
+  noNumber: z
     .enum(['true', 'false'])
     .transform((v) => v === 'true')
     .optional(),

@@ -92,7 +92,7 @@ export function exportRow(
   const riskLevels = type?.riskLevels ?? true;
   const severity = result && riskLevels ? severityOf(result) : null;
   return [
-    item.itemNumber,
+    item.itemNumber ?? '',
     item.designation ?? '',
     type?.name ?? '',
     item.locationPath.join(LOCATION_SEPARATOR),
@@ -113,6 +113,20 @@ export function exportRow(
   ];
 }
 
+/**
+ * Start of an item's photo file names: its číslo TZ, else its designation made file-safe
+ * ("NH01"), else "bez-cisla" (ADR-0020).
+ */
+export function photoPrefixOf(item: { itemNumber: string | null; designation: string | null }) {
+  if (item.itemNumber) return item.itemNumber;
+  const safe = (item.designation ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return safe || 'bez-cisla';
+}
+
 /** `12345_01.jpg`: item number and the photo's order within the item. */
 export function photoFileName(prefix: string, index: number, mimeType: string): string {
   const ext = mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg';
@@ -127,7 +141,7 @@ export function photoCaption(
 ): string {
   const severity = item.result ? severityOf(item.result) : null;
   return [
-    `Číslo TZ ${item.itemNumber}`,
+    item.itemNumber ? `Číslo TZ ${item.itemNumber}` : '',
     item.designation ? `označení ${item.designation}` : '',
     typeName,
     item.locationPath.join(LOCATION_SEPARATOR),
@@ -190,7 +204,7 @@ export interface DatabaseItem {
   customerName: string;
   siteName: string;
   locationPath: string[];
-  itemNumber: string;
+  itemNumber: string | null;
   designation: string | null;
   qrCode: string | null;
   equipmentTypeId: string;
@@ -275,7 +289,7 @@ export function databaseRow(types: readonly ExportType[], item: DatabaseItem): E
   return [
     item.customerName,
     item.siteName,
-    item.itemNumber,
+    item.itemNumber ?? '',
     item.designation ?? '',
     type?.name ?? '',
     item.locationPath.join(LOCATION_SEPARATOR),
@@ -297,7 +311,7 @@ export function databaseRow(types: readonly ExportType[], item: DatabaseItem): E
 export interface HistoryRow {
   customerName: string;
   siteName: string;
-  itemNumber: string;
+  itemNumber: string | null;
   designation: string | null;
   equipmentTypeId: string;
   locationPath: string[];
@@ -340,7 +354,7 @@ export function historyRow(types: readonly ExportType[], row: HistoryRow): Expor
   return [
     row.customerName,
     row.siteName,
-    row.itemNumber,
+    row.itemNumber ?? '',
     row.designation ?? '',
     type?.name ?? '',
     row.locationPath.join(LOCATION_SEPARATOR),
@@ -418,7 +432,7 @@ export function appendixRow(
     }
     switch (key) {
       case 'itemNumber':
-        return item.itemNumber;
+        return item.itemNumber ?? '';
       case 'designation':
         return item.designation ?? '';
       case 'type':

@@ -16,6 +16,7 @@ import {
   type RawCell,
   type RowCandidate,
   type SavedHeaders,
+  itemLabel,
 } from '@revize/shared';
 import { and, eq, inArray, isNotNull, isNull, max, sql } from 'drizzle-orm';
 import type { AuthContext } from '../../auth/context.js';
@@ -162,7 +163,7 @@ export function createImportsService(db: Db) {
             inArray(item.itemNumber, numbers.slice(i, i + INSERT_CHUNK)),
           ),
         );
-      rows.forEach((r) => existingByNumber.set(r.itemNumber, r));
+      rows.forEach((r) => r.itemNumber && existingByNumber.set(r.itemNumber, r));
     }
     // Designations of the site's items (unique within the site).
     const existingByDesignation = new Map<string, ItemRow>();
@@ -216,12 +217,16 @@ export function createImportsService(db: Db) {
       const designationKey = firstCandidate.designation
         ? normalizeDesignation(firstCandidate.designation) || null
         : null;
-      // Without číslo TZ, an update finds the item by its designation in the site.
-      const existing = firstCandidate.itemNumber
-        ? (existingByNumber.get(firstCandidate.itemNumber) ?? null)
-        : designationKey && mapping.mode === 'upsert'
+      // Without číslo TZ, an update finds the item by its designation in the site; so does a
+      // row that brings the číslo TZ for an item that had none yet (ADR-0020).
+      const byDesignation =
+        designationKey && mapping.mode === 'upsert'
           ? (existingByDesignation.get(designationKey) ?? null)
           : null;
+      const existing = firstCandidate.itemNumber
+        ? (existingByNumber.get(firstCandidate.itemNumber) ??
+          (byDesignation && byDesignation.itemNumber === null ? byDesignation : null))
+        : byDesignation;
       const updating = existing !== null && mapping.mode === 'upsert';
       const candidate = updating
         ? buildRowCandidate(
@@ -289,7 +294,7 @@ export function createImportsService(db: Db) {
         if (owner && owner.id !== existing?.id)
           add(
             mapping.designation,
-            `Označení ${candidate.designation} už v provozovně má artikl ${owner.itemNumber}`,
+            `Označení ${candidate.designation} už v provozovně má artikl ${itemLabel(owner)}`,
           );
       }
 
@@ -595,7 +600,7 @@ export function createImportsService(db: Db) {
               siteId: mapping.siteId,
               locationId: locationIdOf(candidate.locationPath),
               equipmentTypeId: mapping.equipmentTypeId,
-              itemNumber: candidate.itemNumber ?? nextNumber(),
+              itemNumber: candidate.itemNumber ?? (mapping.autoNumber ? nextNumber() : null),
               ...designationOf(candidate.designation),
               qrCode: candidate.qrCode,
               fieldValues: candidate.fieldValues,
@@ -620,7 +625,12 @@ export function createImportsService(db: Db) {
                 ? { locationId: locationIdOf(candidate.locationPath) }
                 : {}),
               ...(mapping.qrCode !== null && candidate.qrCode ? { qrCode: candidate.qrCode } : {}),
-              ...(mapping.designation !== null && candidate.designation
+              // A item without číslo TZ found by its designation gets the number of the row.
+              ...(existing.itemNumber === null && candidate.itemNumber
+                ? { itemNumber: candidate.itemNumber }
+                : {}),
+              ...(candidate.designation &&
+              (mapping.designation !== null || mapping.itemNumber !== null)
                 ? designationOf(candidate.designation)
                 : {}),
               ...(mapping.nextInspectionDate !== null && candidate.nextInspectionDate

@@ -14,6 +14,7 @@ export interface DatabaseExportMenuProps {
     due?: string;
     lastInspection?: string;
     incomplete?: string;
+    noNumber?: string;
   };
 }
 

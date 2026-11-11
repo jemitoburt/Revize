@@ -23,8 +23,11 @@ export const importMappingSchema = z.object({
   /** When a single location column holds the whole path ("Hala A / Řada 1"), split by this. */
   locationSeparator: z.string().max(5).default(''),
   createMissingLocations: z.boolean().default(true),
-  /** Rows without an item number get the next free number (else they are errors). */
-  autoNumber: z.boolean().default(true),
+  /**
+   * Rows without a číslo TZ get the next free number; otherwise they are imported without
+   * číslo TZ (racks; filled in on site later, ADR-0020).
+   */
+  autoNumber: z.boolean().default(false),
   fields: z.record(z.string(), columnRef).default({}),
   /**
    * Per field key: replace a cell value with another one in every row ("Kolo" → "Opěrný").

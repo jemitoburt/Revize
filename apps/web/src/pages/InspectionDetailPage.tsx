@@ -22,6 +22,7 @@ import {
   outcomeLabel,
   severityOf,
   type InspectionResult,
+  itemLabel,
 } from '@revize/shared';
 import { IconFileText, IconLock, IconLockOpen, IconPencil } from '@tabler/icons-react';
 import { useParams } from '@tanstack/react-router';
@@ -316,10 +317,10 @@ export function InspectionDetailPage() {
               key={i.id}
               style={{ cursor: 'pointer' }}
               onClick={() => setOpenItemId(i.id)}
-              data-testid={`result-row-${i.itemNumber}`}
+              data-testid={`result-row-${i.itemNumber ?? i.designation ?? i.id}`}
             >
               <Table.Td ff="monospace" fw={700}>
-                {i.itemNumber}
+                {i.itemNumber ?? '–'}
               </Table.Td>
               <Table.Td fw={600}>{i.designation ?? ''}</Table.Td>
               <Table.Td>{typeName.get(i.equipmentTypeId)}</Table.Td>
@@ -362,7 +363,7 @@ export function InspectionDetailPage() {
                     mt={4}
                     size="xs"
                     label="do protokolu"
-                    aria-label={`Fotky ${i.itemNumber} do protokolu`}
+                    aria-label={`Fotky ${itemLabel(i)} do protokolu`}
                     checked={i.result.photosInProtocol}
                     disabled={!open || !can('inspection.perform')}
                     onChange={(e) =>
@@ -375,7 +376,7 @@ export function InspectionDetailPage() {
                 )}
               </Table.Td>
               <Table.Td>
-                <ActionIcon variant="subtle" aria-label={`Upravit ${i.itemNumber}`}>
+                <ActionIcon variant="subtle" aria-label={`Upravit ${itemLabel(i)}`}>
                   <IconPencil size={18} />
                 </ActionIcon>
               </Table.Td>

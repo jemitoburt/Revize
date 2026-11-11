@@ -153,4 +153,9 @@ pnpm smoke https://localhost admin@revize.local <heslo>   # smoke test of a runn
   drawers; merging equipment types (`POST /equipment-types/merge`, `planTypeMerge`).
 - Audit view – done: office page Historie změn (`/historie-zmen`, `audit.read`), `GET /audit` filters
   (entityType, actorId, from/to, paging `before`), Czech labels and diffs in `packages/shared/src/audit.ts`.
+- Optional číslo TZ (ADR-0020): `item.item_number` nullable (racks have none; `itemLabel` shows the
+  designation), import splits a mixed TZ/designation column and replaces values of both
+  (`ITEM_NUMBER_KEY`/`DESIGNATION_KEY` in `replacements`), autoNumber off by default; field mode
+  edits item details through the outbox (`useUpdateFieldItem`, PATCH without version) and assigns a
+  scanned unknown číslo TZ to an item without one; office filter `noNumber`.
 - Next: M1 decision PWA vs Capacitor.

@@ -10,6 +10,22 @@ import {
 } from './cells.js';
 import type { ImportMapping } from './mapping.js';
 
+/** Keys of `mapping.replacements` for the item's own columns (field keys never start with @). */
+export const ITEM_NUMBER_KEY = '@itemNumber';
+export const DESIGNATION_KEY = '@designation';
+
+/** The cell after the mapping's value replacements; a skipped value becomes empty. */
+function replaced(
+  cell: RawCell,
+  replacements: readonly { from: string; to: string; skip?: boolean }[] | undefined,
+): RawCell {
+  if (isEmptyCell(cell) || !replacements?.length) return cell;
+  const text = normalizeText(cellText(cell));
+  const replacement = replacements.find((r) => normalizeText(r.from) === text);
+  if (!replacement) return cell;
+  return replacement.skip ? null : replacement.to;
+}
+
 export interface RowIssue {
   /** Column index, or null for row-level problems. */
   column: number | null;
@@ -67,23 +83,44 @@ export function buildRowCandidate(
   ].filter((i): i is number => i !== null);
   const empty = mappedColumns.every((i) => isEmptyCell(at(i)));
 
+  // Číslo TZ and Označení may share a column (records where each row has one or the other):
+  // a valid číslo TZ goes to Číslo TZ, anything else to Označení.
+  const shared = mapping.itemNumber !== null && mapping.itemNumber === mapping.designation;
+  const numberCell = replaced(at(mapping.itemNumber), mapping.replacements[ITEM_NUMBER_KEY]);
+  let designationText = shared
+    ? ''
+    : cellText(replaced(at(mapping.designation), mapping.replacements[DESIGNATION_KEY])).trim();
+
   let itemNumber: string | null = null;
-  if (mapping.itemNumber !== null && !isEmptyCell(at(mapping.itemNumber))) {
-    const raw = at(mapping.itemNumber);
+  if (mapping.itemNumber !== null && !isEmptyCell(numberCell)) {
+    const raw = numberCell;
     const text = typeof raw === 'number' ? String(Math.trunc(raw)) : cellText(raw);
     itemNumber = canonicalItemNumber(text);
     if (!itemNumber || (typeof raw === 'number' && !Number.isInteger(raw))) {
-      issues.push({
-        column: mapping.itemNumber,
-        message: `„${cellText(raw)}“ není číslo TZ (4 nebo 5 číslic) – patří-li do Označení, namapujte sloupec tam`,
-      });
       itemNumber = null;
+      const value = cellText(raw).trim();
+      if (shared) {
+        designationText = value;
+      } else if (designationText === '') {
+        // Not a číslo TZ but the row has no designation: it is one ("15-RVLS").
+        designationText = value;
+        warnings.push({
+          column: mapping.itemNumber,
+          message: `„${value}“ není číslo TZ – převzato jako označení`,
+          field: ITEM_NUMBER_KEY,
+          value,
+        });
+      } else {
+        warnings.push({
+          column: mapping.itemNumber,
+          message: `„${value}“ není číslo TZ (4 nebo 5 číslic) – artikl bude bez čísla TZ`,
+          field: ITEM_NUMBER_KEY,
+          value,
+        });
+      }
     }
-  } else if (!mapping.autoNumber && !empty) {
-    issues.push({ column: mapping.itemNumber, message: 'Chybí číslo TZ' });
   }
 
-  const designationText = cellText(at(mapping.designation)).trim();
   const designation = designationText === '' ? null : designationText.slice(0, 50);
 
   const qrText = cellText(at(mapping.qrCode));

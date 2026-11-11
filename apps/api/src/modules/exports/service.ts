@@ -12,6 +12,8 @@ import {
   outcomeLabel,
   photoCaption,
   photoFileName,
+  photoPrefixOf,
+  itemLabel,
   sheetName,
   toCsv,
   type DatabaseItem,
@@ -66,6 +68,7 @@ export interface DatabaseQuery {
   due?: ItemDueFilter;
   lastInspection?: 'unchecked';
   incomplete?: boolean;
+  noNumber?: boolean;
 }
 
 export interface ExportFile<T> {
@@ -140,13 +143,13 @@ export function createExportsService(
     for (const item of items) {
       for (const p of rows) {
         if (p.resultInspectionId !== inspectionId || p.itemId !== item.id) continue;
-        photos.push({ ...p, fileName: nameOf(item.itemNumber, p.mimeType), item });
+        photos.push({ ...p, fileName: nameOf(photoPrefixOf(item), p.mimeType), item });
       }
       for (const p of rows) {
         if (p.ownItemId !== item.id) continue;
         photos.push({
           ...p,
-          fileName: nameOf(`${item.itemNumber}_artikl`, p.mimeType),
+          fileName: nameOf(`${photoPrefixOf(item)}_artikl`, p.mimeType),
           item,
           itemPhoto: true,
         });
@@ -585,10 +588,10 @@ export function createExportsService(
             let bytes = original;
             try {
               bytes = await metadata.write(original, p.mimeType, {
-                title: p.item ? p.item.itemNumber : `Kontrola ${inspection.siteName}`,
+                title: p.item ? itemLabel(p.item) : `Kontrola ${inspection.siteName}`,
                 description: describe(p),
                 keywords: [
-                  ...(p.item ? [p.item.itemNumber, typeName(p.item)] : []),
+                  ...(p.item ? [itemLabel(p.item), typeName(p.item)] : []),
                   inspection.customerName,
                   inspection.siteName,
                 ].filter(Boolean),

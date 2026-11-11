@@ -1,6 +1,7 @@
 import {
   Autocomplete,
   Button,
+  Checkbox,
   Group,
   Loader,
   Modal,
@@ -31,6 +32,10 @@ export interface ImportFieldValuesProps {
   opened: boolean;
   onClose: () => void;
   onSave: (replacements: Replacement[], defaultValue: string) => void;
+  /** Offer "Hodnota pro všechny artikly" (not for Číslo TZ and Označení). */
+  withDefault?: boolean;
+  /** What a value (after its replacement) becomes, e.g. "číslo TZ" / "označení". */
+  describe?: (value: string) => string;
 }
 
 const BOOLEAN_VALUES = ['ano', 'ne'];
@@ -88,6 +93,8 @@ export function ImportFieldValues({
   opened,
   onClose,
   onSave,
+  withDefault = true,
+  describe,
 }: ImportFieldValuesProps) {
   const values = useColumnValues(jobId, opened ? column : null);
   const [draftDefault, setDraftDefault] = useState(defaultValue);
@@ -95,32 +102,48 @@ export function ImportFieldValues({
     Object.fromEntries(replacements.filter((r) => !r.skip).map((r) => [r.from, r.to])),
   );
 
+  const [skipped, setSkipped] = useState<Set<string>>(
+    () => new Set(replacements.filter((r) => r.skip).map((r) => r.from)),
+  );
+
   const save = () => {
     const typed = Object.entries(draft)
       .filter(([, to]) => to.trim() !== '')
       .map(([from, to]) => ({ from, to: to.trim() }));
-    // Values skipped in the problem list stay skipped unless a replacement was typed for them.
-    const skipped = replacements.filter((r) => r.skip && !typed.some((t) => t.from === r.from));
-    onSave([...typed, ...skipped], draftDefault.trim());
+    // "Vynechat": the value is not imported (also set from the problem list); a replacement
+    // typed for it wins.
+    const skips = [...skipped]
+      .filter((from) => !typed.some((t) => t.from === from))
+      .map((from) => ({ from, to: '', skip: true }));
+    onSave([...typed, ...skips], draftDefault.trim());
     onClose();
   };
 
   return (
     <Modal opened={opened} onClose={onClose} title={`Hodnoty pole „${field.label}“`} size="lg">
       <Stack>
-        <ValueInput
-          field={field}
-          label="Hodnota pro všechny artikly"
-          placeholder={field.unit ? `např. 150 ${field.unit}` : undefined}
-          value={draftDefault}
-          onChange={setDraftDefault}
-        />
-        <Text size="sm" c="dimmed" mt={-10}>
-          {column === null
-            ? 'Soubor pro toto pole nemá sloupec: hodnota se vyplní u všech artiklů.'
-            : 'Použije se u řádků, kde je buňka prázdná.'}{' '}
-          Při aktualizaci existujících artiklů jejich vyplněnou hodnotu nepřepíše.
-        </Text>
+        {withDefault && (
+          <>
+            <ValueInput
+              field={field}
+              label="Hodnota pro všechny artikly"
+              placeholder={field.unit ? `např. 150 ${field.unit}` : undefined}
+              value={draftDefault}
+              onChange={setDraftDefault}
+            />
+            <Text size="sm" c="dimmed" mt={-10}>
+              {column === null
+                ? 'Soubor pro toto pole nemá sloupec: hodnota se vyplní u všech artiklů.'
+                : 'Použije se u řádků, kde je buňka prázdná.'}{' '}
+              Při aktualizaci existujících artiklů jejich vyplněnou hodnotu nepřepíše.
+            </Text>
+          </>
+        )}
+        {column === null && !withDefault && (
+          <Text size="sm" c="dimmed">
+            Nejdřív vyberte sloupec.
+          </Text>
+        )}
 
         {column !== null && (
           <>
@@ -145,6 +168,8 @@ export function ImportFieldValues({
                       <Table.Th>Hodnota v souboru</Table.Th>
                       <Table.Th>Řádků</Table.Th>
                       <Table.Th>Nahradit za</Table.Th>
+                      {describe && <Table.Th>Převezme se jako</Table.Th>}
+                      <Table.Th>Vynechat</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -156,13 +181,43 @@ export function ImportFieldValues({
                           <ValueInput
                             field={field}
                             ariaLabel={`Nahradit ${v.value}`}
-                            placeholder={
-                              replacements.some((r) => r.skip && r.from === v.value)
-                                ? 'přeskočeno'
-                                : 'ponechat'
-                            }
+                            placeholder={skipped.has(v.value) ? 'vynecháno' : 'ponechat'}
                             value={draft[v.value] ?? ''}
-                            onChange={(to) => setDraft((d) => ({ ...d, [v.value]: to }))}
+                            onChange={(to) => {
+                              setDraft((d) => ({ ...d, [v.value]: to }));
+                              if (to.trim()) {
+                                setSkipped((current) => {
+                                  const next = new Set(current);
+                                  next.delete(v.value);
+                                  return next;
+                                });
+                              }
+                            }}
+                          />
+                        </Table.Td>
+                        {describe && (
+                          <Table.Td>
+                            <Text size="sm" c={skipped.has(v.value) ? 'dimmed' : undefined}>
+                              {skipped.has(v.value)
+                                ? 'nic'
+                                : describe(draft[v.value]?.trim() || v.value)}
+                            </Text>
+                          </Table.Td>
+                        )}
+                        <Table.Td>
+                          <Checkbox
+                            aria-label={`Vynechat ${v.value}`}
+                            checked={skipped.has(v.value)}
+                            onChange={(e) => {
+                              const on = e.currentTarget.checked;
+                              if (on) setDraft((d) => ({ ...d, [v.value]: '' }));
+                              setSkipped((current) => {
+                                const next = new Set(current);
+                                if (on) next.add(v.value);
+                                else next.delete(v.value);
+                                return next;
+                              });
+                            }}
                           />
                         </Table.Td>
                       </Table.Tr>
